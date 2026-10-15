@@ -3,7 +3,9 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import json
+import os
 from pathlib import Path
+import secrets
 import subprocess
 import sys
 from threading import Thread
@@ -33,6 +35,119 @@ def environment_hash() -> str:
 def receipt_applicable(receipt: ProbeReceipt, obligation: Obligation) -> bool:
     return (receipt.obligation_hash == obligation.obligation_hash
             == obligation.tuple.obligation_hash() and receipt.tuple == obligation.tuple)
+
+
+def run_harness(codec_path: Path, entry: str, payload: bytes, timeout_s: float = 5) -> dict:
+    """Run the trusted harness once on ``payload`` and return its verdict.
+
+    This is the only sanctioned caller of the fixture harness. It owns the
+    per-run secret nonce (the reader cannot see or guess it), a minimal child
+    environment, bounded I/O, the timeout, and the strict one-line/nonce/schema
+    parsing of the result channel. Returns::
+
+        {"result": "PASS"|"FAIL"|"UNKNOWN", "exit": int|None, "stdout": bytes,
+         "error_type": str|None, "message": str|None, "shape": dict|None}
+
+    ``stdout`` is the raw bytes seen on the result channel (capped at
+    ``MAX_STDOUT``). ``stderr`` stays discarded so reader output cannot reach
+    the parent as evidence.
+    """
+    nonce = secrets.token_hex(16)
+    outcome = {"result": "UNKNOWN", "exit": None, "stdout": b"",
+               "error_type": None, "message": None, "shape": None}
+
+    if timeout_s <= 0:
+        outcome["message"] = "invalid timeout"
+        return outcome
+
+    codec = Path(codec_path)
+    env = {"RW_PROBE_NONCE": nonce,
+           "SYSTEMROOT": os.environ.get("SYSTEMROOT", ""),
+           "PATH": os.environ.get("PATH", "")}
+    try:
+        process = subprocess.Popen(
+            [sys.executable, "-I", str(harness_path()), str(codec), entry],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            env=env)
+    except (OSError, ValueError) as exc:
+        outcome["error_type"] = type(exc).__name__
+        outcome["message"] = str(exc)
+        return outcome
+
+    stdout = bytearray()
+    overflow = []
+
+    def collect():
+        with process.stdout as stream:
+            while chunk := stream.read1(1024):
+                remaining = MAX_STDOUT - len(stdout)
+                stdout.extend(chunk[:remaining])
+                if len(chunk) > remaining:
+                    overflow.append(True)
+                    process.kill()
+                    break
+
+    def feed():
+        try:
+            with process.stdin as stream:
+                stream.write(payload)
+        except (BrokenPipeError, OSError):
+            pass
+
+    reader = Thread(target=collect, daemon=True)
+    writer = Thread(target=feed, daemon=True)
+    reader.start()
+    writer.start()
+    timed_out = False
+    exit_code = None
+    try:
+        exit_code = process.wait(timeout=timeout_s)
+    except subprocess.TimeoutExpired:
+        timed_out = True
+        process.kill()
+        process.wait()
+    reader.join()
+    writer.join()
+
+    raw = bytes(stdout)
+    outcome["stdout"] = raw
+    outcome["exit"] = exit_code
+    if timed_out:
+        outcome["message"] = "probe timeout"
+        return outcome
+    if overflow:
+        outcome["message"] = "stdout exceeds 8192 bytes"
+        return outcome
+
+    try:
+        # The harness writes exactly one JSON line; strip the single trailing
+        # newline and reject anything that is not exactly one non-empty line.
+        text = raw.decode("utf-8")
+        if text.endswith("\r\n"):
+            text = text[:-2]
+        elif text.endswith("\n"):
+            text = text[:-1]
+        lines = [line for line in text.split("\n") if line.strip()]
+        if len(lines) != 1:
+            raise ValueError("stdout must be exactly one non-empty line")
+        data = json.loads(lines[0])
+        if not isinstance(data, dict) or data.get("nonce") != nonce:
+            raise ValueError("stdout must carry the run nonce")
+        if exit_code == 0 and data.get("status") == "PASS" and isinstance(data.get("shape"), dict):
+            outcome["result"] = "PASS"
+            outcome["shape"] = data["shape"]
+            return outcome
+        if exit_code == 10 and data.get("status") == "FAIL":
+            if not isinstance(data.get("error_type"), str) or not isinstance(data.get("message"), str):
+                raise ValueError("FAIL lacks error_type/message")
+            outcome["result"] = "FAIL"
+            outcome["error_type"] = data["error_type"]
+            outcome["message"] = data["message"]
+            return outcome
+    except (ValueError, UnicodeError, RecursionError):
+        pass
+    outcome["message"] = "harness error or invalid stdout"
+    return outcome
 
 
 def run_probe(obligation: Obligation, payload_path: Path, timeout_s=5) -> ProbeReceipt:
@@ -68,58 +183,14 @@ def run_probe(obligation: Obligation, payload_path: Path, timeout_s=5) -> ProbeR
             return receipt(message="codec hash mismatch")
         if timeout_s <= 0:
             return receipt(message="invalid timeout")
-        process = subprocess.Popen(
-            [sys.executable, "-I", str(harness_path()), str(codec), obligation.reader_entry],
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     except (OSError, ValueError) as exc:
         return receipt(message=str(exc), error_type=type(exc).__name__)
 
-    overflow = []
-
-    def collect():
-        with process.stdout as stream:
-            while chunk := stream.read1(1024):
-                remaining = MAX_STDOUT - len(stdout)
-                stdout.extend(chunk[:remaining])
-                if len(chunk) > remaining:
-                    overflow.append(True)
-                    process.kill()
-                    break
-
-    def feed():
-        try:
-            with process.stdin as stream:
-                stream.write(payload)
-        except (BrokenPipeError, OSError):
-            pass
-
-    reader = Thread(target=collect, daemon=True)
-    writer = Thread(target=feed, daemon=True)
-    reader.start()
-    writer.start()
-    timed_out = False
-    try:
-        exit_code = process.wait(timeout=timeout_s)
-    except subprocess.TimeoutExpired:
-        timed_out = True
-        process.kill()
-        process.wait()
-    reader.join()
-    writer.join()
-    if timed_out:
-        return receipt(message="probe timeout")
-    if overflow:
-        return receipt(message="stdout exceeds 8192 bytes")
-    try:
-        data = json.loads(bytes(stdout))
-        if not isinstance(data, dict):
-            raise ValueError("stdout must be an object")
-        if exit_code == 0 and data.get("status") == "PASS":
-            return receipt(ProbeResult.PASS)
-        if exit_code == 10 and data.get("status") == "FAIL":
-            if not isinstance(data.get("error_type"), str) or not isinstance(data.get("message"), str):
-                raise ValueError("FAIL lacks error_type/message")
-            return receipt(ProbeResult.FAIL, data["message"], data["error_type"])
-    except (ValueError, UnicodeError, RecursionError):
-        pass
-    return receipt(message="harness error or invalid stdout")
+    outcome = run_harness(codec, obligation.reader_entry, payload, timeout_s)
+    stdout.extend(outcome["stdout"])
+    exit_code = outcome["exit"]
+    if outcome["result"] == ProbeResult.PASS:
+        return receipt(ProbeResult.PASS)
+    if outcome["result"] == ProbeResult.FAIL:
+        return receipt(ProbeResult.FAIL, outcome["message"], outcome["error_type"])
+    return receipt(message=outcome["message"], error_type=outcome["error_type"])

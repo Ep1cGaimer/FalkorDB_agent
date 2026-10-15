@@ -3,6 +3,8 @@
 import hashlib
 import importlib.util
 import json
+import os
+import secrets
 import subprocess
 import sys
 from pathlib import Path
@@ -37,16 +39,32 @@ def fixture_files():
     return sorted(PAYLOADS.glob("*.bin")) + sorted(SNAPSHOTS.glob("*/manifest.json"))
 
 
-def run_harness(release_dir, entry, payload_bytes):
+def nonce_env(nonce):
+    return {"RW_PROBE_NONCE": nonce,
+            "SYSTEMROOT": os.environ.get("SYSTEMROOT", ""),
+            "PATH": os.environ.get("PATH", "")}
+
+
+def run_harness(release_dir, entry, payload_bytes, nonce):
     return subprocess.run(
         [sys.executable, "-I", str(HARNESS), str(codec_path(release_dir)), entry],
         input=payload_bytes,
         capture_output=True,
+        env=nonce_env(nonce),
     )
 
 
-def harness_json(proc):
-    return json.loads(proc.stdout.decode("utf-8"))
+def harness_json(proc, nonce):
+    text = proc.stdout.decode("utf-8")
+    if text.endswith("\r\n"):
+        text = text[:-2]
+    elif text.endswith("\n"):
+        text = text[:-1]
+    lines = [line for line in text.split("\n") if line.strip()]
+    assert len(lines) == 1, proc.stdout
+    data = json.loads(lines[0])
+    assert data["nonce"] == nonce
+    return data
 
 
 def test_rebuild_is_byte_identical(tmp_path):
@@ -78,48 +96,58 @@ def test_harness_cart_reads():
     payload_1001 = (PAYLOADS / "saved-cart-1001.bin").read_bytes()
     payload_2002 = (PAYLOADS / "saved-cart-2002.bin").read_bytes()
 
-    proc = run_harness("cart-1.4", "read_cart", payload_1001)
+    nonce = secrets.token_hex(16)
+    proc = run_harness("cart-1.4", "read_cart", payload_1001, nonce)
     assert proc.returncode == 0
-    assert harness_json(proc) == {"status": "PASS", "shape": {"format": "str", "item_count": "int"}}
+    data = harness_json(proc, nonce)
+    assert data["status"] == "PASS"
+    assert data["shape"] == {"format": "str", "item_count": "int"}
 
-    proc = run_harness("cart-1.4", "read_cart", payload_2002)
+    nonce = secrets.token_hex(16)
+    proc = run_harness("cart-1.4", "read_cart", payload_2002, nonce)
     assert proc.returncode == 10
-    assert harness_json(proc)["status"] == "FAIL"
+    assert harness_json(proc, nonce)["status"] == "FAIL"
 
     for payload in (payload_1001, payload_2002):
-        proc = run_harness("cart-1.5", "read_cart", payload)
+        nonce = secrets.token_hex(16)
+        proc = run_harness("cart-1.5", "read_cart", payload, nonce)
         assert proc.returncode == 0, proc.stdout
-        assert harness_json(proc)["status"] == "PASS"
+        assert harness_json(proc, nonce)["status"] == "PASS"
 
 
 def test_harness_checkout_pricing_reads():
     payload_1001 = (PAYLOADS / "saved-cart-1001.bin").read_bytes()
     payload_2002 = (PAYLOADS / "saved-cart-2002.bin").read_bytes()
 
-    proc = run_harness("checkout-2.0", "read_cart_for_pricing", payload_2002)
+    nonce = secrets.token_hex(16)
+    proc = run_harness("checkout-2.0", "read_cart_for_pricing", payload_2002, nonce)
     assert proc.returncode == 10
-    assert harness_json(proc)["status"] == "FAIL"
+    assert harness_json(proc, nonce)["status"] == "FAIL"
 
     for payload in (payload_1001, payload_2002):
-        proc = run_harness("checkout-2.1", "read_cart_for_pricing", payload)
+        nonce = secrets.token_hex(16)
+        proc = run_harness("checkout-2.1", "read_cart_for_pricing", payload, nonce)
         assert proc.returncode == 0, proc.stdout
-        assert harness_json(proc)["status"] == "PASS"
+        assert harness_json(proc, nonce)["status"] == "PASS"
 
 
 def test_harness_errors_are_exit_20():
     payload = (PAYLOADS / "saved-cart-1001.bin").read_bytes()
 
-    proc = run_harness("cart-1.4", "no_such_entry", payload)
+    nonce = secrets.token_hex(16)
+    proc = run_harness("cart-1.4", "no_such_entry", payload, nonce)
     assert proc.returncode == 20
-    assert harness_json(proc)["status"] == "HARNESS_ERROR"
+    assert harness_json(proc, nonce)["status"] == "HARNESS_ERROR"
 
+    nonce = secrets.token_hex(16)
     proc = subprocess.run(
         [sys.executable, "-I", str(HARNESS), str(FIXTURES / "nope" / "codec.py"), "read_cart"],
         input=payload,
         capture_output=True,
+        env=nonce_env(nonce),
     )
     assert proc.returncode == 20
-    assert harness_json(proc)["status"] == "HARNESS_ERROR"
+    assert harness_json(proc, nonce)["status"] == "HARNESS_ERROR"
 
 
 def test_receipt_total_differs_between_checkout_versions():

@@ -50,17 +50,13 @@ def startup_check(codec_path: str, timeout_s: int = 5) -> dict[str, Any]:
     Reported beside the obligations for contrast only; it reads no retained state and can never
     discharge an obligation.
     """
-    import subprocess
-    import sys
-
     from . import probes as P
-    try:
-        proc = subprocess.run([sys.executable, "-I", str(P.harness_path()), str(REPO_ROOT / codec_path), "health"],
-                              input=b"", capture_output=True, timeout=timeout_s)
-        ok = proc.returncode == 0 and b'"PASS"' in proc.stdout[:8192]
-        return {"codec_path": codec_path, "result": "GREEN" if ok else "RED", "exit": proc.returncode}
-    except subprocess.TimeoutExpired:
+    outcome = P.run_harness(REPO_ROOT / codec_path, "health", b"", timeout_s=timeout_s)
+    if outcome["message"] == "probe timeout":
         return {"codec_path": codec_path, "result": "UNKNOWN", "exit": None}
+    return {"codec_path": codec_path,
+            "result": "GREEN" if outcome["result"] == "PASS" else "RED",
+            "exit": outcome["exit"]}
 
 
 class Session:

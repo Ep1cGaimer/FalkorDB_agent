@@ -1,5 +1,7 @@
+import json
 from pathlib import Path
 import shutil
+import subprocess
 import sys
 
 import pytest
@@ -51,8 +53,9 @@ def test_hashes_match_frozen_protocol():
     ("def read_cart(data):\n    raise ValueError('bad cart')\n", ProbeResult.FAIL),
     ("raise ImportError('unavailable')\n", ProbeResult.UNKNOWN),
     ("def other(data):\n    return {}\n", ProbeResult.UNKNOWN),
-    ("def read_cart(data):\n    print('noise')\n    return {}\n", ProbeResult.UNKNOWN),
-    ("def read_cart(data):\n    print('x' * 1000000)\n    return {}\n", ProbeResult.UNKNOWN),
+    # Reader stdout goes to stderr, so reader noise can no longer pollute the result channel.
+    ("def read_cart(data):\n    print('noise')\n    return {}\n", ProbeResult.PASS),
+    ("def read_cart(data):\n    print('x' * 1000000)\n    return {}\n", ProbeResult.PASS),
 ])
 def test_tiny_readers(tiny, source, expected):
     codec, payload = tiny
@@ -70,6 +73,66 @@ def test_tiny_readers(tiny, source, expected):
     if expected == ProbeResult.FAIL:
         assert receipt.error_type == "ValueError"
         assert receipt.message == "bad cart"
+
+
+FORGED_PASS = (
+    "def read_cart(data):\n"
+    "    import sys\n"
+    "    print(%r)\n"
+    "    sys.exit(0)\n"
+)
+
+
+@pytest.mark.parametrize("forged", ['{"status":"PASS","shape":{}}', '{"status":"PASS"}'])
+def test_reader_cannot_forge_a_pass_by_printing_and_exiting(tiny, forged):
+    """A reader that prints a PASS line and exits without returning is never a PASS."""
+    codec, payload = tiny
+    codec.write_text(FORGED_PASS % forged)
+    receipt = probes.run_probe(obligation(codec, payload), payload)
+    assert receipt.result == ProbeResult.UNKNOWN
+    assert receipt.harness_exit == 20  # premature exit is a harness error, not a reader verdict
+
+
+def test_reader_fd1_write_never_reaches_the_result_channel(tiny, monkeypatch):
+    """Writing a forged line straight to fd 1 is diverted to stderr; only the real line survives."""
+    codec, payload = tiny
+    codec.write_text(
+        "import os\n\n"
+        "def read_cart(data):\n"
+        "    os.write(1, b'{\"status\":\"PASS\",\"shape\":{}}\\n')\n"
+        "    return {'bytes': len(data)}\n")
+    nonce = "0123456789abcdef0123456789abcdef"
+    monkeypatch.setattr(probes.secrets, "token_hex", lambda _n: nonce)
+    receipt = probes.run_probe(obligation(codec, payload), payload)
+    assert receipt.result == ProbeResult.PASS
+    lines = [line for line in receipt.stdout_excerpt.split("\n") if line.strip()]
+    assert len(lines) == 1  # exactly one line seen by the parent
+    data = json.loads(lines[0])
+    assert data["nonce"] == nonce  # the line the parent accepts is the harness's, carrying the nonce
+    assert data["status"] == "PASS"
+    assert data["shape"] == {"bytes": "int"}
+
+
+def test_reader_exception_is_fail_not_harness_error(tiny):
+    codec, payload = tiny
+    codec.write_text("def read_cart(data):\n    raise ValueError('bad cart')\n")
+    receipt = probes.run_probe(obligation(codec, payload), payload)
+    assert receipt.result == ProbeResult.FAIL
+    assert receipt.harness_exit == 10
+    assert receipt.error_type == "ValueError"
+    assert receipt.message == "bad cart"
+
+
+def test_harness_rejects_a_run_without_the_nonce(tmp_path):
+    """The harness refuses to produce a verdict when the parent did not supply a nonce."""
+    harness = tmp_path / "run_reader.py"
+    shutil.copyfile(probes.harness_path(), harness)
+    codec = tmp_path / "codec.py"
+    codec.write_text("def read_cart(data):\n    return {}\n")
+    proc = subprocess.run([sys.executable, "-I", str(harness), str(codec), "read_cart"],
+                          input=b"x", capture_output=True)
+    assert proc.returncode == 20
+    assert json.loads(proc.stdout)["status"] == "HARNESS_ERROR"
 
 
 def test_timeout(tiny):

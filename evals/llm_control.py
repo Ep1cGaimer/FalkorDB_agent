@@ -145,67 +145,15 @@ def _run_harness(codec_path: Path, entry: str, payload: bytes) -> dict[str, Any]
     reader yields UNKNOWN (never FAIL) so the control cannot mistake a harness error for an observed
     incompatibility.
     """
-    def out(status: str, error_type: str | None = None, message: str | None = None) -> dict[str, Any]:
-        return {"status": status, "error_type": error_type, "message": message}
+    from rw import probes
 
-    stdout = bytearray()
-    overflow: list[bool] = []
-    exit_code: int | None = None
-    try:
-        process = subprocess.Popen(
-            [sys.executable, "-I", str(HARNESS_PATH), str(codec_path), entry],
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
-    except (OSError, ValueError) as exc:
-        return out("UNKNOWN", type(exc).__name__, f"harness could not start: {exc}")
-
-    def collect() -> None:
-        with process.stdout as stream:
-            while chunk := stream.read1(1024):
-                remaining = MAX_STDOUT - len(stdout)
-                stdout.extend(chunk[:remaining])
-                if len(chunk) > remaining:
-                    overflow.append(True)
-                    process.kill()
-                    break
-
-    def feed() -> None:
-        try:
-            with process.stdin as stream:
-                stream.write(payload)
-        except (BrokenPipeError, OSError):
-            pass
-
-    reader = Thread(target=collect, daemon=True)
-    writer = Thread(target=feed, daemon=True)
-    reader.start()
-    writer.start()
-    timed_out = False
-    try:
-        exit_code = process.wait(timeout=PROBE_TIMEOUT_S)
-    except subprocess.TimeoutExpired:
-        timed_out = True
-        process.kill()
-        process.wait()
-    reader.join()
-    writer.join()
-    if timed_out:
-        return out("UNKNOWN", "Timeout", "probe timeout")
-    if overflow:
-        return out("UNKNOWN", "HarnessError", f"stdout exceeds {MAX_STDOUT} bytes")
-    try:
-        data = json.loads(bytes(stdout))
-        if not isinstance(data, dict):
-            raise ValueError("stdout must be an object")
-        if exit_code == 0 and data.get("status") == "PASS":
-            return out("PASS")
-        if exit_code == 10 and data.get("status") == "FAIL":
-            error_type, message = data.get("error_type"), data.get("message")
-            if not isinstance(error_type, str) or not isinstance(message, str):
-                raise ValueError("FAIL lacks error_type/message")
-            return out("FAIL", error_type, message)
-    except (ValueError, UnicodeError, RecursionError):
-        pass
-    return out("UNKNOWN", "HarnessError", "harness error or invalid stdout")
+    outcome = probes.run_harness(codec_path, entry, payload, timeout_s=PROBE_TIMEOUT_S)
+    status = outcome["result"]
+    error_type = outcome["error_type"]
+    message = outcome["message"]
+    if status == "UNKNOWN" and error_type is None:
+        error_type = "HarnessError"
+    return {"status": status, "error_type": error_type, "message": message}
 
 
 class FlatControlTools:

@@ -9,6 +9,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import secrets
 import subprocess
 import sys
 from pathlib import Path
@@ -134,22 +135,32 @@ def test_probe_tool_result_shape_and_mapping(tools):
     assert tools.run_reader_probe("checkout", "2.1", "saved-cart-1001")["status"] == "PASS"
 
 
+def _direct_harness(harness, codec, entry, payload):
+    """Run the trusted harness by hand, the way the sanctioned caller does: fresh nonce in env."""
+    nonce = secrets.token_hex(16)
+    env = {"RW_PROBE_NONCE": nonce,
+           "SYSTEMROOT": os.environ.get("SYSTEMROOT", ""),
+           "PATH": os.environ.get("PATH", "")}
+    proc = subprocess.run([sys.executable, "-I", str(harness), str(codec), entry], input=payload,
+                          capture_output=True, timeout=30, env=env)
+    data = json.loads(proc.stdout)
+    assert data["nonce"] == nonce  # the returned line carries this run's nonce
+    return proc, data
+
+
 def test_probe_matches_a_direct_harness_run(tools):
     """Independent expected outcome: the same harness invocation run by hand, outside the control."""
     harness = control.HARNESS_PATH
     codec = scoring.FIXTURE_ROOT / "releases" / "cart-1.4" / "codec.py"
     payload = (scoring.FIXTURE_ROOT / "payloads" / "saved-cart-2002.bin").read_bytes()
-    proc = subprocess.run([sys.executable, "-I", str(harness), str(codec), "read_cart"], input=payload,
-                          capture_output=True, timeout=30)
-    direct = json.loads(proc.stdout)
+    proc, direct = _direct_harness(harness, codec, "read_cart", payload)
     assert proc.returncode == 10 and direct["status"] == "FAIL" and direct["error_type"] == "ValueError"
     got = tools.run_reader_probe("cart", "1.4", "saved-cart-2002")
     assert (got["status"], got["error_type"], got["message"]) == ("FAIL", direct["error_type"], direct["message"])
     # and the newer reader passes on the same bytes (also checked by hand)
     codec_new = scoring.FIXTURE_ROOT / "releases" / "cart-1.5" / "codec.py"
-    proc_new = subprocess.run([sys.executable, "-I", str(harness), str(codec_new), "read_cart"], input=payload,
-                              capture_output=True, timeout=30)
-    assert proc_new.returncode == 0 and json.loads(proc_new.stdout)["status"] == "PASS"
+    proc_new, direct_new = _direct_harness(harness, codec_new, "read_cart", payload)
+    assert proc_new.returncode == 0 and direct_new["status"] == "PASS"
 
 
 def test_extra_args_never_reach_the_tool_and_unknown_tools_error(tmp_path):
