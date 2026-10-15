@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from copy import deepcopy
 from datetime import datetime, timezone
 import json
+import logging
 from pathlib import Path
 from threading import RLock
 from typing import Any, Callable, Literal
@@ -18,6 +19,31 @@ from .contracts import (Approval, CandidatePlan, Disposition, FleetEntry,
                         GroundingClarification, GroundingResult, MAX_PLANS_PER_SESSION,
                         ScopeConfirmation, VerificationResult)
 from .simulation import DEFAULT_FORBIDDEN_IDENTITIES, SimulationRefused
+
+log = logging.getLogger("rw.api")
+
+PROVIDER_MESSAGES = {
+    "provider_quota": "Live model rate limit or request size limit reached. Try replay.",
+    "provider_unavailable": "Live model did not respond. Try again later or use replay.",
+    "provider_error": "Live model could not produce a usable answer. Try replay.",
+}
+
+
+def provider_failure(exc) -> dict:
+    """Client-safe summary of a grounding failure: a code and a fixed message, never the raw text.
+
+    Provider errors can carry account/org identifiers, tiers and usage numbers; the raw text stays in
+    the server log only.
+    """
+    text = str(exc).lower()
+    if any(k in text for k in ("429", "413", "rate limit", "too large", "quota", "tokens per")):
+        code = "provider_quota"
+    elif any(k in text for k in ("timeout", "timed out", "connection", " 500", " 502", " 503", " 504")):
+        code = "provider_unavailable"
+    else:
+        code = "provider_error"
+    return {"code": code, "message": PROVIDER_MESSAGES[code]}
+
 
 ROOT = Path(__file__).resolve().parents[2]
 GROUNDING_DIR = ROOT / "artifacts/grounding"
@@ -59,6 +85,11 @@ class AlternativeRequest(RequestBody):
     replay_path: str | None = None
 
 
+class AnswerRequest(RequestBody):
+    answer: str = Field(min_length=1, max_length=4000)
+    replay_path: str | None = None
+
+
 @dataclass
 class Attempt:
     grounding: GroundingResult
@@ -91,6 +122,8 @@ class Investigation:
     request: InvestigationRequest
     session: Any
     attempts: list[Attempt] = field(default_factory=list)
+    original_request_text: str = ""
+    answered: bool = False
     lock: Any = field(default_factory=RLock)
 
     def public(self):
@@ -123,8 +156,8 @@ class Investigation:
                 raise SimulationRefused("release labels query is truncated")
             for row in rows:
                 releases[row["release_id"]] = (service, row["version"])
-        labels = {rid: f"{releases[rid][0]} {releases[rid][1]}"
-                  for rid in sorted(release_ids) if rid in releases}
+        # every release of a known service: lets the UI name the release behind a cited excerpt
+        labels = {rid: f"{svc} {version}" for rid, (svc, version) in sorted(releases.items())}
 
         def enrich_plan(plan):
             if plan is None:
@@ -145,7 +178,9 @@ class Investigation:
                 attempt["report"]["release_labels"] = labels
                 enrich_plan(attempt["report"]["plan"])
         return {"id": self.id, "investigation_id": self.id,
-                "request_text": self.request.request_text, "mode": self.request.mode,
+                "request_text": self.request.request_text,
+                "original_request_text": self.original_request_text or self.request.request_text,
+                "answered": self.answered, "mode": self.request.mode,
                 "snapshot_id": self.session.snapshot_id,
                 "snapshot_manifest_hash": self.session.manifest_hash,
                 "attempts": attempts, "release_labels": labels,
@@ -231,7 +266,8 @@ def create_app(*, session_factory: Callable | None = None,
                 result, transcript = (ground_function or grounding.ground)(
                     inv.request.request_text, tools, alternative_context=context)
             except grounding.GroundingError as exc:
-                raise HTTPException(502, f"grounding unavailable: {exc}") from exc
+                log.warning("grounding unavailable: %s", exc)
+                raise HTTPException(502, provider_failure(exc)) from exc
         if result.request_text != inv.request.request_text:
             raise SimulationRefused("grounding request does not match this investigation")
         errors = list(result.validation_errors)
@@ -239,7 +275,7 @@ def create_app(*, session_factory: Callable | None = None,
         if not isinstance(result.result, GroundingClarification):
             proposed, validation = inv.session.plan_from_proposal(
                 result.result, inv.request.request_text, origin="agent",
-                label=f"candidate {len(inv.attempts) + 1}")
+                label=f"candidate {sum(1 for a in inv.attempts if a.plan) + 1}")
             errors.extend(validation)
             if not errors:
                 plan = proposed
@@ -266,7 +302,7 @@ def create_app(*, session_factory: Callable | None = None,
                 # Initialize the shared fixture graph once, preserving other investigations.
                 session = Session(snapshot="snap-001", reimport=not initialized)
                 initialized = True
-        inv = Investigation(uuid4().hex, body, session)
+        inv = Investigation(uuid4().hex, body, session, original_request_text=body.request_text)
         ground_attempt(inv)
         with registry_lock:
             investigations[inv.id] = inv
@@ -287,8 +323,11 @@ def create_app(*, session_factory: Callable | None = None,
                 live = result.get("live", data.get("live"))
                 if not isinstance(request_text, str) or not isinstance(model, str) or not isinstance(live, bool):
                     continue
+                body = result.get("result")
+                outcome = ("question" if isinstance(body, dict) and "question" in body
+                           else "proposal" if isinstance(body, dict) and "changes" in body else None)
                 transcripts.append({"file_name": path.name, "replay_path": path.name,
-                    "request_text": request_text, "model": model, "live": live,
+                    "request_text": request_text, "model": model, "live": live, "outcome": outcome,
                     "mtime": datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat()})
             except (OSError, ValueError, AttributeError, HTTPException):
                 continue
@@ -331,7 +370,7 @@ def create_app(*, session_factory: Callable | None = None,
         from .pipeline import summarize_for_agent
         inv = get_investigation(identifier)
         with inv.lock:
-            if len(inv.attempts) >= MAX_PLANS_PER_SESSION:
+            if sum(1 for a in inv.attempts if a.plan) >= MAX_PLANS_PER_SESSION:
                 raise SimulationRefused("plan limit reached")
             latest = inv.attempts[-1]
             if not latest.report or latest.report["verification"]["disposition"] not in {
@@ -343,6 +382,35 @@ def create_app(*, session_factory: Callable | None = None,
             if inv.request.mode == "live" and replay_path:
                 raise HTTPException(422, "replay_path requires replay mode")
             ground_attempt(inv, summarize_for_agent(latest.report), replay_path)
+            return inv.public()
+
+    @app.post("/api/investigations/{identifier}/answer")
+    def answer_clarification(identifier: str, body: AnswerRequest):
+        from .pipeline import with_answer
+        inv = get_investigation(identifier)
+        with inv.lock:
+            latest = inv.attempts[-1]
+            if not isinstance(latest.grounding.result, GroundingClarification):
+                raise SimulationRefused("the agent has no open question")
+            if inv.answered:
+                raise SimulationRefused("the one clarification round was already used")
+            if not body.answer.strip():
+                raise HTTPException(422, "answer cannot be blank")
+            replay_path = body.replay_path
+            if inv.request.mode == "replay" and not replay_path:
+                raise HTTPException(422, "replay_path is required in replay mode")
+            if inv.request.mode == "live" and replay_path:
+                raise HTTPException(422, "replay_path requires replay mode")
+            original = inv.request
+            bound = with_answer(original.request_text, latest.grounding.result.question, body.answer.strip())
+            inv.request = original.model_copy(update={"request_text": bound})
+            try:
+                ground_attempt(inv, None, replay_path)
+            except BaseException:
+                inv.request = original
+                raise
+            inv.original_request_text = original.request_text
+            inv.answered = True
             return inv.public()
 
     def verified(attempt):

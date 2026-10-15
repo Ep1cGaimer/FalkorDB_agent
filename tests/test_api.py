@@ -490,3 +490,104 @@ def test_list_investigations_tracks_latest_plan_disposition(api):
     confirm(client, alternative)
     assert listing()[first["id"]]["latest_disposition"] == "BOUNDED_PASS"
     assert listing()[second["id"]]["latest_disposition"] is None
+
+
+@pytest.fixture
+def clarifying_api(tmp_path):
+    """A grounder that asks once, then proposes cart 1.4 against the answered (bound) request."""
+    from rw import graph
+    from rw.pipeline import Session, with_answer
+
+    name = "rw_test_api_" + uuid4().hex
+    session = Session(snapshot="snap-001", graph_name=name)
+    question = "Keep checkout 2.1?"
+    calls = []
+
+    def ground(request, tools, alternative_context=None):
+        calls.append(request)
+        if request == REQUEST:
+            return GroundingResult(request_text=request, result=GroundingClarification(
+                question=question, unresolved=["receipt"]), model="fake-grounder", live=True), None
+        rows, _ = graph.releases_for_service(session.g, "cart")
+        release = next(row for row in rows if row["version"] == "1.4")
+        history, _ = tools.release_history("cart")
+        excerpt = next(ex for row in history if row["release_id"] == release["release_id"]
+                       for ex in row["excerpts"] if ex["kind"] == "changelog")
+        proposal = GroundingProposal(changes=[FleetEntry(service="cart", release_id=release["release_id"])],
+            citations=[Citation(excerpt_id=excerpt["excerpt_id"], content_hash=excerpt["content_hash"],
+                                quote=excerpt["text"])], rationale="after answer")
+        return GroundingResult(request_text=request, result=proposal, model="fake-grounder", live=True), None
+
+    app = create_app(session_factory=lambda: Session(snapshot="snap-001", graph_name=name, reimport=False),
+                     ground_function=ground, db_path=tmp_path / "sim.sqlite")
+    try:
+        with TestClient(app) as client:
+            yield client, calls, question, with_answer
+    finally:
+        session.g.delete()
+
+
+def test_answer_regrounds_once_and_binds_answered_request(clarifying_api):
+    client, calls, question, with_answer = clarifying_api
+    state = create(client)
+    assert state["clarification"]["question"] == question and state["plan"] is None
+    url = f"/api/investigations/{state['id']}/answer"
+    answered = client.post(url, json={"answer": "  Yes, keep it.  "})
+    assert answered.status_code == 200, answered.text
+    bound = with_answer(REQUEST, question, "Yes, keep it.")
+    body = answered.json()
+    assert calls == [REQUEST, bound]
+    assert body["request_text"] == bound and body["original_request_text"] == REQUEST
+    assert body["answered"] is True and len(body["attempts"]) == 2
+    assert body["plan"]["label"] == "candidate 1"
+    # one clarification round per investigation
+    assert client.post(url, json={"answer": "again"}).status_code == 409
+    # the answered plan can still be checked
+    assert confirm(client, body)["verification"]["disposition"] == "BLOCKED"
+
+
+def test_answer_refused_without_open_question_and_for_bad_bodies(api):
+    client, _, _ = api
+    state = create(client)
+    url = f"/api/investigations/{state['id']}/answer"
+    assert client.post(url, json={"answer": "x"}).status_code == 409
+    assert client.post(url, json={"answer": ""}).status_code == 422
+    assert client.post(url, json={"answer": "x", "extra": 1}).status_code == 422
+    assert client.post("/api/investigations/missing/answer", json={"answer": "x"}).status_code == 404
+
+
+def test_transcript_picker_reports_question_or_proposal_outcome(tmp_path):
+    directory = tmp_path / "grounding"
+    directory.mkdir()
+    for name, body in (("q.json", {"question": "Which?"}), ("p.json", {"changes": []})):
+        (directory / name).write_text(json.dumps({"request_text": REQUEST, "result": {
+            "model": "m", "live": True, "result": body}}), encoding="utf-8")
+    with TestClient(create_app(transcript_dir=directory)) as client:
+        rows = {row["file_name"]: row["outcome"] for row in client.get("/api/transcripts").json()}
+    assert rows == {"q.json": "question", "p.json": "proposal"}
+
+
+@pytest.mark.parametrize("raw,code", [
+    ("HTTP 429: Rate limit reached in organization `org_FAKE0000000000000000000000` tier on_demand Used 197112", "provider_quota"),
+    ("request timed out for org_FAKE0000000000000000000000", "provider_unavailable"),
+    ("malformed output for org_FAKE0000000000000000000000", "provider_error"),
+])
+def test_provider_failure_is_sanitized(tmp_path, raw, code):
+    from rw import grounding
+    from rw.pipeline import Session
+
+    name = "rw_test_api_" + uuid4().hex
+    session = Session(graph_name=name)
+
+    def failing(request, tools, alternative_context=None):
+        raise grounding.GroundingError(raw)
+
+    app = create_app(session_factory=lambda: session, ground_function=failing, db_path=tmp_path / "sim.sqlite")
+    try:
+        with TestClient(app) as client:
+            response = client.post("/api/investigations", json={"request_text": REQUEST, "mode": "live"})
+        assert response.status_code == 502
+        assert response.json()["detail"]["code"] == code
+        assert "org_" not in response.text and "197112" not in response.text and "on_demand" not in response.text
+    finally:
+        session.g.delete()
