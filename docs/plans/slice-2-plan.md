@@ -85,7 +85,7 @@ Acceptance: unit tests pass; then run `.venv\Scripts\python.exe -m pytest tests\
 
 ## Task 7: Grounding quality pass + repeatable grounding eval
 
-Files: `src/rw/grounding.py` (SYSTEM_PROMPT text and alternative-context handling only), `evals/grounding_cases/requests.json`, `evals/grounding_cases/expected.json`, `evals/run_grounding_cases.py` (new), `tests/test_grounding.py`.
+Files: `src/rw/grounding.py` (SYSTEM_PROMPT text and alternative-context handling only), `evals/llm_control.py` + `tests/test_llm_control.py` (switch the control to the same RW_GROUNDING_MODEL chain and provider transports as the product, no duplicated transport code), `evals/grounding_cases/requests.json`, `evals/grounding_cases/expected.json`, `evals/run_grounding_cases.py` (new), `tests/test_grounding.py`.
 
 Implement:
 1. Prompt: require that each release kept or changed is supported by a `changelog` excerpt describing behavior; code excerpts may supplement but a version string alone (e.g. a `health()` return value) is not evidence. Keep every existing rule. Do not mention fixture-specific answers (no "cart/v2", no "basket_v2 off is safe").
