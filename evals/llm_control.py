@@ -1,9 +1,14 @@
 """Flat-context LLM control (no graph) for RollbackWitness.
 
-Equal-information control for the graph-grounded product: the SAME provider and model the product
-uses (``RW_GROUNDING_MODEL`` via ``rw.grounding``), the same temperature 0 and the same maximum of 8
-model turns, but NO graph and NO Cypher. Everything the FalkorDB importer receives is handed to the
-model once, as plain text in a single prompt:
+Equal-information control for the graph-grounded product: the SAME ``RW_GROUNDING_MODEL`` chain the
+product uses, through the product's OWN transports (``rw.grounding.make_transport``: same providers,
+same HTTP retry/backoff/TLS code, same key handling — no transport code is duplicated here), the same
+temperature 0 and the same maximum of 8 model turns, but NO graph and NO Cypher. As in the product,
+when a chain entry exhausts its retries the WHOLE conversation restarts with the next entry. The
+conversation is rendered and parsed by the product's provider adapters
+(``grounding.GeminiProvider`` / ``grounding.GroqProvider``), which the two thin subclasses below
+re-point at this control's neutral prompt and tool set. Everything the FalkorDB importer receives is
+handed to the model once, as plain text in a single prompt:
 
 * every ``fixtures/shop/releases/<service>-<version>/release.json``, ``CHANGELOG.md`` and
   ``codec.py``, with its file path;
@@ -48,7 +53,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from rw import grounding  # noqa: E402  read-only reuse of the product's transport + model env handling
+from rw import grounding  # noqa: E402  the product's provider adapters, transports and model chain
 
 FIXTURE_ROOT = REPO_ROOT / "fixtures" / "shop"
 HARNESS_PATH = FIXTURE_ROOT / "harness" / "run_reader.py"
@@ -58,7 +63,7 @@ REQUEST = "Undo the basket rollout, but keep the receipt correction."
 DEFAULT_SNAPSHOT = "snap-001"
 
 MAX_TURNS = 8                 # same model-turn budget as the product's grounding loop
-TEMPERATURE = 0               # same as the product
+TEMPERATURE = 0               # the product's provider bodies send temperature 0; recorded in the transcript
 MAX_INPUT = 65536             # same bounds as probes.run_probe
 MAX_STDOUT = 8192
 PROBE_TIMEOUT_S = 5
@@ -306,32 +311,85 @@ _DISPATCH: dict[str, Callable[[FlatControlTools, dict], Any]] = {
 }
 
 
+_S = {"type": "string"}
+_ENTRY = {"type": "object", "properties": {
+    "service": _S, "version": _S,
+    "flags": {"type": "array", "description": "declared flags only; omit for release defaults",
+              "items": {"type": "object", "properties": {"name": _S, "enabled": {"type": "boolean"}},
+                        "required": ["name", "enabled"]}}},
+    "required": ["service", "version"]}
+
+# One neutral declaration per tool, rendered for Gemini or OpenAI-compatible providers below. The
+# product's ``grounding.TOOL_SPECS`` is a different tool set (four read tools + two terminal tools),
+# so the control owns its two specs; nothing here is model-supplied.
+CONTROL_TOOL_SPECS: list[dict] = [
+    {"name": PROBE_TOOL,
+     "description": "Run the trusted byte/shape reader probe for one release against one retained "
+                    "record. status is PASS, FAIL (reader raised; see error_type/message) or UNKNOWN "
+                    "(harness could not load/call the reader).",
+     "parameters": {"type": "object", "properties": {"service": _S, "version": _S, "record_id": _S},
+                    "required": ["service", "version", "record_id"]}},
+    {"name": TERMINAL_TOOL,
+     "description": "TERMINAL. Give the proposed fleet, your disposition for it, and the evidence you gathered.",
+     "parameters": {"type": "object", "properties": {
+         "fleet": {"type": "array", "description": "one entry per service in the snapshot", "items": _ENTRY},
+         "disposition": {"type": "string", "enum": list(DISPOSITIONS)},
+         "evidence": {"type": "array", "items": _S},
+         "alternative": {"type": "array", "description": "optional single alternative fleet", "items": _ENTRY}},
+         "required": ["fleet", "disposition", "evidence"]}},
+]
+
+
 def _declarations() -> list[dict]:
-    s = {"type": "STRING"}
-    entry = {"type": "OBJECT", "properties": {
-        "service": s, "version": s,
-        "flags": {"type": "ARRAY", "description": "declared flags only; omit for release defaults",
-                  "items": {"type": "OBJECT", "properties": {"name": s, "enabled": {"type": "BOOLEAN"}},
-                            "required": ["name", "enabled"]}}},
-        "required": ["service", "version"]}
-    return [{"functionDeclarations": [
-        {"name": PROBE_TOOL,
-         "description": "Run the trusted byte/shape reader probe for one release against one retained "
-                        "record. status is PASS, FAIL (reader raised; see error_type/message) or UNKNOWN "
-                        "(harness could not load/call the reader).",
-         "parameters": {"type": "OBJECT", "properties": {"service": s, "version": s, "record_id": s},
-                        "required": ["service", "version", "record_id"]}},
-        {"name": TERMINAL_TOOL,
-         "description": "TERMINAL. Give the proposed fleet, your disposition for it, and the evidence you gathered.",
-         "parameters": {"type": "OBJECT", "properties": {
-             "fleet": {"type": "ARRAY", "description": "one entry per service in the snapshot",
-                       "items": entry},
-             "disposition": {"type": "STRING", "enum": list(DISPOSITIONS)},
-             "evidence": {"type": "ARRAY", "items": s},
-             "alternative": {"type": "ARRAY", "description": "optional single alternative fleet",
-                             "items": entry}},
-             "required": ["fleet", "disposition", "evidence"]}},
-    ]}]
+    """Gemini ``tools`` payload for the control's two tools, from the one neutral spec list."""
+    decls = []
+    for spec in CONTROL_TOOL_SPECS:
+        decl = {"name": spec["name"], "description": spec["description"]}
+        params = spec.get("parameters") or {}
+        if params.get("properties"):
+            decl["parameters"] = grounding._gemini_schema(params)  # the product's neutral->Gemini converter
+        decls.append(decl)
+    return [{"functionDeclarations": decls}]
+
+
+def _openai_tools() -> list[dict]:
+    """OpenAI-compatible ``tools`` array (plain JSON Schema) for the same two tools."""
+    return [{"type": "function",
+             "function": {"name": spec["name"], "description": spec["description"],
+                          "parameters": spec.get("parameters") or {"type": "object", "properties": {}}}}
+            for spec in CONTROL_TOOL_SPECS]
+
+
+class _ControlGemini(grounding.GeminiProvider):
+    """The product's Gemini rendering (history, raw parts, functionResponse) with this control's prompt/tools."""
+
+    def body(self, messages: list[dict]) -> dict:
+        body = super().body(messages)
+        body["system_instruction"] = {"parts": [{"text": SYSTEM_PROMPT}]}
+        body["tools"] = _declarations()
+        return body
+
+
+class _ControlGroq(grounding.GroqProvider):
+    """The product's OpenAI-compatible rendering (verbatim assistant turns, tool_call_id replies)."""
+
+    def body(self, messages: list[dict]) -> dict:
+        body = super().body(messages)
+        body["messages"][0] = {"role": "system", "content": SYSTEM_PROMPT}
+        body["tools"] = _openai_tools()
+        return body
+
+
+CONTROL_PROVIDERS: dict[str, grounding.Provider] = {p.name: p for p in (_ControlGemini(), _ControlGroq())}
+
+
+def _adapter_for(transport: Callable[[dict], dict]) -> grounding.Provider:
+    """The control adapter for a transport's provider, validated by the product's own selector.
+
+    A transport that declares no provider (the shape the offline test doubles speak) is Gemini, as in
+    the product; the control's prompt and tool set are what differ.
+    """
+    return CONTROL_PROVIDERS[grounding._adapter_for(transport).name]
 
 
 # --------------------------------------------------------------------------- flat context
@@ -399,33 +457,33 @@ def _finalize(args: dict, tools: FlatControlTools) -> tuple[dict[str, Any], list
     return answer, answer["validation_errors"]
 
 
-def _run_loop(request_text: str, tools: FlatControlTools, transport: Callable[[dict], dict],
-              fixture_root: Path | str, snapshot: str) -> tuple[dict[str, Any] | None, list[str],
-                                                                list[dict], list[dict], int]:
-    """Returns (answer|None, validation_errors, tool_call_audit, events, model_turns)."""
-    contents: list[dict] = [{"role": "user", "parts": [{"text": _user_message(request_text, fixture_root, snapshot)}]}]
+def _run_loop(request_text: str, tools: FlatControlTools, adapter: grounding.Provider,
+              transport: Callable[[dict], dict], fixture_root: Path | str, snapshot: str
+              ) -> tuple[dict[str, Any] | None, list[str], list[dict], list[dict], int]:
+    """Returns (answer|None, validation_errors, tool_call_audit, events, model_turns).
+
+    Provider-neutral, exactly like the product's loop: the adapter renders each request body and
+    parses each raw response; the allowlist, terminal validation, audit trail, unknown-tool answer and
+    turn cap below are shared and written once.
+    """
+    messages: list[dict] = [{"role": "user", "text": _user_message(request_text, fixture_root, snapshot)}]
     audit: list[dict] = []
     events: list[dict] = []
     turns = 0
 
     for turn in range(MAX_TURNS):
-        body = {"system_instruction": {"parts": [{"text": SYSTEM_PROMPT}]}, "contents": contents,
-                "tools": _declarations(),
-                "toolConfig": {"functionCallingConfig": {"mode": "ANY"}},
-                "generationConfig": {"temperature": TEMPERATURE}}
-        resp = transport(body)
+        resp = transport(adapter.body(messages))
         turns += 1
         events.append({"type": "model", "turn": turn, "response": _jsonable(resp)})
-        cand = ((resp or {}).get("candidates") or [{}])[0]
-        parts = (cand.get("content") or {}).get("parts") or []
-        calls = [p["functionCall"] for p in parts if "functionCall" in p]
+        text, calls, native = adapter.parse(resp)
         if not calls:
-            contents.append({"role": "user", "parts": [{"text": "Respond only by calling a tool."}]})
+            messages.append({"role": "user", "text": "Respond only by calling a tool."})
             continue
-        contents.append({"role": "model", "parts": parts})
-        replies: list[dict] = []
+        # The assistant turn is kept verbatim: OpenAI-compatible providers require it (with its
+        # tool_calls) immediately before the matching tool replies; Gemini keeps its raw parts.
+        messages.append({"role": "assistant", "native": native, "text": text})
         for call in calls:
-            name, args = call.get("name"), dict(call.get("args") or {})
+            name, args = call.name, dict(call.args or {})
             if name == TERMINAL_TOOL:
                 try:
                     answer, errors = _finalize(args, tools)
@@ -455,8 +513,7 @@ def _run_loop(request_text: str, tools: FlatControlTools, transport: Callable[[d
                 audit.append({"name": str(name)[:60], "args": _jsonable(args), "error": "unknown tool"})
                 events.append({"type": "tool", "name": str(name)[:60], "args": _jsonable(args),
                                "error": "unknown tool"})
-            replies.append({"functionResponse": {"name": name, "response": payload}})
-        contents.append({"role": "user", "parts": replies})
+            messages.append(adapter.tool_message(call, payload))
     return None, [f"CONTROL_ABORTED: no final_answer within {MAX_TURNS} model turns"], audit, events, turns
 
 
@@ -482,46 +539,71 @@ def save_transcript(transcript: dict, directory: Path | str = CONTROL_DIR) -> Pa
 def run_control(request_text: str = REQUEST, *, transport: Callable[[dict], dict] | None = None,
                 tools: FlatControlTools | None = None, fixture_root: Path | str = FIXTURE_ROOT,
                 snapshot: str = DEFAULT_SNAPSHOT, artifact_dir: Path | str | None = None,
-                save: bool = True) -> tuple[dict, Path | None]:
+                models: list[str] | None = None, save: bool = True) -> tuple[dict, Path | None]:
     """Run the flat-context control once. Returns (transcript, transcript_path|None).
 
+    With an explicit ``transport`` the loop runs once. Otherwise each ``provider:model`` entry of the
+    product's chain (``RW_GROUNDING_MODEL``, or ``models``) is tried in order through the product's
+    own transports (``grounding.make_transport``): when an entry exhausts its retries the WHOLE
+    conversation is restarted from turn 0 with the next entry, never mixing providers. Abandoned
+    attempts (model + error) are recorded in the transcript; if every entry fails, ``GroundingError``
+    is raised. A provider failure raises ``GroundingError``.
+
     The model label is recorded verbatim from the transport that actually answered
-    (``transport.model_used``), never relabeled. A provider failure raises ``GroundingError``.
+    (``transport.model_used``), never relabeled.
     """
     fixture_root = Path(fixture_root)
     tools = tools or FlatControlTools(fixture_root, snapshot)
-    transport = transport or grounding.make_gemini_transport()
-    started = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    answer, errors, audit, events, turns = _run_loop(request_text, tools, transport, fixture_root, snapshot)
-    model_used = getattr(transport, "model_used", None) or grounding.configured_models()[0]
-    files = context_files(fixture_root, snapshot)
-    transcript = {
-        "control": "flat_context_no_graph",
-        "control_version": 2,
-        "request_text": request_text,
-        "snapshot": snapshot.removeprefix("snapshot:"),
-        "model": model_used,
-        "live": True,
-        "temperature": TEMPERATURE,
-        "max_turns": MAX_TURNS,
-        "system_prompt": SYSTEM_PROMPT,
-        "context_files": [{"path": p.relative_to(REPO_ROOT).as_posix(), "sha256": _sha256_bytes(p.read_bytes())}
-                          for p in files],
-        "events": events,
-        "tool_calls": audit,
-        "model_turns": turns,
-        "tool_call_count": len(audit),
-        "probe_calls": [_jsonable({"service": c["args"].get("service"), "version": c["args"].get("version"),
-                                   "record_id": c["args"].get("record_id"), "result": c.get("result"),
-                                   "error": c.get("error")})
-                        for c in audit if c["name"] == PROBE_TOOL],
-        "result": answer,
-        "validation_errors": errors,
-        "aborted": answer is None,
-        "started_at": started,
-    }
-    path = save_transcript(transcript, artifact_dir or CONTROL_DIR) if save else None
-    return transcript, path
+    abandoned: list[dict] = []
+    if transport is not None:
+        attempts: list[tuple[str, Callable[[dict], dict] | None]] = [
+            (getattr(transport, "model_used", None) or grounding.configured_models()[0], transport)]
+    else:
+        attempts = [(m, None) for m in (models or grounding.configured_models())]
+
+    for model, tr in attempts:
+        try:
+            tr = tr or grounding.make_transport(model)
+            adapter = _adapter_for(tr)
+            started = datetime.now(timezone.utc).isoformat(timespec="seconds")
+            answer, errors, audit, events, turns = _run_loop(request_text, tools, adapter, tr,
+                                                             fixture_root, snapshot)
+        except grounding.GroundingError as exc:
+            abandoned.append({"model": model, "error": str(exc)})
+            continue
+        model_used = getattr(tr, "model_used", None) or model
+        files = context_files(fixture_root, snapshot)
+        transcript = {
+            "control": "flat_context_no_graph",
+            "control_version": 2,
+            "request_text": request_text,
+            "snapshot": snapshot.removeprefix("snapshot:"),
+            "model": model_used,
+            "provider": adapter.name,
+            "live": True,
+            "temperature": TEMPERATURE,
+            "max_turns": MAX_TURNS,
+            "system_prompt": SYSTEM_PROMPT,
+            "context_files": [{"path": p.relative_to(REPO_ROOT).as_posix(), "sha256": _sha256_bytes(p.read_bytes())}
+                              for p in files],
+            "events": events,
+            "tool_calls": audit,
+            "model_turns": turns,
+            "tool_call_count": len(audit),
+            "probe_calls": [_jsonable({"service": c["args"].get("service"), "version": c["args"].get("version"),
+                                       "record_id": c["args"].get("record_id"), "result": c.get("result"),
+                                       "error": c.get("error")})
+                            for c in audit if c["name"] == PROBE_TOOL],
+            "result": answer,
+            "validation_errors": errors,
+            "abandoned": abandoned,
+            "aborted": answer is None,
+            "started_at": started,
+        }
+        path = save_transcript(transcript, artifact_dir or CONTROL_DIR) if save else None
+        return transcript, path
+    raise grounding.GroundingError("all models failed: "
+                                   + " | ".join(f"{a['model']}: {a['error']}" for a in abandoned))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -536,7 +618,7 @@ def main(argv: list[str] | None = None) -> int:
     models = grounding.configured_models()
     print(f"control: flat context, no graph | models={models} | temperature={TEMPERATURE} | max_turns={MAX_TURNS}")
     try:
-        transcript, path = run_control(args.request, snapshot=args.snapshot, artifact_dir=args.out)
+        transcript, path = run_control(args.request, snapshot=args.snapshot, artifact_dir=args.out, models=models)
     except grounding.GroundingError as exc:
         print(f"LIVE CONTROL FAILED: {exc}")
         return 2

@@ -68,6 +68,9 @@ Rules:
 - Flags may only be ones the release declares (declared_flags). Omit flags to use release defaults.
 - Cite exact quotes: every citation is an excerpt_id you retrieved plus a verbatim substring of its
   text. Cite the evidence for each release you choose to keep or change.
+- Back every release you keep or change with a `changelog` excerpt that describes the behavior you
+  rely on. A `code` excerpt may supplement that evidence, but a version string on its own (for
+  example a health() return value) never shows what a build does or does not do.
 - Call ask_clarification instead of guessing when the referent of the request is ambiguous, when the
   behavior to keep and the behavior to undo exist only in the same artifact and no declared flag
   separates them, or when the available evidence cannot bind a request phrase to one artifact.
@@ -348,6 +351,18 @@ def _retry_after_s(r: httpx.Response) -> float | None:
         return None
 
 
+def _quota_refused(r: httpx.Response) -> bool:
+    """True when a 429 is a hard quota refusal that waiting cannot clear.
+
+    Groq answers 429 both for rate limits (worth retrying after Retry-After) and for refusals:
+    "tokens per day (TPD)" exhaustion for a model/day, and "Request too large" when the prompt is
+    above the model's per-minute/context budget. Retrying either just burns the remaining window, so
+    the chain entry fails at once and the next entry is tried.
+    """
+    text = (r.text or "").lower()
+    return "tokens per day" in text or "request too large" in text
+
+
 def _tls_context() -> ssl.SSLContext:
     # TLS 1.3 handshakes from this environment die with SSLV3_ALERT_BAD_RECORD_MAC; TLS 1.2 works.
     tls = ssl.create_default_context()
@@ -370,9 +385,11 @@ def _retrying_post(url: str, body: dict, headers: dict, key: str,
             last = f"HTTP {r.status_code}: {r.text[:200].replace(key, '***')}"
             if r.status_code not in (408, 429, 500, 502, 503, 504):
                 raise GroundingError(f"{label} request failed (not retryable): {last}")
+            if r.status_code == 429 and _quota_refused(r):  # TPD / request too large: waiting cannot help
+                raise GroundingError(f"{label} request failed (not retryable): {last}")
             wait = _retry_after_s(r)
         except httpx.TransportError as e:  # TLS resets, timeouts, connection errors
-            last = f"{type(e).__name__}: {str(e)[:200]}"
+            last = f"{type(e).__name__}: {str(e)[:200].replace(key, '***')}"
         if attempt < attempts - 1:
             sleep(wait if wait is not None else min(RETRY_MAX_S, RETRY_MIN_S * 2 ** attempt))
     raise GroundingError(f"{label} request failed after {attempts} attempts; last error: {last}")

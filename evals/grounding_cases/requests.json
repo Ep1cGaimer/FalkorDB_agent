@@ -1,5 +1,7 @@
 [
   {"id": "main", "text": "Undo the basket rollout, but keep the receipt correction."},
   {"id": "ambiguous", "text": "Roll back the cart change from last week."},
-  {"id": "inseparable", "text": "Turn off the order summary basket headings, but keep the basket grouping of saved carts."}
+  {"id": "inseparable", "text": "Turn off the order summary basket headings, but keep the basket grouping of saved carts."},
+  {"id": "named-old-build", "text": "Roll cart back to the build it ran before the basket rollout, but keep the receipt correction."},
+  {"id": "keep-everything", "text": "Undo the receipt correction but keep the basket rollout."}
 ]

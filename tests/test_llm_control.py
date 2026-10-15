@@ -1,8 +1,9 @@
 """Unit tests for the flat-context LLM control and the control/product scorer.
 
 Offline: a fake transport and the real fixture-local harness (no network, no graph, no database).
-One ``@pytest.mark.live`` test runs the control once against the live provider and is skipped
-without ``GEMINI_API_KEY``.
+Fake transports speak both the Gemini and the OpenAI-compatible (Groq) shapes the product's adapters
+handle. One ``@pytest.mark.live`` test runs the control once against the live provider on the product's
+``RW_GROUNDING_MODEL`` chain and is skipped without ``GROQ_API_KEY``.
 """
 from __future__ import annotations
 
@@ -59,6 +60,37 @@ def final(fleet, disposition, evidence=None):
     return call("final_answer", fleet=fleet, disposition=disposition, evidence=evidence or ["observed"])
 
 
+# ------------------------------------------------------- OpenAI-compatible (Groq) fakes
+
+GROQ_MODEL = "groq:openai/gpt-oss-120b"
+
+
+def groq_call(name, call_id="call_1", **args):
+    """One Groq/OpenAI-compatible Chat Completions response carrying a single tool call."""
+    return {"id": "chatcmpl-1", "object": "chat.completion", "model": "openai/gpt-oss-120b", "choices": [
+        {"index": 0, "finish_reason": "tool_calls", "message": {
+            "role": "assistant", "content": None,
+            "tool_calls": [{"id": call_id, "type": "function",
+                            "function": {"name": name, "arguments": json.dumps(args)}}]}}]}
+
+
+class FakeGroqTransport:
+    """Speaks the OpenAI-compatible shape the product's Groq provider renders and parses."""
+
+    provider = "groq"
+
+    def __init__(self, responses, model=GROQ_MODEL):
+        self.responses = list(responses)
+        self.bodies: list[dict] = []
+        self.model_used = model
+
+    def __call__(self, body):
+        self.bodies.append(json.loads(json.dumps(body)))
+        if not self.responses:
+            raise AssertionError("fake Groq script exhausted")
+        return self.responses.pop(0)
+
+
 @pytest.fixture(scope="module")
 def tools():
     return control.FlatControlTools()
@@ -111,6 +143,12 @@ def test_dispatch_allowlist_is_exactly_the_declared_tools():
     assert set(control._DISPATCH) == {"run_reader_probe"}
     declared = [f["name"] for group in control._declarations() for f in group["functionDeclarations"]]
     assert declared == list(control.TOOLS)
+    # the OpenAI-compatible rendering comes from the same neutral spec list
+    assert [t["function"]["name"] for t in control._openai_tools()] == list(control.TOOLS)
+    assert control._openai_tools()[0]["type"] == "function"
+    gemini_params = control._declarations()[0]["functionDeclarations"][1]["parameters"]
+    assert gemini_params["properties"]["disposition"]["enum"] == list(control.DISPOSITIONS)
+    assert gemini_params["properties"]["fleet"]["items"]["properties"]["service"]["type"] == "STRING"
 
 
 def test_probe_tool_rejects_everything_not_in_the_fixture(tools):
@@ -271,6 +309,99 @@ def test_normalize_fleet_accepts_map_and_entry_list(tools):
             "checkout": {"version": "2.1", "flags": {}}}
     assert tools.normalize_fleet(as_map)[0] == want
     assert tools.normalize_fleet(as_list)[0] == want
+
+
+# ------------------------------------------------------- product chain + OpenAI-compatible provider
+
+def test_groq_control_round_trip_to_a_scored_answer(tmp_path):
+    """The control runs on the product's Groq provider: OpenAI-format tool call, terminal answer."""
+    transport = FakeGroqTransport([
+        groq_call("run_reader_probe", call_id="c1", service="cart", version="1.4",
+                  record_id="saved-cart-2002"),
+        groq_call("final_answer", call_id="c2", fleet=[{"service": "cart", "version": "1.4"}],
+                  disposition="BLOCKED", evidence=["probe on saved-cart-2002 FAIL (ValueError)"]),
+    ])
+    transcript, path = control.run_control(transport=transport, artifact_dir=tmp_path)
+    assert transcript["provider"] == "groq" and transcript["model"] == GROQ_MODEL
+    assert transcript["aborted"] is False and transcript["model_turns"] == 2
+    assert transcript["result"]["disposition"] == "BLOCKED"
+    assert transcript["result"]["fleet"] == {"cart": {"version": "1.4", "flags": {}},
+                                             "checkout": {"version": "2.1", "flags": {}}}
+    first = transport.bodies[0]
+    assert first["messages"][0] == {"role": "system", "content": control.SYSTEM_PROMPT}
+    assert first["tool_choice"] == "auto" and first["temperature"] == 0
+    assert [t["function"]["name"] for t in first["tools"]] == list(control.TOOLS)
+    # the probe reply binds to the model's own tool_call_id and carries the observed FAIL
+    replies = [m for m in transport.bodies[1]["messages"] if m.get("role") == "tool"]
+    assert replies[-1]["tool_call_id"] == "c1"
+    assert json.loads(replies[-1]["content"])["status"] == "FAIL"
+    assert transcript["probe_calls"][0]["result"]["error_type"] == "ValueError"
+    assert [c["name"] for c in transcript["tool_calls"]] == ["run_reader_probe"]
+    saved = json.loads(path.read_text(encoding="utf-8"))
+    assert saved["provider"] == "groq" and saved["model"] == GROQ_MODEL
+    assert saved["system_prompt"] == control.SYSTEM_PROMPT  # the control's prompt, not the product's
+
+
+def test_groq_control_unknown_tool_and_text_nudge(tmp_path):
+    text_only = {"choices": [{"index": 0, "finish_reason": "stop",
+                              "message": {"role": "assistant", "content": "cart 1.4 looks fine"}}]}
+    transport = FakeGroqTransport([
+        text_only,
+        groq_call("delete_everything", call_id="c1", graph="other"),
+        groq_call("final_answer", call_id="c2", fleet=[{"service": "cart", "version": "1.4"}],
+                  disposition="BLOCKED", evidence=["no probe ran"]),
+    ])
+    transcript, _ = control.run_control(transport=transport, artifact_dir=tmp_path)
+    assert transport.bodies[1]["messages"][-1] == {"role": "user", "content": "Respond only by calling a tool."}
+    assert json.loads(transport.bodies[2]["messages"][-1]["content"])["error"].startswith("unknown tool")
+    assert [c["name"] for c in transcript["tool_calls"]] == ["delete_everything"]
+    assert transcript["result"]["disposition"] == "BLOCKED"
+
+
+def test_control_chain_restarts_with_the_next_model(tmp_path, monkeypatch):
+    from rw import grounding
+
+    made, bodies = [], {}
+
+    def make_transport(spec):
+        made.append(spec)
+        n = []
+
+        def tr(body):
+            bodies.setdefault(spec, []).append(body)
+            n.append(1)
+            if spec == "groq:m1" and len(n) == 2:  # fails mid-conversation, after one successful turn
+                raise grounding.GroundingError("groq:m1 request failed after 6 attempts; last error: HTTP 503")
+            if spec == "groq:m1" or len(n) == 1:
+                return groq_call("run_reader_probe", call_id=f"{spec}-{len(n)}", service="cart",
+                                 version="1.4", record_id="saved-cart-1001")
+            return groq_call("final_answer", call_id="m2-2", fleet=[{"service": "cart", "version": "1.4"}],
+                             disposition="BLOCKED", evidence=["probe PASS"])
+        tr.model_used, tr.provider = spec, "groq"
+        return tr
+
+    monkeypatch.setattr(grounding, "make_transport", make_transport)
+    transcript, _ = control.run_control(artifact_dir=tmp_path, models=["groq:m1", "groq:m2"])
+    assert made == ["groq:m1", "groq:m2"] and transcript["model"] == "groq:m2"
+    # m2 started from turn 0: system + user only, none of m1's history
+    assert [m["role"] for m in bodies["groq:m2"][0]["messages"]] == ["system", "user"]
+    assert transcript["abandoned"][0]["model"] == "groq:m1"
+    assert "503" in transcript["abandoned"][0]["error"]
+    assert transcript["result"]["disposition"] == "BLOCKED"
+
+
+def test_control_reports_all_models_failing(tmp_path, monkeypatch):
+    from rw import grounding
+
+    def make_transport(spec):
+        def tr(body):
+            raise grounding.GroundingError(f"{spec} down")
+        tr.model_used, tr.provider = spec, "groq"
+        return tr
+
+    monkeypatch.setattr(grounding, "make_transport", make_transport)
+    with pytest.raises(grounding.GroundingError, match="groq:m1 down.*groq:m2 down"):
+        control.run_control(artifact_dir=tmp_path, models=["groq:m1", "groq:m2"])
 
 
 # --------------------------------------------------------------------------- scoring math
@@ -529,9 +660,13 @@ def test_collect_reads_saved_files(tmp_path, fixtures):
 
 @pytest.mark.live
 def test_live_control_runs_once(tmp_path):
-    if not os.environ.get("GEMINI_API_KEY"):
-        pytest.skip("GEMINI_API_KEY missing")
-    from rw import grounding
+    from rw import config, grounding
+
+    config.load_env()  # GROQ_API_KEY from the git-ignored .env; never printed
+    chain = grounding.configured_models()
+    if not os.environ.get("GROQ_API_KEY"):
+        pytest.skip("no GROQ_API_KEY for the configured chain: " + ",".join(chain))
+    print("LIVE CHAIN:", ",".join(chain))
 
     last = None
     for attempt in range(2):
@@ -541,12 +676,14 @@ def test_live_control_runs_once(tmp_path):
             last = exc
             print(f"live control attempt {attempt + 1} failed: {exc}")
             continue
-        print("LIVE CONTROL:", json.dumps({"model": transcript["model"], "turns": transcript["model_turns"],
+        print("LIVE CONTROL:", json.dumps({"model": transcript["model"], "provider": transcript["provider"],
+                                           "turns": transcript["model_turns"],
                                            "tool_calls": transcript["tool_call_count"],
+                                           "probes": [p["result"] for p in transcript["probe_calls"]],
                                            "result": transcript["result"]}, indent=2, default=str))
         print("transcript:", path)
         assert transcript["live"] is True
-        assert transcript["model"] in grounding.configured_models()
+        assert transcript["model"] in chain
         assert transcript["aborted"] is False, transcript["validation_errors"]
         assert transcript["result"]["disposition"] in control.DISPOSITIONS
         assert set(transcript["result"]["fleet"]) == {"cart", "checkout"}
