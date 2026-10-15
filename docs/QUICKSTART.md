@@ -55,19 +55,21 @@ docker compose -f docker-compose.yml config
 ## 3. Set up the environment
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\setup.ps1     # Windows
+powershell -ExecutionPolicy Bypass -File scripts\setup.ps1     # Windows PowerShell
 ```
 
 ```sh
-sh scripts/setup.sh                                            # Linux / macOS
+sh scripts/setup.sh                                            # Linux / macOS / Git Bash on Windows
 ```
 
 Both create `.venv` with uv (Python 3.12), install the dependencies declared in `pyproject.toml`, and
 install the pinned test runner `pytest==9.1.1` (the `pyproject.toml` dependencies are runtime only —
 the test runner is pinned in the setup script so this quickstart needs no extra manual install). The
-uv cache lives inside the checkout (`.uv-cache/`, git-ignored). `falkordb==1.8.0`, `redis==8.1.0` and
-`pydantic==2.14.1` are pinned in `pyproject.toml`; `fastapi`, `uvicorn` and `httpx` are not pinned
-there and resolve to current releases.
+uv cache lives inside the checkout (`.uv-cache/`, git-ignored). `setup.sh` also picks the interpreter
+uv created for the host OS — `.venv/Scripts/python.exe` on Windows (including Git Bash / MSYS),
+`.venv/bin/python` elsewhere — so the same script works from Git Bash. `falkordb==1.8.0`,
+`redis==8.1.0` and `pydantic==2.14.1` are pinned in `pyproject.toml`; `fastapi`, `uvicorn` and `httpx`
+are not pinned there and resolve to current releases.
 
 ## 4. Run the tests
 
