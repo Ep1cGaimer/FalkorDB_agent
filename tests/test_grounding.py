@@ -3,13 +3,14 @@ from __future__ import annotations
 
 import json
 import os
+import ssl
 import uuid
 from pathlib import Path
 
 import httpx
 import pytest
 
-from rw import grounding
+from rw import config, grounding
 from rw.contracts import GroundingClarification, GroundingProposal
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -70,6 +71,53 @@ PROPOSE = call("propose_fleet", changes=[{"service": "cart", "release_id": "rele
                                           "flags": [{"name": "basket_v2", "enabled": False}]}],
                citations=[{"excerpt_id": EX_ID, "quote": "Receipt correction", "content_hash": "sha256:evil"}],
                rationale="because")
+
+
+# ------------------------------------------------------------------- OpenAI-compatible (Groq) fakes
+
+GROQ_MODEL = "groq:openai/gpt-oss-120b"
+
+
+def groq_call(name, call_id="call_1", arguments=None, **args):
+    """One Groq/OpenAI-compatible Chat Completions response carrying a single tool call."""
+    encoded = arguments if arguments is not None else json.dumps(args)
+    return {"id": "chatcmpl-1", "object": "chat.completion", "model": "openai/gpt-oss-120b", "choices": [
+        {"index": 0, "finish_reason": "tool_calls", "message": {
+            "role": "assistant", "content": None,
+            "tool_calls": [{"id": call_id, "type": "function",
+                            "function": {"name": name, "arguments": encoded}}]}}]}
+
+
+def groq_text(text):
+    return {"choices": [{"index": 0, "finish_reason": "stop",
+                         "message": {"role": "assistant", "content": text}}]}
+
+
+class FakeGroqTransport:
+    """Speaks the OpenAI-compatible shape the Groq transport sees, and records each request body."""
+    provider = "groq"
+
+    def __init__(self, responses, model=GROQ_MODEL):
+        self.responses = list(responses)
+        self.bodies: list[dict] = []
+        self.model_used = model
+
+    def __call__(self, body):
+        self.bodies.append(json.loads(json.dumps(body)))
+        if not self.responses:
+            raise AssertionError("fake Groq script exhausted")
+        return self.responses.pop(0)
+
+
+def groq_run(responses, tmp_path, tools=None, **kw):
+    tools = tools or FakeTools()
+    t = FakeGroqTransport(responses)
+    gr, path = grounding.ground("Undo the basket rollout", tools, transport=t, artifact_dir=tmp_path, **kw)
+    return gr, path, tools, t
+
+
+def tool_replies(transport, request_index=-1):
+    return [m for m in transport.bodies[request_index]["messages"] if m.get("role") == "tool"]
 
 
 def test_propose_path(tmp_path, monkeypatch):
@@ -174,6 +222,7 @@ def test_text_only_turn_is_nudged(tmp_path):
 
 def test_replay_is_labeled_and_offline(tmp_path):
     gr, path, *_ = run([call("release_history", service="cart"), PROPOSE], tmp_path)
+    assert json.loads(path.read_text())["provider"] == "gemini"  # old transcripts default to gemini
     rp = grounding.replay(path)
     assert rp.live is False and rp.model == f"replay:{path.name}"
     assert rp.result == gr.result and rp.tool_calls == gr.tool_calls
@@ -206,6 +255,229 @@ def test_transport_retries_tls_reset_then_succeeds(monkeypatch):
 
     monkeypatch.setattr(grounding.httpx, "post", fake_post)
     assert grounding.make_gemini_transport(api_key="k", sleep=lambda s: None)({}) == {"ok": True}
+
+
+# --------------------------------------------------------------------------- model chain & .env
+
+def test_configured_models_default_chain_and_bare_entry_prefix(monkeypatch):
+    monkeypatch.delenv("RW_GROUNDING_MODEL", raising=False)
+    assert grounding.configured_models() == ["groq:openai/gpt-oss-120b", "groq:qwen/qwen3.8-27b"]
+    monkeypatch.setenv("RW_GROUNDING_MODEL", "gemini-3.1-flash-lite, groq:qwen/qwen3.8-27b")
+    assert grounding.configured_models() == ["gemini:gemini-3.1-flash-lite", "groq:qwen/qwen3.8-27b"]
+    assert grounding.split_model("whatever") == ("gemini", "whatever")
+
+
+def test_make_transport_routes_by_provider(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "k")
+    monkeypatch.setenv("GEMINI_API_KEY", "k")
+    groq = grounding.make_transport("groq:openai/gpt-oss-120b")
+    assert groq.provider == "groq" and groq.model_used == "groq:openai/gpt-oss-120b"
+    gemini = grounding.make_transport("gemini-3.8-flash")
+    assert gemini.provider == "gemini" and gemini.model_used == "gemini:gemini-3.8-flash"
+    with pytest.raises(grounding.GroundingError, match="unknown grounding provider"):
+        grounding.make_transport("anthropic:claude")
+
+
+def test_load_env_sets_missing_keys_only(tmp_path):
+    env = tmp_path / ".env"
+    env.write_text('# secrets, git-ignored\n\nGROQ_API_KEY="FAKE-KEY-1"\nEXPORTED=unquoted\n'
+                   "export TRIMMED = ' kept '\nBAD LINE\nNO_EQUALS\n", encoding="utf-8")
+    keys = ("GROQ_API_KEY", "EXPORTED", "TRIMMED")
+    before = {k: os.environ.get(k) for k in keys}
+    try:
+        os.environ.pop("GROQ_API_KEY", None)
+        os.environ.pop("EXPORTED", None)
+        os.environ["TRIMMED"] = "already-set"
+        config.load_env(env)
+        assert os.environ["GROQ_API_KEY"] == "FAKE-KEY-1"   # quotes stripped
+        assert os.environ["EXPORTED"] == "unquoted"
+        assert os.environ["TRIMMED"] == "already-set"       # an existing variable always wins
+        config.load_env(tmp_path / "absent.env")            # missing file is a no-op, never fatal
+    finally:
+        for k, v in before.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+    assert config.DEFAULT_ENV_PATH == ROOT / ".env"  # the default target is the repo's git-ignored .env
+
+
+# --------------------------------------------------------------------------- Groq transport
+
+def test_groq_tool_call_round_trip_to_proposal(tmp_path):
+    script = [groq_call("release_history", call_id="call_a", service="cart"),
+              groq_call("propose_fleet", call_id="call_b",
+                        changes=[{"service": "cart", "release_id": "release:cart:old",
+                                  "flags": [{"name": "basket_v2", "enabled": False}]}],
+                        citations=[{"excerpt_id": EX_ID, "quote": "Receipt correction"}], rationale="r")]
+    gr, path, _tools, t = groq_run(script, tmp_path)
+    assert isinstance(gr.result, GroundingProposal) and gr.live
+    assert gr.model == GROQ_MODEL
+    assert [c["name"] for c in gr.tool_calls] == ["release_history"] and gr.tool_calls[0]["rows"] == 1
+    assert gr.result.citations[0].content_hash == GOOD_HASH  # trusted hash, not the model's
+    first = t.bodies[0]
+    assert first["tool_choice"] == "auto" and first["temperature"] == 0
+    assert [m["role"] for m in first["messages"]] == ["system", "user"]
+    assert all(tool["type"] == "function" for tool in first["tools"])
+    assert [tool["function"]["name"] for tool in first["tools"]] == list(
+        grounding.READ_TOOLS + grounding.TERMINAL_TOOLS)
+    # the assistant turn is replayed verbatim and immediately precedes the matching tool reply
+    second = t.bodies[1]["messages"]
+    assistant = [m for m in second if m.get("role") == "assistant"][-1]
+    assert assistant == script[0]["choices"][0]["message"]
+    assert second[-2] == assistant and second[-1]["role"] == "tool"
+    assert second[-1]["tool_call_id"] == "call_a"
+    assert json.loads(second[-1]["content"])["rows"][0]["release_id"] == "release:cart:old"
+    assert "untrusted" in json.loads(second[-1]["content"])["note"]
+    saved = json.loads(path.read_text())
+    assert saved["provider"] == "groq" and saved["model"] == GROQ_MODEL
+    assert [e["type"] for e in saved["events"]] == ["model", "tool", "model", "terminal"]
+
+
+def test_groq_unknown_tool_and_extra_args_never_reach_tools(tmp_path):
+    script = [groq_call("drop_database", call_id="c1", snapshot_id="evil"),
+              groq_call("release_history", call_id="c2", service="cart", graph="other"),
+              groq_call("ask_clarification", call_id="c3", question="q", unresolved=[])]
+    gr, _path, tools, t = groq_run(script, tmp_path)
+    first_reply = json.loads(tool_replies(t, 1)[-1]["content"])
+    assert "unknown tool" in first_reply["error"]
+    assert tools.calls == ["release_history:cart"]  # unknown tool and extra args never dispatch
+    assert set(grounding._DISPATCH) == set(grounding.READ_TOOLS)
+    assert isinstance(gr.result, GroundingClarification)
+    assert any(c.get("error") == "unknown tool" for c in gr.tool_calls)
+
+
+def test_groq_bad_args_and_malformed_arguments_are_errors_not_crashes(tmp_path):
+    class Strict(FakeTools):
+        def release_history(self, service):
+            raise ValueError("service must be a short service name such as 'cart'")
+
+    refused = groq_call("release_history", call_id="c1", service="x; MATCH (n) DELETE n")
+    malformed = groq_call("release_history", call_id="c2", arguments="{not json")
+    script = [refused, malformed, groq_call("ask_clarification", call_id="c3", question="q", unresolved=[])]
+    gr, _path, _tools, t = groq_run(script, tmp_path, tools=Strict())
+    assert "short service name" in json.loads(tool_replies(t, 1)[-1]["content"])["error"]
+    # a malformed arguments string is no crash either: GroundingTools validates the (empty) args
+    t2 = FakeGroqTransport([groq_call("release_history", call_id="d1", arguments="{not json"),
+                            groq_call("ask_clarification", call_id="d2", question="q", unresolved=[])])
+    gr2, _ = grounding.ground("r", grounding.GroundingTools(object()), transport=t2, artifact_dir=tmp_path)
+    assert "error" in json.loads(tool_replies(t2, 1)[-1]["content"])
+    assert isinstance(gr2.result, GroundingClarification) and isinstance(gr.result, GroundingClarification)
+
+
+def test_groq_text_only_turn_is_nudged(tmp_path):
+    gr, _path, _tools, t = groq_run([groq_text("hello"),
+                                     groq_call("ask_clarification", call_id="c1", question="q", unresolved=[])],
+                                    tmp_path)
+    assert isinstance(gr.result, GroundingClarification) and len(t.bodies) == 2
+    assert t.bodies[1]["messages"][-1]["role"] == "user"
+    assert "Respond only by calling a tool." in t.bodies[1]["messages"][-1]["content"]
+
+
+def test_groq_chain_fallback_restarts_whole_conversation(tmp_path):
+    made, bodies = [], {}
+
+    def factory(spec):
+        made.append(spec)
+        n = []
+
+        def tr(body):
+            bodies.setdefault(spec, []).append(body)
+            n.append(1)
+            if spec == "groq:m1":
+                if len(n) == 2:  # fails mid-conversation, after one successful turn
+                    raise grounding.GroundingError("groq:m1 request failed after 6 attempts; last error: HTTP 503")
+                return groq_call("current_fleet", call_id=f"m1-{len(n)}")
+            return groq_call("current_fleet", call_id="m2-1") if len(n) == 1 else \
+                groq_call("ask_clarification", call_id="m2-2", question="q", unresolved=[])
+        tr.model_used, tr.provider = spec, "groq"
+        return tr
+
+    gr, path = grounding.ground("r", FakeTools(), artifact_dir=tmp_path, transport_factory=factory,
+                                models=["groq:m1", "groq:m2"])
+    assert made == ["groq:m1", "groq:m2"] and gr.model == "groq:m2"
+    # m2 started from turn 0: system + user only, none of m1's history
+    assert [m["role"] for m in bodies["groq:m2"][0]["messages"]] == ["system", "user"]
+    assert [c["name"] for c in gr.tool_calls] == ["current_fleet"]
+    saved = json.loads(path.read_text())
+    assert saved["model"] == "groq:m2" and saved["provider"] == "groq"
+    assert saved["abandoned_attempts"][0]["model"] == "groq:m1"
+    assert "503" in saved["abandoned_attempts"][0]["error"]
+
+
+def test_groq_transport_pins_tls_and_never_leaks_the_key(tmp_path, monkeypatch):
+    fake_key = "FAKE-GROQ-KEY-do-not-leak-0001"
+    monkeypatch.setenv("GROQ_API_KEY", fake_key)
+    seen: dict = {}
+
+    def fake_post(url, **kw):
+        seen["url"] = url
+        seen.update(kw)
+        return httpx.Response(200, json=groq_call("ask_clarification", call_id="c1", question="q",
+                                                  unresolved=["which release?"]))
+
+    monkeypatch.setattr(grounding.httpx, "post", fake_post)
+    transport = grounding.make_groq_transport()  # key read from the environment, never a parameter
+    gr, path = grounding.ground("Undo the basket rollout", FakeTools(), transport=transport,
+                               artifact_dir=tmp_path)
+    assert isinstance(gr.result, GroundingClarification) and gr.model == GROQ_MODEL
+    assert seen["url"] == grounding.GROQ_API_URL
+    assert seen["headers"]["authorization"] == f"Bearer {fake_key}"
+    assert seen["verify"].maximum_version == ssl.TLSVersion.TLSv1_2
+    assert seen["json"]["model"] == "openai/gpt-oss-120b"
+    assert seen["json"]["tool_choice"] == "auto" and seen["json"]["temperature"] == 0
+    assert seen["json"]["messages"][0] == {"role": "system", "content": grounding.SYSTEM_PROMPT}
+    saved = path.read_text(encoding="utf-8")
+    assert fake_key not in saved and "Bearer" not in saved
+    assert fake_key not in json.dumps(gr.model_dump(mode="json"), default=str)
+
+
+def test_groq_transport_retry_after_not_retryable_and_missing_key(monkeypatch):
+    sleeps, n = [], []
+
+    def fake_post(*a, **kw):
+        n.append(1)
+        return httpx.Response(429, headers={"retry-after": "7"}) if len(n) < 3 \
+            else httpx.Response(200, json={"ok": 1})
+
+    monkeypatch.setattr(grounding.httpx, "post", fake_post)
+    assert grounding.make_groq_transport(api_key="k", sleep=sleeps.append)({}) == {"ok": 1}
+    assert sleeps == [7.0, 7.0]
+    monkeypatch.setattr(grounding.httpx, "post", lambda *a, **kw: httpx.Response(401, text="bad key SECRET"))
+    with pytest.raises(grounding.GroundingError, match="not retryable") as ei:
+        grounding.make_groq_transport(api_key="SECRET", sleep=lambda s: None, retries=2)({})
+    assert "SECRET" not in str(ei.value) and "***" in str(ei.value)
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    with pytest.raises(grounding.GroundingError, match="GROQ_API_KEY is not set"):
+        grounding.make_groq_transport()
+    if not os.environ.get("GEMINI_API_KEY"):
+        with pytest.raises(grounding.GroundingError, match="GEMINI_API_KEY is not set"):
+            grounding.make_gemini_transport()
+
+
+def test_groq_replay_replays_in_openai_format(tmp_path, monkeypatch):
+    script = [groq_call("release_history", call_id="call_a", service="cart"),
+              groq_call("propose_fleet", call_id="call_b",
+                        changes=[{"service": "cart", "release_id": "release:cart:old"}], citations=[],
+                        rationale="r")]
+    gr, path, _tools, _t = groq_run(script, tmp_path)
+    assert json.loads(path.read_text())["provider"] == "groq"
+    replayed: list[dict] = []
+
+    class SpyGroq(grounding.GroqProvider):
+        def body(self, messages):
+            body = super().body(messages)
+            replayed.append(body)
+            return body
+
+    monkeypatch.setitem(grounding.PROVIDERS, "groq", SpyGroq())
+    rp = grounding.replay(path)
+    assert rp.live is False and rp.model == f"replay:{path.name}"
+    assert rp.result == gr.result and rp.tool_calls == gr.tool_calls
+    assert rp.validation_errors == gr.validation_errors
+    assert [m["role"] for m in replayed[1]["messages"]] == ["system", "user", "assistant", "tool"]
+    assert replayed[1]["messages"][-1]["tool_call_id"] == "call_a"
+    assert replayed[1]["tool_choice"] == "auto"
 
 
 # --------------------------------------------------------------------------- live
@@ -255,11 +527,23 @@ def test_tools_against_real_graph_no_errors(tmp_path):
         _drop_test_graphs(db)
 
 
+_PROVIDER_KEY_ENV = {"gemini": "GEMINI_API_KEY", "groq": "GROQ_API_KEY"}
+
+
+def _available_chain() -> list[str]:
+    """Configured chain entries whose provider key is present in the environment (.env loaded first)."""
+    return [spec for spec in grounding.configured_models()
+            if os.environ.get(_PROVIDER_KEY_ENV.get(grounding.split_model(spec)[0], ""))]
+
+
 @pytest.mark.live
 @pytest.mark.parametrize("case_index", [0, 1])  # main request, ambiguous request
 def test_live_request(case_index):
-    if not os.environ.get("GEMINI_API_KEY"):
-        pytest.skip("GEMINI_API_KEY missing")
+    config.load_env()  # GROQ_API_KEY from the git-ignored .env; never printed
+    chain = _available_chain()
+    if not chain:
+        pytest.skip("no provider key for the configured chain: " + ",".join(grounding.configured_models()))
+    print("LIVE CHAIN:", ",".join(chain))
     graph = pytest.importorskip("rw.graph")
     db = graph.connect()
     name = f"rw_test_grounding_{uuid.uuid4().hex[:8]}"
@@ -272,13 +556,15 @@ def test_live_request(case_index):
         request = json.loads((ROOT / "evals/grounding_cases/requests.json").read_text())[case_index]["text"]
         for attempt in range(4):  # provider is flaky (503, TLS resets); outer retry on top of transport's
             try:
-                gr, path = grounding.ground(request, tools)
+                gr, path = grounding.ground(request, tools, models=chain)
                 break
             except grounding.GroundingError as e:
                 print(f"live attempt {attempt + 1} failed: {e}")
                 if attempt == 3:
                     raise
-        print("LIVE RESULT:", gr.model_dump_json(indent=2), "TRANSCRIPT:", path)
+        print(f"LIVE RESULT: model={gr.model} kind={gr.result.kind} aborted={grounding.is_aborted(gr)} "
+              f"validation_errors={gr.validation_errors} transcript={path}")
+        print("LIVE RESULT JSON:", gr.model_dump_json(indent=2))
         assert gr.live and not grounding.is_aborted(gr)
         if isinstance(gr.result, GroundingProposal):
             assert all(c.release_id in known for c in gr.result.changes)

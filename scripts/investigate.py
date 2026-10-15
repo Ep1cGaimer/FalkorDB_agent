@@ -16,7 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from rw import grounding  # noqa: E402
+from rw import config, grounding  # noqa: E402
 from rw.contracts import CandidatePlan, ScopeConfirmation  # noqa: E402
 from rw.pipeline import Session, run_investigation, save_report  # noqa: E402
 
@@ -31,6 +31,7 @@ def _print_plan(plan: CandidatePlan, labels: dict[str, str]) -> None:
 
 def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    config.load_env()  # .env before anything reads the environment; never prints a value
     ap = argparse.ArgumentParser()
     ap.add_argument("request")
     ap.add_argument("--snapshot", default="snap-001")
@@ -56,7 +57,7 @@ def main() -> int:
                 raise SystemExit("replay has no transcript for the alternative step")
             print(f"\n[REPLAY — not live] grounding from {path}")
             return grounding.replay(Path(path)), Path(path)
-        chain = os.environ.get("RW_GROUNDING_MODEL", grounding.MODEL)
+        chain = os.environ.get("RW_GROUNDING_MODEL", grounding.DEFAULT_MODEL_CHAIN)
         print(f"\n[LIVE, model chain {chain}] grounding{' an alternative' if alternative_context else ''} ...")
         return grounding.ground(request, tools, alternative_context=alternative_context)
 
