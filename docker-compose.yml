@@ -1,0 +1,16 @@
+# FalkorDB for RollbackWitness (synthetic fixture only).
+#
+# Pinned by digest so every reviewer gets the exact server the evidence was produced against
+# (FalkorDB 6.0.2, graph module ver 60002, Redis 8.10.2 — see docs/CONTRACTS.md "Verified runtime").
+# Ports are bound to 127.0.0.1 only; nothing is exposed to the network.
+#
+#   docker compose up -d        # start
+#   docker compose ps           # expect: rw-falkordb ... 127.0.0.1:6379->6379, 127.0.0.1:3000->3000
+#   docker compose down         # stop
+services:
+  falkordb:
+    image: falkordb/falkordb:6.0.2@sha256:107455e862a824e45e8e9f5a7fbfdf5e00a08b14e13eae2577c72fd9e3f59ba6
+    container_name: rw-falkordb
+    ports:
+      - "127.0.0.1:6379:6379"
+      - "127.0.0.1:3000:3000"

@@ -1,31 +1,58 @@
 # Build status
 
-Updated 2026-10-15 by the orchestrator (Opus 5.5). Product: **RollbackWitness**, build mode. Synthetic fixture only.
+Updated 2026-10-16 (Task 9: setup, quickstart and contracts docs) by the orchestrator's Task 9 worker.
+Product: **RollbackWitness**, build mode, branch `build/slice-2`. Synthetic fixture only — no
+production data, no deployment, nothing published or submitted.
+
+Every row below is a command that was actually run, with its observed output. Nothing here is a plan
+or an estimate.
 
 ## Verified (commands actually run)
 
 | Milestone | Evidence |
 |---|---|
-| Runtime | Docker Desktop was stopped (cause of earlier "missing pipe" failures); started it. `falkordb/falkordb:6.0.2` pulled (tag has no `v`; `latest` is the separate v4.22.1 line), digest `sha256:107455e862a8…`, module ver 60002, Redis 8.10.2, container `rw-falkordb` on `127.0.0.1:6379` only. `.venv` = Python 3.12 via uv with project-local cache; falkordb-py 1.8.0. |
-| FalkorDB behavior | params, `ro_query` write rejection, no APOC, **null properties are not stored** (unknowns are detected by manifest comparison, never stored as null). |
-| Contracts frozen | `docs/CONTRACTS.md`, `src/rw/contracts.py` before parallel writers. |
-| Fixture | `fixtures/shop/` (DeepSeek): cart 1.4/1.5, checkout 2.0/2.1, one `cart-cache`, retained records 1001 (cart/v1) and 2002 (cart/v2), negative snapshots partial/orphan; deterministic rebuild; `health()` startup entry added by orchestrator. |
-| Graph | `src/rw/graph.py` (DeepSeek): importer + fixed parameterized queries, cap+1 truncation; 8 live integration tests, mutation-checked (dropping each edge type fails ≥1 test). |
-| Checker | `src/rw/verification.py` (Opus): obligations from the FalkorDB multi-hop path, cross-checked against independent manifest × routes; fail dominance; gaps → NEEDS_EVIDENCE. |
-| Probes / simulator / API | `probes.py`, `simulation.py`, `api.py` (Sol): hash-checked bounded subprocess probes; approval only for BOUNDED_PASS, stale/mutated refusal, idempotent SQLite simulation; step-wise FastAPI. |
-| Independent oracle | `evals/expected/dispositions.json` (Astra, authored without running src/): 8 cases A–H. |
-| End-to-end acceptance | `tests/test_acceptance_oracle.py`: real FalkorDB + real readers match the oracle on **8/8** cases (disposition, exact obligation set, per-obligation probe result, gap kinds, witness path). Case A: cart 1.4 reader × saved-cart-2002 → FAIL exit 10 `unsupported saved-cart format 'cart/v2'` → BLOCKED. Case B (cart 1.5, `basket_v2=false`) → BOUNDED_PASS. |
-| Relational control | `evals/relational_control.py` (DeepSeek): SQL joins over the same raw facts reproduce FalkorDB's obligation sets on 8/8 cases — **a tie** (representational parity, reported as such). |
-| Test suite | `.venv/Scripts/python.exe -m pytest -q -m "not live"` → 122 passed. |
+| Runtime | `docker compose -f docker-compose.yml config` resolves to image `falkordb/falkordb:6.0.2@sha256:107455e862a824e45e8e9f5a7fbfdf5e00a08b14e13eae2577c72fd9e3f59ba6`, container `rw-falkordb`, ports `127.0.0.1:6379` and `127.0.0.1:3000`. Running container: module ver 60002, Redis 8.10.2. `.venv` = Python 3.12 via uv with a project-local `.uv-cache`; client `falkordb` 1.8.0. |
+| FalkorDB behavior | parameterized `$params` work; `ro_query` rejects writes; APOC absent; **a property set to `null` is not stored** — unknowns are detected by comparison with independently parsed files, never stored as null. |
+| Contracts | `docs/CONTRACTS.md` + `src/rw/contracts.py` describe the current code: probe nonce/result channel, `GapKind` list, `GraphEvidence` fields, `build_evidence(declarations=…)`, `revalidate`, grounding providers, API endpoints. |
+| Fixture | `fixtures/shop/`: cart 1.4/1.5, checkout 2.0/2.1, one `cart-cache`, retained records `saved-cart-1001` (cart/v1) and `saved-cart-2002` (cart/v2), plus the negative snapshots `snap-002-partial` / `snap-003-orphan`; deterministic rebuild via `scripts/build_fixture.py`. |
+| Graph | `src/rw/graph.py`: importer + fixed parameterized queries, `cap+1` truncation; 8 live integration tests, mutation-checked (dropping each edge type fails ≥ 1 test). |
+| Checker | `src/rw/verification.py`: obligations from the FalkorDB multi-hop path, cross-checked against the independently loaded declarations and the manifest read from disk; `ROUTE_DECLARATION_MISMATCH`; writer/format reconciliation; fail dominance; snapshot binding on the evidence. |
+| Probes / simulator / API | `src/rw/probes.py`, `simulation.py`, `api.py`: per-run nonce result channel a reader cannot impersonate, receipts bound to the exact obligation tuple, approval only for `BOUNDED_PASS` on current bytes (`revalidate` → HTTP 409 on drift), idempotent SQLite simulation, one clarification round via `POST /api/investigations/{id}/answer`. |
+| Independent oracle | `evals/expected/dispositions.json` (authored without running `src/`): 8 cases A–H. `.venv\Scripts\python.exe -m pytest tests/test_acceptance_oracle.py -q` → **8 passed** on the real server with the real readers. Case A: cart 1.4 reader × `saved-cart-2002` → FAIL exit 10 `unsupported saved-cart format 'cart/v2'` → BLOCKED. Case B (cart 1.5, `basket_v2=false`) → BOUNDED_PASS. |
+| Relational control | `.venv\Scripts\python.exe evals\relational_control.py` → `SQL obligations == FalkorDB obligations: 8/8 cases`, `SQL obligations == independent oracle: 8/8 cases` — **a tie** (representational parity, not superiority; the control is not handicapped). |
+| Test suite | `.venv\Scripts\python.exe -m pytest -q -m "not live"` → **229 passed, 3 deselected** (~20 s; needs the container above). The 3 deselected tests call the live provider. |
+| Reproducibility (fresh clone) | `git clone --branch build/slice-2` into a temp directory, with its own `.venv` and `.uv-cache` inside the clone (the main checkout's `.venv` untouched), then `scripts/setup.ps1` (uv, Python 3.12.10, 21 packages from `pyproject.toml` + `pytest==9.1.1`) and `.venv\Scripts\python.exe -m pytest -q -m "not live"` → **229 passed, 3 deselected**. `docker compose -f <clone>\docker-compose.yml config` resolves the pinned image without starting a second container, and the three `fixtures/shop/snapshots/*/manifest.json` sha256 values in the clone equal the main checkout's (`416e1df3…`, `734cae65…`, `7e2947e4…`). |
+| Slice-2 commits | `f8e4a7c` (T1), `3d3310d` (T2), `c8aad81` (T3), `eb4939e` (T4), `24ec745` (T5), `92acc5a` (T6), `103f5df` + `0bf177f` (T7), `a22b986` (T8), plus the Task 9 setup/docs commit. |
 
-## Blocker: live LLM from this machine
+## Known limits (measured, not assumed)
 
-`GEMINI_API_KEY` is the only model credential in the environment. `generateContent` for gemini-3.8-flash/3.7/3.6/3.5/2.5-pro/3.1-pro fails almost always with TLS record corruption (`SEC_E_MESSAGE_ALTERED` / `SSLV3_ALERT_BAD_RECORD_MAC`, also through Docker's network) or 503 high demand; short GETs to the same host succeed; `gemini-3.1-flash-lite` answers normally. Grounding is being made configurable (`RW_GROUNDING_MODEL`) and records the model that actually answered. No live grounding result is claimed until observed.
+- **Groq free tier.** `openai/gpt-oss-120b` allows 200k tokens/day and was exhausted during the
+  slice-2 evaluation runs on 2026-10-15 (199,113 used); `qwen/qwen3.8-27b` allows 7000 input /
+  1000 output tokens per minute and rejects the flat-context control prompt as "request too large".
+  A live run can therefore fail fast with a non-retryable quota refusal (the chain records the
+  abandoned attempt and tries the next entry).
+- **Live grounding eval: 6/10 runs matched the expected kind** (`evals/results/grounding_20261015T205622Z.md`,
+  git-ignored: 5 cases × 2 runs, model `groq:openai/gpt-oss-120b`, chain default, temperature 0). This
+  is a small-N single-machine observation, not a benchmark or a ranking.
+- **Flat LLM control has no live run today** — blocked by the quota above, not by a code defect. No
+  control score is claimed.
+- **Live model access from this machine is flaky for Gemini**: `gemini-3.8-flash` and larger fail
+  almost always with TLS record corruption (`SEC_E_MESSAGE_ALTERED` / `SSLV3_ALERT_BAD_RECORD_MAC`) or
+  503; pinning TLS 1.2 and retrying helps; `gemini-3.1-flash-lite` answers normally. The product
+  default chain is Groq.
+- **SQL control = tie** on obligation sets (8/8). Parity is reported as parity.
+- **Synthetic fixture only.** No production data, and the "simulate" action writes a local SQLite
+  record; it performs nothing.
+- **`BOUNDED_PASS` = modeled byte/shape readability only.** It is not behavioral compatibility and
+  not a claim that no other reader or writer exists.
+- **UI screenshots are untracked** (`artifacts/screens/` is git-ignored; the images were removed from
+  git in Task 8), so the console visuals must be regenerated locally.
+- **Replay is labeled.** `model=replay:<file>` with `live=False` means a saved transcript was re-run.
 
-## In progress
+## Not done / next
 
-Grounding adapter live run (Sonnet), evidence UI (Sonnet), flat-context LLM control (DeepSeek), adversarial correctness review (Astra).
+- Live grounding eval on a fresh quota; the flat-context LLM control live run; UI visual review at
+  1280/1920; holdout wording for the report. No deployment, publishing, submission or third-party
+  message has been made.
 
-## Not done / limits
-
-Live grounding with the intended model; UI; LLM-control scores; holdout wording; visual review; reproducible quickstart doc. BOUNDED_PASS = modeled byte/shape readability only. Nothing committed yet.
+Setup and demo commands for a reviewer: [QUICKSTART.md](QUICKSTART.md).

@@ -1,6 +1,11 @@
-# Frozen contracts — slice 1
+# Frozen contracts — slice 1 (updated in slice 2)
 
 Owner: Opus (orchestrator). Workers may not change this file or `src/rw/contracts.py`; request changes in their handoff. Everything here is synthetic fixture data.
+
+Slice-2 updates (Task 9, documentation only — no contract or code change): probe protocol and result
+channel, the `GapKind` list, `GraphEvidence` fields, `build_evidence` / `revalidate` signatures,
+grounding providers, API endpoints, and the artifact-hash input rules (including one documented
+difference between the loader and the importer). Everything below describes the code as it is now.
 
 ## Verified runtime (2026-10-15)
 
@@ -36,6 +41,25 @@ Consequence of the null behavior: unknowns can never be recorded as graph nulls.
 | Batch | `batch:<store>:<snapshot_id>:<record_id>:<payload_hash[7:23]>` |
 | Snapshot | `snapshot:<name>`; `manifest_hash = bh(manifest.json bytes)` |
 | Plan | `plan:<plan_hash[7:23]>` |
+
+### Artifact hash inputs (what the code actually does)
+
+`artifact_hash` is computed in two places: the importer (`graph._release_dir_files`) and the checker's
+independent loader (`verification._release_dir_files`). Both hash
+`[[relpath, bh(bytes)] for every file in the release dir]` with posix relative paths, so a release id
+is a function of the shipped bytes only. Two implementation details are worth stating exactly:
+
+- **Exclusions.** `verification._release_dir_files` skips a file if any path part is `__pycache__`
+  **or** its suffix is `.pyc` (anywhere). `graph._release_dir_files` skips only files whose path
+  contains a `__pycache__` part. A `.pyc` file outside a `__pycache__` directory would therefore
+  enter the importer's hash and not the loader's. The committed fixture contains none (the probe
+  harness sets `sys.dont_write_bytecode = True`), and a test asserts that both sides produce the
+  exact same four release ids, so the two agree today. This is a documented difference, not a code
+  change.
+- **Sort order.** The file list is built from `sorted(release_dir.rglob("*"))`, i.e. sorted by
+  `pathlib.Path` order, not by the posix relpath string. `Path` ordering is case-insensitive on
+  Windows and case-sensitive on POSIX; the fixture's release directories use one case, so both orders
+  coincide here. "Sorted by relpath" above is the intent; `Path` order is what the code does.
 
 ## Fixture layout (`fixtures/shop/`)
 
@@ -83,15 +107,49 @@ No edge or property encodes a compatibility verdict. `bundle_id` is investigatio
 
 ## Probe protocol (byte/shape family `byte_shape_v1`)
 
-`python -I fixtures/shop/harness/run_reader.py <codec_path> <entry>` with payload bytes on stdin (max 64 KiB), timeout 5 s, stdout capped at 8 KiB. The harness loads `codec.py` by path and calls `entry(data: bytes) -> dict`.
+Trusted code (`src/rw/probes.py`) is the only sanctioned caller of the fixture harness. It generates a
+fresh per-run secret `nonce = secrets.token_hex(16)` and starts
 
-| Harness exit | Meaning | Receipt result |
+```text
+python -I fixtures/shop/harness/run_reader.py <codec_path> <entry>
+```
+
+with a minimal environment containing only `RW_PROBE_NONCE=<nonce>`, `SYSTEMROOT` and `PATH` (no
+other inherited variables); payload bytes on stdin (at most 65536, and one byte past the limit is
+read so an oversized file is detected); stdout capped at 8192 bytes; stderr discarded; timeout 5 s.
+
+**Result channel.** The harness pops `RW_PROBE_NONCE` from its environment (absent →
+`HARNESS_ERROR` exit 20), saves the real stdout fd with `os.dup(1)`, then `os.dup2(2, 1)` and
+`sys.stdout = sys.stderr` **before** loading `codec.py`. Everything the reader prints — including a
+raw `os.write(1, ...)` — therefore goes to the parent's discarded stderr. The harness loads the codec
+by path, calls `entry(data: bytes)`, and writes exactly one JSON line (sorted keys) to the saved fd,
+carrying `"nonce": <nonce>`, then exits with `os._exit(code)`. A reader cannot reach the result
+channel, and a reader that aborts the process (`SystemExit` / `KeyboardInterrupt` / `GeneratorExit`)
+is a harness error, never a `FAIL`.
+
+The parent requires stdout to decode to exactly one non-empty line whose parsed `nonce` equals the
+nonce it generated; anything else → `UNKNOWN` with message `harness error or invalid stdout`.
+
+| Harness exit | stdout | Receipt result |
 |---|---|---|
-| 0, stdout `{"status":"PASS","shape":{...}}` | reader returned a dict | PASS |
-| 10, stdout `{"status":"FAIL","error_type":..,"message":..}` | reader raised while reading these bytes | FAIL |
-| 20 or any other exit, timeout, bad stdout | harness could not load/call the reader | UNKNOWN (harness error, never FAIL) |
+| 0 | one line `{"status":"PASS","nonce":<nonce>,"shape":{...}}` | PASS (only when `shape` is a dict) |
+| 10 | one line `{"status":"FAIL","nonce":<nonce>,"error_type":str,"message":str}` | FAIL |
+| 20 or any other exit, timeout, stdout > 8192 bytes, missing/mismatched nonce, bad JSON, extra lines | — | UNKNOWN (harness error, never FAIL) |
 
-`probe_spec_hash = h({"family":"byte_shape_v1","harness_hash":bh(run_reader.py),"entry":entry,"timeout_s":5,"max_input":65536})`; `environment_hash = h({"python": sys.version_info[:3] as list, "platform": sys.platform, "harness_hash": ...})`.
+`run_probe(obligation, payload_path, timeout_s=5) -> ProbeReceipt` performs the identity checks
+before running anything: payload ≤ 65536 bytes and `bh(payload) == tuple.payload_hash`;
+`probe_spec_hash(entry) == tuple.probe_spec_hash` and `environment_hash() == tuple.environment_hash`;
+`bh(codec bytes) == tuple.codec_hash`; `timeout_s > 0`. Any failure returns an UNKNOWN receipt with the
+reason as `message` — never a FAIL.
+
+`probe_spec_hash(entry) = h({"family":"byte_shape_v1","harness_hash":bh(run_reader.py),"entry":entry,"timeout_s":5,"max_input":65536})`;
+`environment_hash() = h({"python": sys.version_info[:3] as list, "platform": sys.platform, "harness_hash": bh(run_reader.py)})`.
+Both include the harness bytes, so editing the harness changes every obligation's probe-spec and
+environment hash; `revalidate` reports that as drift (expected, not a bug).
+
+`pipeline.startup_check(codec_path)` runs the same harness on the `health` entry with an empty payload
+and reports `GREEN` / `RED` / `UNKNOWN` beside the obligations for contrast only: it reads no retained
+state and can never discharge an obligation.
 
 ## Obligation and receipt binding
 
@@ -102,6 +160,28 @@ An obligation is one (executing reader route under a plan) × (retained record i
 1. Any applicable FAIL receipt → `BLOCKED` (even with incomplete coverage or other gaps).
 2. Else any gap (missing route/no-read evidence, unknown read domain, coverage ≠ COMPLETE, inventory ID-set mismatch, missing writer/IN_STORE edge, truncation, invalid fleet, missing/UNKNOWN/inapplicable receipt) → `NEEDS_EVIDENCE`.
 3. Else → `BOUNDED_PASS` (modeled byte/shape readability only).
+
+## Gap kinds (`contracts.GapKind`) — unknown evidence is never a pass
+
+Every `Gap` is `(kind, subject, detail)` and is emitted by trusted code only. The current members and
+the facts that raise them:
+
+| Kind | Raised when |
+|---|---|
+| `INVALID_FLEET` | plan fleet ≠ snapshot services; no independently loaded declaration for a release; graph deployment missing for a service, or running a different release than the plan |
+| `ROUTE_EVIDENCE_MISSING` | a release declares no reader routes and no `no_state_read` evidence |
+| `READ_DOMAIN_UNKNOWN` | the declared `read_domain` is not `ALL_KEYS` |
+| `STORE_MISSING` | a declared route has no `reads_from`; a store read by the fleet is absent from the snapshot manifest |
+| `COVERAGE_INCOMPLETE` | manifest or graph coverage is `PARTIAL` / `UNKNOWN` / missing for a read store |
+| `INVENTORY_MISMATCH` | graph batch id set ≠ independently parsed manifest set; payload hash differs; batch lacks its `IN_STORE` edge; a declared (route, record) pair is missing from the graph path query |
+| `WRITER_UNKNOWN` | batch has no `WRITTEN_BY` writer release; manifest writer `null`; manifest writer does not resolve to a declared release; graph/manifest writer contradiction |
+| `FORMAT_UNKNOWN` | record format not established on either side; manifest format ≠ graph format |
+| `TRUNCATED` | a fixed query returned `cap + 1` rows |
+| `RECEIPT_MISSING` | no probe receipt for an obligation |
+| `RECEIPT_UNKNOWN` | a probe ran but the harness could not establish a result |
+| `RECEIPT_INAPPLICABLE` | a receipt exists but its bound tuple differs from the obligation tuple |
+| `STALE_SNAPSHOT` | the plan was built against different manifest bytes than the manifest read at verification time |
+| `ROUTE_DECLARATION_MISMATCH` | graph route set ≠ shipped `release.json`: a declared route is missing from the graph, or a graph route is not declared; a graph route field (`entry`, `read_domain`, `store_id`, `route_name`, `route_contract_hash`) differs from the declaration; the graph `codec_hash` differs from the declaration |
 
 ## Scope confirmation vs action approval
 
@@ -144,26 +224,89 @@ Release node properties: id, service, version, artifact_hash, codec_hash, codec_
 
 ```python
 load_manifest(fixture_root, snapshot) -> (manifest: dict, manifest_hash: str)   # independent of the graph
+load_release_declarations(fixture_root) -> {release_id: {service, version, artifact_hash,
+    codec_path, codec_hash, routes: {route_id: route_dict}, no_state_read}}     # independent of the graph
+release_index_by_service_version(declarations) -> {(service, version): release_id}  # ambiguous keys dropped
 materialize_plan(proposal, current_fleet_rows, release_rows_by_service, snapshot_id, manifest_hash, request_text, origin, label) -> (CandidatePlan | None, errors)
 validate_citations(citations, excerpt_rows) -> errors
-build_evidence(plan, manifest, route_rows, inventories, path_rows, probe_spec_for) -> GraphEvidence
+build_evidence(plan, manifest, manifest_hash, route_rows, route_log, inventories, path_rows, path_log,
+               probe_spec_for, environment_hash, *, declarations) -> GraphEvidence
 dispose(evidence, receipts) -> VerificationResult
+fixture_file(path, fixture_root) -> Path          # re-roots a fixtures/shop/... path under one fixture root
+revalidate(verification, fixture_root, environment_hash_fn, probe_spec_fn) -> list[str]
 ```
+
+`declarations` is a **required keyword** argument of `build_evidence`: the graph's route set, route
+fields and `codec_hash` are trusted only insofar as they match the shipped `release.json` (see
+`ROUTE_DECLARATION_MISMATCH`), and every obligation tuple takes `route_contract_hash`, `codec_hash`,
+`reader_entry` and `reader_codec_path` from the declaration, never from graph rows. The expected
+(route, record) pair set is computed from **declared** routes, so a route missing from the graph still
+leaves its pairs reported as missing.
+
+`GraphEvidence` fields: `plan_hash`, `obligations`, `gaps`, `queries` (each
+`{"name","params","rows","truncated"}`), and the plan-level binding `snapshot_id` +
+`snapshot_manifest_hash` (set from the plan and from the manifest read at verification time).
+`dispose` takes the snapshot binding from the evidence itself, never from the first obligation, so
+zero-obligation evidence keeps a non-empty binding.
+
+`revalidate(verification, fixture_root, environment_hash_fn, probe_spec_fn)` returns one
+human-readable drift line per distinct fact, or `[]` when the bytes behind a verification are still
+current. It fails closed on: a fresh `bh(manifest.json)` for `verification.snapshot_id`; per
+obligation the payload bytes resolved through the fresh manifest record, `bh(reader codec bytes)`,
+`environment_hash_fn()` and `probe_spec_fn(obligation.reader_entry)`; and that `fixture_root/releases`
+still declares `tuple.release_id` with the same `h(route_dict)` for `tuple.route_id`. A missing or
+unreadable file is a drift line, not an exception. Both hash functions already include the harness
+hash, which is why they bind the harness too. Callers: `api.py` `/approve` and `/simulate`, which
+answer HTTP 409 `{"reason", "drift"}` — no action may be taken on evidence that no longer exists as
+verified.
 
 ### `src/rw/probes.py` (owner: Sol)
 
 ```python
-harness_path() -> Path; probe_spec_hash(entry) -> str; environment_hash() -> str
-run_probe(obligation: Obligation, payload_path: Path, timeout_s=5) -> ProbeReceipt   # subprocess, -I, bounded I/O; timeout/harness error -> UNKNOWN
+harness_path() -> Path
+probe_spec_hash(entry) -> str
+environment_hash() -> str
+run_harness(codec_path, entry, payload: bytes, timeout_s=5) -> dict   # the only sanctioned harness caller
+run_probe(obligation: Obligation, payload_path: Path, timeout_s=5) -> ProbeReceipt
 ```
+
+`run_harness` owns the nonce, the minimal child environment, bounded I/O, the timeout and the strict
+one-line/nonce/schema parsing; it returns
+`{"result": "PASS"|"FAIL"|"UNKNOWN", "exit": int|None, "stdout": bytes, "error_type": str|None, "message": str|None, "shape": dict|None}`.
+See "Probe protocol" above for the exit-code table. `run_probe` returns an UNKNOWN receipt on any
+identity mismatch and never FAILs from its own checks.
 
 ### `src/rw/grounding.py` (owner: Sonnet)
 
-A bounded tool loop (≤ 8 model turns) over read-only tools `current_fleet`, `release_history`, `store_readers`, `get_excerpts` and terminal tools `propose_fleet(changes, citations, rationale)` / `ask_clarification(question, unresolved, citations)`. Returns `GroundingResult`. Live provider: Gemini API `gemini-3.8-flash` via `GEMINI_API_KEY`; transcripts saved for labeled replay (`live=False`).
+A provider-neutral bounded tool loop (≤ 8 model turns) over the read-only tools `current_fleet`, `release_history`, `store_readers`, `get_excerpts` and the terminal tools `propose_fleet(changes, citations, rationale)` / `ask_clarification(question, unresolved, citations)`. Returns `GroundingResult`. Read tools, argument validation, citation hashing, the audit trail and terminal validation are written once and shared; only conversation rendering and response parsing differ per provider.
+
+Providers are chosen by `RW_GROUNDING_MODEL` (comma-separated `provider:model`; a bare entry means `gemini:`); the default chain is `groq:openai/gpt-oss-120b,groq:qwen/qwen3.8-27b`.
+
+- `groq` — OpenAI-compatible Chat Completions (`GROQ_API_KEY`, Bearer header only), `tool_choice: "auto"`, temperature 0. The assistant message with its `tool_calls` is replayed verbatim before the matching tool replies.
+- `gemini` — `generateContent` (`GEMINI_API_KEY` in a header only), `functionCallingConfig.mode = ANY`, raw parts (thought signatures) preserved. Optional; used when a `gemini:` entry is selected.
+
+When a chain entry exhausts its retries the **whole conversation restarts** from turn 0 on the next entry — providers are never mixed. `GroundingResult.model` records the `provider:model` that actually answered, or `replay:<file>` with `live=False` for a saved transcript. Retries: 2–30 s exponential backoff, or the server's `Retry-After` (capped at 120 s); non-retryable are statuses outside 408/429/500/502/503/504 and Groq 429s whose body says `tokens per day` or `request too large` (waiting cannot clear those). The credential only ever travels in a header and is redacted from error text. Transcripts are saved under `artifacts/grounding/` for labeled replay.
 
 ### `src/rw/simulation.py` (owner: Sol)
 
-SQLite ledger under `artifacts/sim.sqlite`; `record_approval(db_path, approval, verification, forbidden_identities)`, `simulate(db_path, approval, verification, current_manifest_hash, current_fleet, plan) -> SimulationReceipt` (raises `SimulationRefused`); rejects non-BOUNDED_PASS, stale manifest/plan/verification, and applies each idempotency key once.
+SQLite ledger under `artifacts/sim.sqlite` (git-ignored). `record_approval(db_path=DEFAULT_DB_PATH, approval=None, verification=None, forbidden_identities=DEFAULT_FORBIDDEN_IDENTITIES)` refuses a verification that is not `BOUNDED_PASS`, a mismatched `verification_hash`/`plan_hash`/`snapshot_manifest_hash`, and a missing or forbidden approver identity (the model can never be the approver). `simulate(db_path=DEFAULT_DB_PATH, approval=None, verification=None, current_manifest_hash=None, current_fleet=None, plan=None) -> SimulationReceipt` (raises `SimulationRefused`) additionally requires the recorded approval, a current manifest hash equal to the approval's, matching plan/verification identities, and a current fleet, and applies each idempotency key (`h([plan_hash, verification_hash])`) exactly once — a duplicate returns the stored receipt with `applied=False`.
+
+### API (`src/rw/api.py`, owner: Sol)
+
+`create_app(...)` builds the FastAPI app; `scripts/serve.py` binds `127.0.0.1:8000`. No endpoint lets
+the model approve, apply or deploy anything.
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/api/investigations` | start one investigation (live, or labeled replay of a saved transcript) |
+| GET | `/api/investigations`, `/api/investigations/{identifier}` | list / read one investigation |
+| GET | `/api/transcripts` | saved transcripts available for replay |
+| POST | `/api/investigations/{identifier}/plans/{plan_hash}/confirm-scope` | human scope confirmation for one plan |
+| POST | `/api/investigations/{identifier}/answer` | one clarification round: body `{"answer": str, "replay_path": str \| null}`; the answer is folded into the request text via `pipeline.with_answer` and the session re-grounds against it. Blank answer → 422; a second round is refused; in replay mode `replay_path` is required, in live mode it is rejected (422) |
+| POST | `/api/investigations/{identifier}/alternative` | at most one alternative, only after `BLOCKED` / `NEEDS_EVIDENCE` |
+| POST | `/api/investigations/{identifier}/plans/{plan_hash}/approve` | human approval: only for `BOUNDED_PASS` and only on current bytes (409 with `{"reason", "drift"}` when `revalidate` reports drift) |
+| POST | `/api/investigations/{identifier}/plans/{plan_hash}/simulate` | local idempotent simulation (409 on drift); never a deployment |
+| GET | `/` | the single-screen console (replay picker, `SYNTHETIC FIXTURE` and `BOUNDED_PASS` labels always visible) |
 
 ### ID-form clarification (binding)
 

@@ -1,0 +1,14 @@
+# Fixture bytes are evidence, not text.
+#
+# Release artifact hashes and snapshot manifest hashes are computed from the exact bytes on disk
+# (src/rw/verification.py and src/rw/graph.py), and probe receipts are bound to those hashes. Git
+# must therefore never rewrite line endings or apply any other content conversion inside fixtures/,
+# on checkout or on add.
+fixtures/** -text
+
+# Retained payload bytes are opaque records: keep them byte-exact and undiffed.
+*.bin binary
+
+# Shell entry points must keep LF endings to run under sh/dash (the repository default here is
+# core.autocrlf=true on Windows, which would otherwise check them out as CRLF).
+*.sh text eol=lf
