@@ -1,8 +1,18 @@
-"""Disposition/completeness rules of the trusted checker, on hand-built graph rows."""
+"""Disposition/completeness rules of the trusted checker, on hand-built graph rows.
+
+The F4 revalidation tests use a real pipeline verification on a temporary graph plus private copies
+of the fixture: obligation codec paths are repo-relative, so the same verification can be
+revalidated against a copy whose bytes are then mutated one fact at a time.
+"""
 from __future__ import annotations
 
+import json
+import shutil
 import uuid
 
+import pytest
+
+from rw import probes as P
 from rw.contracts import (
     Citation,
     Disposition,
@@ -11,14 +21,19 @@ from rw.contracts import (
     GroundingProposal,
     ProbeReceipt,
     ProbeResult,
+    ScopeConfirmation,
+    VerificationResult,
     h,
 )
+from rw.pipeline import FIXTURE_ROOT, Session
 from rw.verification import (
     REPO_ROOT,
     build_evidence,
     dispose,
+    fixture_file,
     load_release_declarations,
     materialize_plan,
+    revalidate,
     validate_citations,
 )
 
@@ -446,3 +461,145 @@ def test_zero_obligation_evidence_keeps_the_snapshot_binding():
     assert res.disposition == Disposition.BOUNDED_PASS
     assert res.snapshot_id == SNAP
     assert res.snapshot_manifest_hash == MHASH
+
+
+# --------------------------------------------------------------------------- F4: revalidation
+
+def test_fixture_file_maps_repo_relative_paths_into_the_real_fixture_and_a_copy(tmp_path):
+    """The stored path is repo-relative; the same path must resolve inside a copy of the fixture."""
+    relative = "fixtures/shop/releases/cart-1.5/codec.py"
+    real = fixture_file(relative, FIXTURE_ROOT)
+    assert real == REPO_ROOT / "fixtures" / "shop" / "releases" / "cart-1.5" / "codec.py" and real.is_file()
+
+    copy = tmp_path / "shop"
+    shutil.copytree(FIXTURE_ROOT, copy)
+    copied = fixture_file(relative, copy)
+    assert copied == copy / "releases" / "cart-1.5" / "codec.py"
+    assert copied.read_bytes() == real.read_bytes()
+    # manifest record paths are already fixture-relative and must not be re-prefixed
+    assert fixture_file("payloads/saved-cart-1001.bin", copy) == copy / "payloads" / "saved-cart-1001.bin"
+
+
+@pytest.fixture(scope="module")
+def verified_pass():
+    """A real BOUNDED_PASS verification of snap-001, produced by the pipeline on a temporary graph.
+
+    Its snapshot bytes are the shipped fixture's, so it can be revalidated against a private copy.
+    """
+    from rw import graph as G
+
+    name = "rw_test_" + uuid.uuid4().hex[:8]
+    session = Session(snapshot="snap-001", graph_name=name)
+    try:
+        rows, _ = G.releases_for_service(session.g, "cart")
+        release = next(r for r in rows if r["version"] == "1.5")
+        plan, errors = session.plan_from_proposal(
+            GroundingProposal(changes=[FleetEntry(service="cart", release_id=release["release_id"],
+                                                  flags={"basket_v2": False})],
+                              citations=[], rationale="keep 1.5 with the basket rollout off"),
+            "undo the basket rollout", origin="fixture")
+        assert not errors and plan is not None
+        report = session.verify(plan, ScopeConfirmation(plan_hash=plan.plan_hash(), confirmed_by="test-operator",
+                                                        confirmed_at="2026-10-16T00:00:00Z"))
+        result = VerificationResult.model_validate(report["verification"])
+        assert result.disposition == Disposition.BOUNDED_PASS and not result.gaps
+        assert len(result.obligations) == 4
+        for obligation in result.obligations:
+            assert obligation.reader_codec_path.startswith("fixtures/shop/")  # repo-relative, as stored
+        yield result
+    finally:
+        try:
+            session.g.delete()
+        except Exception:
+            pass
+
+
+@pytest.fixture
+def fixture_copy(tmp_path):
+    root = tmp_path / "shop"
+    shutil.copytree(FIXTURE_ROOT, root)
+    return root
+
+
+def release_id_for(verified: VerificationResult, codec_fragment: str) -> str:
+    """The exact release id a reader's obligations carry (ids embed the artifact hash)."""
+    return next(o.tuple.release_id for o in verified.obligations if codec_fragment in o.reader_codec_path)
+
+
+def test_revalidate_accepts_unchanged_evidence(verified_pass, fixture_copy):
+    assert revalidate(verified_pass, fixture_copy, P.environment_hash, P.probe_spec_hash) == []
+
+
+def test_revalidate_flags_changed_payload_bytes(verified_pass, fixture_copy):
+    payload = fixture_copy / "payloads" / "saved-cart-1001.bin"
+    payload.write_bytes(payload.read_bytes() + b"\x00")
+    errors = revalidate(verified_pass, fixture_copy, P.environment_hash, P.probe_spec_hash)
+    assert errors and all("saved-cart-1001" in e for e in errors)  # named per drifted record, deduped
+    assert not any("saved-cart-2002" in e for e in errors)
+
+
+def test_revalidate_flags_a_missing_payload_as_drift_not_an_exception(verified_pass, fixture_copy):
+    (fixture_copy / "payloads" / "saved-cart-2002.bin").unlink()
+    errors = revalidate(verified_pass, fixture_copy, P.environment_hash, P.probe_spec_hash)
+    assert any("saved-cart-2002" in e and "unreadable" in e for e in errors)
+
+
+def test_revalidate_flags_changed_reader_codec(verified_pass, fixture_copy):
+    codec = fixture_copy / "releases" / "cart-1.5" / "codec.py"
+    codec.write_bytes(codec.read_bytes() + b"\n# drift\n")
+    release_id = release_id_for(verified_pass, "cart-1.5")
+    errors = revalidate(verified_pass, fixture_copy, P.environment_hash, P.probe_spec_hash)
+    assert any("codec.py" in e and release_id in e and "changed" in e for e in errors), errors
+    # changing a file of the release also changes its artifact-derived release id
+    assert any(e == f"release {release_id} is no longer declared by the fixture" for e in errors), errors
+
+
+def test_revalidate_flags_a_missing_reader_codec(verified_pass, fixture_copy):
+    (fixture_copy / "releases" / "checkout-2.1" / "codec.py").unlink()
+    release_id = release_id_for(verified_pass, "checkout-2.1")
+    errors = revalidate(verified_pass, fixture_copy, P.environment_hash, P.probe_spec_hash)
+    assert any("codec.py" in e and release_id in e and "unreadable" in e for e in errors), errors
+
+
+def test_revalidate_flags_changed_manifest_bytes(verified_pass, fixture_copy):
+    path = fixture_copy / "snapshots" / "snap-001" / "manifest.json"
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    manifest["environment"] = "drifted"
+    path.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
+    errors = revalidate(verified_pass, fixture_copy, P.environment_hash, P.probe_spec_hash)
+    assert any("snapshot manifest changed" in e and verified_pass.snapshot_manifest_hash in e for e in errors)
+
+
+def test_revalidate_flags_a_missing_manifest(verified_pass, fixture_copy):
+    (fixture_copy / "snapshots" / "snap-001" / "manifest.json").unlink()
+    errors = revalidate(verified_pass, fixture_copy, P.environment_hash, P.probe_spec_hash)
+    assert any("manifest" in e and "cannot be read" in e for e in errors)
+
+
+def test_revalidate_flags_a_changed_environment(verified_pass, fixture_copy):
+    errors = revalidate(verified_pass, fixture_copy, lambda: "sha256:other-environment", P.probe_spec_hash)
+    environment_errors = [e for e in errors if "environment" in e]
+    assert len(environment_errors) == 1  # identical for every obligation, reported once
+    assert "sha256:other-environment" in environment_errors[0]
+
+
+def test_revalidate_flags_a_changed_probe_spec(verified_pass, fixture_copy):
+    errors = revalidate(verified_pass, fixture_copy, P.environment_hash, lambda entry: f"spec-{entry}")
+    assert {e for e in errors} == {f"probe spec for entry {o.reader_entry!r} changed: fresh=spec-{o.reader_entry} "
+                                  f"verified={o.tuple.probe_spec_hash}" for o in verified_pass.obligations}
+
+
+def test_revalidate_flags_a_release_that_is_no_longer_declared(verified_pass, fixture_copy):
+    release_id = release_id_for(verified_pass, "checkout-2.1")
+    shutil.rmtree(fixture_copy / "releases" / "checkout-2.1")
+    errors = revalidate(verified_pass, fixture_copy, P.environment_hash, P.probe_spec_hash)
+    assert f"release {release_id} is no longer declared by the fixture" in errors, errors
+
+
+def test_revalidate_flags_a_changed_route_contract(verified_pass, fixture_copy):
+    first = verified_pass.obligations[0]
+    tampered = first.model_copy(update={"tuple": first.tuple.model_copy(
+        update={"route_contract_hash": "sha256:tampered"})})
+    drifted = verified_pass.model_copy(update={"obligations": [tampered] + list(verified_pass.obligations[1:])})
+    errors = revalidate(drifted, fixture_copy, P.environment_hash, P.probe_spec_hash)
+    assert any("route contract" in e and first.tuple.route_id in e and "sha256:tampered" in e for e in errors)

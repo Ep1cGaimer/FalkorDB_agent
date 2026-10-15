@@ -529,3 +529,124 @@ def dispose(evidence: GraphEvidence, receipts: list[ProbeReceipt]) -> Verificati
         blocking_receipts=sorted(blocking),
         computed_at=_now(),
     )
+
+
+# --------------------------------------------------------------------------- revalidation (F4)
+
+FIXTURE_PREFIX = "fixtures/shop/"
+
+
+def fixture_file(path: str, fixture_root: Path) -> Path:
+    """Resolve a stored artifact path against one fixture root.
+
+    Obligation payload/codec paths are posix paths relative to the repository root
+    (``fixtures/shop/...``) while manifest record paths are fixture-relative; re-rooting the
+    fixture-relative part under ``fixture_root`` therefore resolves the real fixture and any copy of
+    it identically. An already-absolute path is returned unchanged, and a path that does not exist is
+    the caller's drift problem, never an exception here.
+    """
+    candidate = Path(path)
+    if candidate.is_absolute() or candidate.as_posix().startswith("/"):
+        return candidate
+    posix = candidate.as_posix()
+    relative = posix[len(FIXTURE_PREFIX):] if posix.startswith(FIXTURE_PREFIX) else posix
+    return Path(fixture_root) / relative
+
+
+def revalidate(verification: VerificationResult, fixture_root: Path, environment_hash_fn: Callable[[], str],
+               probe_spec_fn: Callable[[str], str]) -> list[str]:
+    """Report every way the bytes behind a verification have drifted; empty list means still current.
+
+    Approval and local simulation must never act on evidence that no longer exists as verified, so
+    each check fails closed: a missing or unreadable file, a re-hashed payload, codec, manifest,
+    route declaration, harness environment or probe spec becomes a drift error instead of an
+    exception. ``environment_hash_fn``/``probe_spec_fn`` are supplied by the caller (they already
+    include the harness hash) so this module needs no probe dependency.
+    """
+    root = Path(fixture_root)
+    errors: list[str] = []
+
+    def drift(message: str) -> None:
+        # one line per distinct fact, however many obligations share it
+        if message not in errors:
+            errors.append(message)
+
+    try:
+        manifest, fresh_manifest_hash = load_manifest(root, verification.snapshot_id)
+    except (OSError, ValueError) as exc:
+        manifest = None
+        drift(f"snapshot manifest {verification.snapshot_id!r} cannot be read: {exc}")
+    else:
+        if fresh_manifest_hash != verification.snapshot_manifest_hash:
+            drift(f"snapshot manifest changed: fresh={fresh_manifest_hash} "
+                  f"verified={verification.snapshot_manifest_hash}")
+
+    payloads: dict[tuple[str, str], Any] = {}
+    for store in (manifest or {}).get("stores", []):
+        for record in store.get("records", []):
+            payloads[("store:" + str(store.get("name")), record.get("record_id"))] = record.get("payload")
+
+    for obligation in verification.obligations:
+        t = obligation.tuple
+        payload = payloads.get((t.store_id, t.record_id))
+        if not isinstance(payload, str) or not payload:
+            drift(f"record {t.record_id} has no payload in {verification.snapshot_id} store {t.store_id}")
+        else:
+            payload_path = fixture_file(payload, root)
+            try:
+                payload_bytes = payload_path.read_bytes()
+            except OSError as exc:
+                drift(f"payload for record {t.record_id} is unreadable: {payload_path} ({exc})")
+            else:
+                if bh(payload_bytes) != t.payload_hash:
+                    drift(f"payload for record {t.record_id} changed: fresh={bh(payload_bytes)} "
+                          f"verified={t.payload_hash}")
+
+        codec_path = fixture_file(obligation.reader_codec_path, root)
+        try:
+            codec_bytes = codec_path.read_bytes()
+        except OSError as exc:
+            drift(f"reader codec {obligation.reader_codec_path} for {t.release_id} is unreadable: "
+                  f"{codec_path} ({exc})")
+        else:
+            if bh(codec_bytes) != t.codec_hash:
+                drift(f"reader codec {obligation.reader_codec_path} for {t.release_id} changed: "
+                      f"fresh={bh(codec_bytes)} verified={t.codec_hash}")
+
+        try:
+            fresh_environment = environment_hash_fn()
+        except (OSError, ValueError) as exc:
+            drift(f"environment hash cannot be computed: {exc}")
+        else:
+            if fresh_environment != t.environment_hash:
+                drift(f"probe environment changed: fresh={fresh_environment} verified={t.environment_hash}")
+
+        try:
+            fresh_spec = probe_spec_fn(obligation.reader_entry)
+        except (OSError, ValueError) as exc:
+            drift(f"probe spec cannot be computed for entry {obligation.reader_entry!r}: {exc}")
+        else:
+            if fresh_spec != t.probe_spec_hash:
+                drift(f"probe spec for entry {obligation.reader_entry!r} changed: fresh={fresh_spec} "
+                      f"verified={t.probe_spec_hash}")
+
+    try:
+        declarations = load_release_declarations(root)
+    except (OSError, ValueError, KeyError) as exc:
+        declarations = {}
+        drift(f"release declarations cannot be read: {exc}")
+
+    for obligation in verification.obligations:
+        t = obligation.tuple
+        declaration = declarations.get(t.release_id)
+        if declaration is None:
+            drift(f"release {t.release_id} is no longer declared by the fixture")
+            continue
+        route = declaration["routes"].get(t.route_id)
+        if route is None:
+            drift(f"route {t.route_id} is no longer declared by {t.release_id}")
+        elif h(route) != t.route_contract_hash:
+            drift(f"route contract for {t.route_id} changed: fresh={h(route)} "
+                  f"verified={t.route_contract_hash}")
+
+    return errors
