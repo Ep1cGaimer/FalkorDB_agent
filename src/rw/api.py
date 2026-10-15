@@ -22,6 +22,20 @@ from .simulation import DEFAULT_FORBIDDEN_IDENTITIES, SimulationRefused
 ROOT = Path(__file__).resolve().parents[2]
 GROUNDING_DIR = ROOT / "artifacts/grounding"
 
+EVIDENCE_DRIFT_REASON = "evidence changed since verification; re-verify and re-approve"
+
+
+class EvidenceDrift(SimulationRefused):
+    """The bytes behind a stored verification no longer hold, so approval/simulation must stop.
+
+    ``drift`` names exactly what changed. The verification itself is never replaced: the operator has
+    to re-verify and approve the fresh evidence.
+    """
+
+    def __init__(self, drift: list[str]):
+        self.drift = list(drift)
+        super().__init__(EVIDENCE_DRIFT_REASON)
+
 
 class RequestBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -170,7 +184,11 @@ def create_app(*, session_factory: Callable | None = None,
 
     @app.exception_handler(SimulationRefused)
     async def refused_handler(request, exc):
-        return JSONResponse(status_code=409, content={"detail": exc.reason, "reason": exc.reason})
+        content = {"detail": exc.reason, "reason": exc.reason}
+        if isinstance(exc, EvidenceDrift):
+            # structured detail (reason + the drift lines); the string reason stays for the UI
+            content["detail"] = {"reason": exc.reason, "drift": exc.drift}
+        return JSONResponse(status_code=409, content=content)
 
     def get_investigation(identifier):
         with registry_lock:
@@ -335,6 +353,21 @@ def create_app(*, session_factory: Callable | None = None,
             raise SimulationRefused("verification is not BOUNDED_PASS")
         return verification
 
+    def revalidated(inv, verification):
+        """Refuse to act when the stored verification's bytes have drifted since it was taken.
+
+        The session's own fixture root is authoritative (obligation paths may be absolute for a
+        session built on a copy), and the stored verification is only checked, never replaced.
+        """
+        from . import probes
+        from .verification import revalidate
+
+        drift = revalidate(verification, inv.session.fixture_root,
+                           probes.environment_hash, probes.probe_spec_hash)
+        if drift:
+            raise EvidenceDrift(drift)
+        return verification
+
     @app.post("/api/investigations/{identifier}/plans/{plan_hash}/approve")
     def approve(identifier: str, plan_hash: str, body: ApprovalRequest):
         from .simulation import record_approval
@@ -342,6 +375,7 @@ def create_app(*, session_factory: Callable | None = None,
         with inv.lock:
             attempt = get_attempt(inv, plan_hash)
             verification = verified(attempt)
+            revalidated(inv, verification)
             forbidden = human(inv, body.approved_by)
             approval = Approval(plan_hash=attempt.plan.plan_hash(),
                 verification_hash=verification.verification_hash(),
@@ -360,8 +394,9 @@ def create_app(*, session_factory: Callable | None = None,
             result = verified(attempt)
             if attempt.approval is None:
                 raise SimulationRefused("human approval required")
+            revalidated(inv, result)
             try:
-                _, manifest_hash = verification.load_manifest(ROOT / "fixtures/shop", "snap-001")
+                _, manifest_hash = verification.load_manifest(inv.session.fixture_root, inv.session.snapshot)
             except (OSError, ValueError) as exc:
                 raise SimulationRefused("current manifest is unavailable") from exc
             rows, log = graph.current_fleet(inv.session.g, inv.session.snapshot_id)

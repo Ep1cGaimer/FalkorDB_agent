@@ -1,6 +1,7 @@
 """Real FalkorDB + real probes; only the language-model grounding is replaced."""
 from pathlib import Path
 import json
+import shutil
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -8,7 +9,7 @@ import pytest
 
 from rw.api import create_app
 from rw.contracts import (Citation, FleetEntry, GroundingClarification,
-                          GroundingProposal, GroundingResult)
+                          GroundingProposal, GroundingResult, bh)
 
 REQUEST = "Undo the basket rollout but keep the receipt correction"
 
@@ -229,8 +230,82 @@ def test_stale_disk_manifest_refused(api, monkeypatch):
     monkeypatch.setattr(verification, "load_manifest", stale)
     response = client.post(plan_url(alternative) + "/simulate")
     assert response.status_code == 409
-    assert "stale" in response.json()["reason"]
-    assert reads == [(Path(__file__).resolve().parents[1] / "fixtures/shop", "snap-001")]
+    # The revalidation gate now catches the changed manifest before the ledger's own stale check and
+    # names it; the refusal still happens before anything is applied.
+    assert response.json()["reason"] == "evidence changed since verification; re-verify and re-approve"
+    assert any("snapshot manifest changed" in line and "sha256:changed-on-disk" in line
+               for line in response.json()["detail"]["drift"])
+    # revalidation re-read that session's own manifest (through the stored verification's snapshot id)
+    # and refused before the ledger's own stale check could run
+    assert reads == [(Path(__file__).resolve().parents[1] / "fixtures/shop", "snapshot:snap-001")]
+    assert client.get(f"/api/investigations/{state['id']}").json()["simulation"] is None
+
+
+def test_changed_payload_bytes_block_approval_and_simulation(tmp_path):
+    """F4 at the API boundary: a session on its own fixture copy is gated on that copy's bytes."""
+    from rw import graph
+    from rw.pipeline import Session
+
+    fixture = tmp_path / "shop"
+    shutil.copytree(Path(__file__).resolve().parents[1] / "fixtures/shop", fixture)
+    name = "rw_test_api_" + uuid4().hex
+    session = Session(snapshot="snap-001", graph_name=name, fixture_root=fixture)
+
+    def ground(request, tools, alternative_context=None):
+        rows, log = graph.releases_for_service(session.g, "cart")
+        assert not log["truncated"]
+        release = next(row for row in rows if row["version"] == "1.5")
+        history, _ = tools.release_history("cart")
+        excerpt = next(ex for row in history if row["release_id"] == release["release_id"]
+                       for ex in row["excerpts"] if ex["kind"] == "changelog")
+        proposal = GroundingProposal(changes=[FleetEntry(service="cart",
+            release_id=release["release_id"], flags={"basket_v2": False})],
+            citations=[Citation(excerpt_id=excerpt["excerpt_id"], content_hash=excerpt["content_hash"],
+                                quote=excerpt["text"])], rationale="Fixed drift-test proposal")
+        return GroundingResult(request_text=request, result=proposal, model="fake-grounder", live=True), None
+
+    app = create_app(session_factory=lambda: Session(snapshot="snap-001", graph_name=name,
+                                                     reimport=False, fixture_root=fixture),
+                     ground_function=ground, db_path=tmp_path / "sim.sqlite", transcript_dir=tmp_path)
+    try:
+        with TestClient(app) as client:
+            state = create(client)
+            cart = next(entry for entry in state["plan"]["fleet"] if entry["service"] == "cart")
+            assert cart["proposed_version"] == "1.5" and cart["flags"]["basket_v2"] is False
+            passing = confirm(client, state)
+            assert passing["verification"]["disposition"] == "BOUNDED_PASS"
+
+            payload = fixture / "payloads" / "saved-cart-1001.bin"
+            original = payload.read_bytes()
+            tampered = original + b"\x00"
+            verified_hash = next(ob["tuple"]["payload_hash"] for ob in passing["verification"]["obligations"]
+                                 if ob["tuple"]["record_id"] == "saved-cart-1001")
+            payload.write_bytes(tampered)
+
+            refused = client.post(plan_url(state) + "/approve", json={"approved_by": "oncall:alice"})
+            assert refused.status_code == 409, refused.text
+            body = refused.json()
+            assert body["reason"] == "evidence changed since verification; re-verify and re-approve"
+            assert body["detail"] == {"reason": body["reason"], "drift": [
+                f"payload for record saved-cart-1001 changed: fresh={bh(tampered)} verified={verified_hash}"]}
+            # the refusal happened before any approval was recorded or verification replaced
+            assert client.get(f"/api/investigations/{state['id']}").json()["approval"] is None
+
+            payload.write_bytes(original)
+            approval = client.post(plan_url(state) + "/approve", json={"approved_by": "oncall:alice"})
+            assert approval.status_code == 200, approval.text
+            assert approval.json()["verification_hash"] == passing["verification_hash"]
+
+            payload.write_bytes(tampered)
+            refused = client.post(plan_url(state) + "/simulate")
+            assert refused.status_code == 409, refused.text
+            drift = refused.json()["detail"]["drift"]
+            assert len(drift) == 1 and "saved-cart-1001" in drift[0] and "changed" in drift[0]
+            after = client.get(f"/api/investigations/{state['id']}").json()
+            assert after["simulation"] is None
+            assert after["attempts"][0]["report"]["verification_hash"] == passing["verification_hash"]
+    finally:
+        session.g.delete()
 
 
 def test_root():
