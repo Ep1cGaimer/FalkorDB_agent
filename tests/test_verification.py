@@ -47,12 +47,20 @@ DECL = {
 }
 
 
-def manifest(coverage="COMPLETE", records=("r1", "r2")):
+def manifest(coverage="COMPLETE", records=("r1", "r2"), writer=("cart", "1.5"), fmt="f1"):
+    """An independently parsed manifest; ``writer``/``fmt`` default to what the hand-built graph says."""
+    def record(rid):
+        rec = {"record_id": rid, "payload_hash": f"ph-{rid}"}
+        if writer is not None:
+            rec["writer"] = {"service": writer[0], "version": writer[1]}
+        if fmt is not None:
+            rec["format"] = fmt
+        return rec
+
     return {
         "snapshot": "snap-x",
         "deployments": [{"service": "cart"}, {"service": "checkout"}],
-        "stores": [{"name": "kv", "coverage": coverage,
-                    "records": [{"record_id": r, "payload_hash": f"ph-{r}"} for r in records]}],
+        "stores": [{"name": "kv", "coverage": coverage, "records": [record(r) for r in records]}],
     }
 
 
@@ -106,9 +114,9 @@ def route_rows(plan, checkout_routes=True, decls=None):
     return rows
 
 
-def inventory(records=("r1", "r2"), status="COMPLETE", writer=True, in_store=True, truncated=False):
+def inventory(records=("r1", "r2"), status="COMPLETE", writer=True, in_store=True, truncated=False, fmt="f1"):
     batches = [{"batch_id": f"batch:{r}", "record_id": r, "payload_hash": f"ph-{r}", "payload_path": "x",
-                "format_id": "f1", "in_store": in_store,
+                "format_id": fmt, "in_store": in_store,
                 "writer_release_id": "release:cart:new" if writer else None} for r in records]
     cov = {"coverage_id": "cov", "status": status, "inventory_id_hash": "i"} if status else None
     return {"store:kv": (cov, batches, {"name": "store_inventory", "params": {}, "rows": len(batches),
@@ -364,3 +372,77 @@ def test_citation_quotes_must_be_real():
     assert validate_citations([ok], rows) == []
     assert validate_citations([fake], rows)
     assert validate_citations([Citation(excerpt_id="nope", content_hash="c", quote="a")], rows)
+
+
+# --------------------------------------------------------------------------- manifest reconciliation (F6)
+
+def writers(ev):
+    return [g for g in ev.gaps if g.kind == GapKind.WRITER_UNKNOWN]
+
+
+def formats(ev):
+    return [g for g in ev.gaps if g.kind == GapKind.FORMAT_UNKNOWN]
+
+
+def test_null_manifest_writer_is_a_gap_even_with_a_graph_edge():
+    """A graph WRITTEN_BY edge can never stand in for a null manifest writer."""
+    plan = plan_for()
+    ev = evidence(plan, man=manifest(writer=None))
+    assert len(writers(ev)) == 2  # one per batch, never more
+    assert all(g.detail == "manifest writer is unknown" for g in writers(ev))
+
+
+def test_manifest_writer_contradicting_the_graph_writer_is_a_gap():
+    plan = plan_for()
+    ev = evidence(plan, man=manifest(writer=("cart", "1.4")))  # resolves to release:cart:old
+    assert len(writers(ev)) == 2
+    assert all(g.detail == "writer contradiction: graph=release:cart:new manifest=release:cart:old"
+               for g in writers(ev))
+    res = dispose(ev, [receipt(o, ProbeResult.PASS) for o in ev.obligations])
+    assert res.disposition == Disposition.NEEDS_EVIDENCE
+
+
+def test_manifest_writer_that_resolves_to_no_declared_release_is_a_gap():
+    plan = plan_for()
+    ev = evidence(plan, man=manifest(writer=("cart", "9.9")))
+    assert len(writers(ev)) == 2
+    assert all("does not resolve to a declared release" in g.detail for g in writers(ev))
+
+
+def test_unknown_format_on_either_side_is_a_gap():
+    plan = plan_for()
+    ev = evidence(plan, man=manifest(fmt=None))
+    assert len(formats(ev)) == 2
+    assert all(g.detail == "manifest format is unknown" for g in formats(ev))
+    for graph_format in ("UNKNOWN", ""):
+        ev = evidence(plan, inv=inventory(fmt=graph_format))
+        assert len(formats(ev)) == 2
+        assert all(g.detail == "record format not established" for g in formats(ev))
+
+
+def test_manifest_format_contradicting_the_graph_format_is_a_gap():
+    plan = plan_for()
+    ev = evidence(plan, man=manifest(fmt="cart/v1"))
+    assert len(formats(ev)) == 2
+    assert all(g.detail == "format contradiction: graph=f1 manifest=cart/v1" for g in formats(ev))
+
+
+def test_consistent_manifest_and_graph_metadata_has_no_writer_or_format_gap():
+    plan = plan_for()
+    ev = evidence(plan, man=manifest(writer=("cart", "1.5"), fmt="f1"))
+    assert not writers(ev) and not formats(ev)
+
+
+# --------------------------------------------------------------------------- snapshot binding (F8)
+
+def test_zero_obligation_evidence_keeps_the_snapshot_binding():
+    """F8: a stateless fleet passes with no obligations; the plan binding must survive dispose."""
+    stateless = {rid: {**spec, "routes": [], "no_state_read": True} for rid, spec in DECL.items()}
+    plan = plan_for()
+    ev = evidence(plan, decls=declarations(stateless))
+    assert not ev.obligations and not ev.gaps
+    assert ev.snapshot_id == SNAP and ev.snapshot_manifest_hash == MHASH
+    res = dispose(ev, [])
+    assert res.disposition == Disposition.BOUNDED_PASS
+    assert res.snapshot_id == SNAP
+    assert res.snapshot_manifest_hash == MHASH

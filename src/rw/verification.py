@@ -103,6 +103,69 @@ def load_release_declarations(fixture_root: Path) -> dict[str, dict]:
     return declarations
 
 
+def release_index_by_service_version(declarations: dict[str, dict]) -> dict[tuple[str, str], str]:
+    """Map ``(service, version)`` to the one declared release id, dropping ambiguous keys.
+
+    Manifest writers name a ``{service, version}`` pair; only an unambiguous match may resolve it to
+    an imported artifact.
+    """
+    index: dict[tuple[str, str], str] = {}
+    ambiguous: set[tuple[str, str]] = set()
+    for release_id, decl in declarations.items():
+        key = (decl.get("service"), decl.get("version"))
+        if key in index:
+            ambiguous.add(key)
+        index[key] = release_id
+    for key in ambiguous:
+        index.pop(key, None)
+    return index
+
+
+def _established(value: Any) -> bool:
+    """An identity is established only when it is a non-empty string other than literal UNKNOWN."""
+    return isinstance(value, str) and value not in ("", UNKNOWN)
+
+
+def _writer_gap(batch: dict, manifest_record: dict | None, releases: dict[tuple[str, str], str]) -> str | None:
+    """Reconcile one batch's writer edge with the independent manifest writer, or explain the gap.
+
+    At most one WRITER_UNKNOWN reason is returned per batch.
+    """
+    graph_writer = batch.get("writer_release_id")
+    if manifest_record is None:
+        # graph-only record: the manifest cannot vouch for it, so the edge must stand on its own
+        return None if _established(graph_writer) else "no WRITTEN_BY writer release"
+    writer = manifest_record.get("writer")
+    if (not isinstance(writer, dict) or not _established(writer.get("service"))
+            or not _established(writer.get("version"))):
+        return "manifest writer is unknown"
+    manifest_release = releases.get((writer["service"], writer["version"]))
+    if manifest_release is None:
+        return (f"manifest writer {writer['service']} {writer['version']} "
+                "does not resolve to a declared release")
+    if manifest_release != graph_writer:
+        return f"writer contradiction: graph={graph_writer} manifest={manifest_release}"
+    return None
+
+
+def _format_gap(batch: dict, manifest_record: dict | None) -> str | None:
+    """Reconcile one batch's format with the independent manifest format, or explain the gap.
+
+    At most one FORMAT_UNKNOWN reason is returned per batch.
+    """
+    graph_format = batch.get("format_id")
+    if not _established(graph_format):
+        return "record format not established"
+    if manifest_record is None:
+        return None
+    manifest_format = manifest_record.get("format")
+    if not _established(manifest_format):
+        return "manifest format is unknown"
+    if manifest_format != graph_format:
+        return f"format contradiction: graph={graph_format} manifest={manifest_format}"
+    return None
+
+
 # --------------------------------------------------------------------------- grounding validation
 
 def _norm(text: str) -> str:
@@ -213,6 +276,7 @@ def build_evidence(
     """
     plan_hash = plan.plan_hash()
     plan_id = plan.plan_id()
+    release_by_version = release_index_by_service_version(declarations)
     gaps: list[Gap] = []
     queries = [route_log, path_log] + [inv[2] for inv in inventories.values()]
 
@@ -333,10 +397,14 @@ def build_evidence(
         for rid, b in sorted(g_records.items()):
             if not b.get("in_store"):
                 gap(GapKind.INVENTORY_MISMATCH, b["batch_id"], "batch lacks its IN_STORE edge")
-            if not b.get("writer_release_id"):
-                gap(GapKind.WRITER_UNKNOWN, b["batch_id"], "no WRITTEN_BY writer release")
-            if not b.get("format_id"):
-                gap(GapKind.FORMAT_UNKNOWN, b["batch_id"], "record format not established")
+            # writer/format provenance is reconciled against the independent manifest, so a graph
+            # edge or a truthy literal can never stand in for a manifest unknown or contradiction
+            writer_problem = _writer_gap(b, m_records.get(rid), release_by_version)
+            if writer_problem:
+                gap(GapKind.WRITER_UNKNOWN, b["batch_id"], writer_problem)
+            format_problem = _format_gap(b, m_records.get(rid))
+            if format_problem:
+                gap(GapKind.FORMAT_UNKNOWN, b["batch_id"], format_problem)
         batches_by_store[store_id] = g_records
         for route_id, route_store_id in declared_route_stores.items():
             if route_store_id == store_id:
@@ -402,7 +470,8 @@ def build_evidence(
             "reader/record pair expected from routes x inventory is missing from the graph path query")
 
     obligations.sort(key=lambda o: (o.tuple.service, o.tuple.route_id, o.tuple.record_id))
-    return GraphEvidence(plan_hash=plan_hash, obligations=obligations, gaps=gaps, queries=queries)
+    return GraphEvidence(plan_hash=plan_hash, obligations=obligations, gaps=gaps, queries=queries,
+                         snapshot_id=plan.snapshot_id, snapshot_manifest_hash=manifest_hash)
 
 
 # --------------------------------------------------------------------------- disposition
@@ -422,7 +491,6 @@ def dispose(evidence: GraphEvidence, receipts: list[ProbeReceipt]) -> Verificati
     for r in receipts:
         by_hash.setdefault(r.obligation_hash, []).append(r)
 
-    plan_tuple = evidence.obligations[0].tuple if evidence.obligations else None
     for ob in evidence.obligations:
         candidates = by_hash.get(ob.obligation_hash, [])
         applicable = [r for r in candidates if receipt_applicable(r, ob)]
@@ -448,13 +516,12 @@ def dispose(evidence: GraphEvidence, receipts: list[ProbeReceipt]) -> Verificati
     else:
         disposition = Disposition.BOUNDED_PASS
 
-    snapshot_id = plan_tuple.snapshot_id if plan_tuple else ""
-    manifest_hash = plan_tuple.snapshot_manifest_hash if plan_tuple else ""
     ob_hashes = {o.obligation_hash for o in evidence.obligations}
     return VerificationResult(
         plan_hash=evidence.plan_hash,
-        snapshot_id=snapshot_id,
-        snapshot_manifest_hash=manifest_hash,
+        # plan-level binding comes from the evidence itself, so zero-obligation evidence keeps it
+        snapshot_id=evidence.snapshot_id,
+        snapshot_manifest_hash=evidence.snapshot_manifest_hash,
         disposition=disposition,
         obligations=evidence.obligations,
         receipts=[r for r in receipts if r.obligation_hash in ob_hashes],

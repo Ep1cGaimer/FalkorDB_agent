@@ -224,6 +224,8 @@ class GraphEvidence(Frozen):
     obligations: list[Obligation]
     gaps: list[Gap]
     queries: list[dict[str, Any]]  # {"name","params","rows","truncated"} — the fixed queries actually executed
+    snapshot_id: str = ""               # plan-level binding; never inferred from an obligation
+    snapshot_manifest_hash: str = ""    # manifest bytes the evidence was built against
 
 
 class VerificationResult(Frozen):

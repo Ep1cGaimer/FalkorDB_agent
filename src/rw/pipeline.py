@@ -20,6 +20,7 @@ from .contracts import (
     GroundingProposal,
     GroundingResult,
     ProbeReceipt,
+    ProbeResult,
     ScopeConfirmation,
     VerificationResult,
     h,
@@ -66,12 +67,15 @@ class Session:
     """Server-side binding of one graph + snapshot; nothing here comes from model output."""
 
     def __init__(self, snapshot: str = "snap-001", graph_name: str = GRAPH_NAME, reimport: bool = True,
-                 host: str = "127.0.0.1", port: int = 6379):
+                 host: str = "127.0.0.1", port: int = 6379, fixture_root: Path | None = None):
         self.db = G.connect(host, port)
         self.graph_name = graph_name
-        self.import_report = G.reset_and_import(self.db, graph_name, FIXTURE_ROOT, ALL_SNAPSHOTS) if reimport else None
+        self.fixture_root = Path(fixture_root) if fixture_root is not None else FIXTURE_ROOT
+        self.snapshot = snapshot
+        self.import_report = (G.reset_and_import(self.db, graph_name, self.fixture_root, ALL_SNAPSHOTS)
+                             if reimport else None)
         self.g = self.db.select_graph(graph_name)
-        self.manifest, self.manifest_hash = load_manifest(FIXTURE_ROOT, snapshot)
+        self.manifest, self.manifest_hash = load_manifest(self.fixture_root, snapshot)
         self.snapshot_id = "snapshot:" + self.manifest["snapshot"]
 
     # ---- plan from a grounded proposal (or a fixture-defined fleet for controls/tests)
@@ -93,14 +97,18 @@ class Session:
 
         if confirmation.plan_hash != plan.plan_hash():
             raise ValueError("scope confirmation does not match this plan")
+        # Re-read the manifest from disk at verification time: the plan is bound to specific manifest
+        # bytes, so a snapshot that changed after the plan was built must show up as STALE_SNAPSHOT
+        # instead of being certified from the copy cached at session construction.
+        manifest, manifest_hash = load_manifest(self.fixture_root, self.snapshot)
         plan_id = G.write_plan(self.g, plan)
         route_rows, route_log = G.plan_reader_routes(self.g, plan_id)
         stores = sorted({r["store_id"] for r in route_rows if r.get("store_id")})
         inventories = {s: G.store_inventory(self.g, self.snapshot_id, s) for s in stores}
         path_rows, path_log = G.obligation_paths(self.g, plan_id, self.snapshot_id)
-        evidence = build_evidence(plan, self.manifest, self.manifest_hash, route_rows, route_log, inventories,
+        evidence = build_evidence(plan, manifest, manifest_hash, route_rows, route_log, inventories,
                                   path_rows, path_log, P.probe_spec_hash, P.environment_hash(),
-                                  declarations=load_release_declarations(FIXTURE_ROOT))
+                                  declarations=load_release_declarations(self.fixture_root))
 
         payload_paths = {b["batch_id"]: b.get("payload_path") for _, rows, _ in inventories.values() for b in rows}
         written: set[str] = set()
@@ -130,20 +138,47 @@ class Session:
         }
 
 
+SUMMARY_SECTION_CAP = 20
+
+
+def _capped(lines: list[str], cap: int = SUMMARY_SECTION_CAP) -> list[str]:
+    """Keep a section bounded: at most `cap` lines, then a single '... and N more' line."""
+    if len(lines) <= cap:
+        return lines
+    return lines[:cap] + [f"... and {len(lines) - cap} more"]
+
+
 def summarize_for_agent(report: dict) -> str:
-    """Trusted, factual summary handed to the agent when it may propose one alternative."""
+    """Trusted, factual summary handed to the agent when it may propose one alternative.
+
+    Capped so a large batch cannot flood the next grounding turn: every FAIL obligation and every gap
+    is listed (at most 20 lines each), then one count of passed obligations. PASS obligations are
+    never listed individually; obligations without an applicable receipt result are already gaps.
+    """
     v = report["verification"]
-    lines = [f"Plan {report['plan_id']} disposition: {v['disposition']}."]
-    by_hash = {r["obligation_hash"]: r for r in v["receipts"]}
+    by_hash: dict[str, list[dict]] = {}
+    for r in v["receipts"]:
+        by_hash.setdefault(r["obligation_hash"], []).append(r)
+
+    fail_lines: list[str] = []
+    passed = 0
     for ob in v["obligations"]:
         t = ob["tuple"]
-        r = by_hash.get(ob["obligation_hash"])
-        res = r["result"] if r else "NO_RECEIPT"
-        msg = f" ({r.get('error_type')}: {r.get('message')})" if r and r["result"] == "FAIL" else ""
-        lines.append(f"- reader {t['release_id']} route {t['route_id']} on record {t['record_id']} "
-                     f"format {t['format_id']} written by {ob.get('writer_release_id')}: {res}{msg}")
-    for g in v["gaps"]:
-        lines.append(f"- gap {g['kind']} on {g['subject']}: {g['detail']}")
+        bound = [r for r in by_hash.get(ob["obligation_hash"], []) if r.get("tuple") == t]
+        results = {r["result"] for r in bound}
+        if ProbeResult.FAIL.value in results:
+            r = next(r for r in bound if r["result"] == ProbeResult.FAIL.value)
+            detail = f" ({r.get('error_type')}: {r.get('message')})" if r.get("error_type") else ""
+            fail_lines.append(f"- FAIL reader {t['release_id']} route {t['route_id']} on record "
+                              f"{t['record_id']} format {t['format_id']} written by "
+                              f"{ob.get('writer_release_id')}: FAIL{detail}")
+        elif ProbeResult.PASS.value in results:
+            passed += 1
+
+    lines = [f"Plan {report['plan_id']} disposition: {v['disposition']}."]
+    lines += _capped(fail_lines)
+    lines += _capped([f"- gap {g['kind']} on {g['subject']}: {g['detail']}" for g in v["gaps"]])
+    lines.append(f"PASS: {passed} obligations")
     return "\n".join(lines)
 
 
@@ -182,6 +217,12 @@ def run_investigation(request_text: str, *, ground: Callable[..., tuple[Groundin
             request_text = with_answer(request_text, grounding.result.question, reply)
             out["request_with_answer"] = request_text
             continue
+        if grounding.validation_errors:
+            # the adapter rejected this grounding (unknown excerpt, invented artifact, ...): never
+            # materialize, confirm or verify a proposal the trusted layer already refused
+            entry["validation_errors"] = list(grounding.validation_errors)
+            entry["outcome"] = "REJECTED_PROPOSAL"
+            break
         attempt = plans
         plans += 1
         plan, errors = session.plan_from_proposal(grounding.result, request_text, "agent",
