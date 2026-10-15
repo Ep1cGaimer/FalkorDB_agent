@@ -1,0 +1,5 @@
+[
+  {"id": "main", "text": "Undo the basket rollout, but keep the receipt correction."},
+  {"id": "ambiguous", "text": "Roll back the cart change from last week."},
+  {"id": "inseparable", "text": "Turn off the order summary basket headings, but keep the basket grouping of saved carts."}
+]

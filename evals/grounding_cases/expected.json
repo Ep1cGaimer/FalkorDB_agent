@@ -1,0 +1,9 @@
+{
+  "_note": "Independent expectations. NEVER imported by src/. Not a gate on model output beyond documentation.",
+  "main": {"kind": "PROPOSAL",
+           "reasoning": "Basket rollout = cart 1.5 (flag basket_v2) + checkout 2.1 basket support, but the receipt correction (INC-4471) is only in checkout 2.1. Plausible grounded answers: roll cart back to 1.4 and keep checkout 2.1, or keep cart 1.5 with basket_v2 off. Rolling checkout back to 2.0 would lose the correction. Bundle co-membership does not force checkout back."},
+  "ambiguous": {"kind": "CLARIFICATION",
+                "reasoning": "'the cart change from last week' has no date anchor in artifacts and 'cart change' could be cart 1.5, checkout 2.1, or the basket_v2 flag; the question cannot bind to one artifact."},
+  "inseparable": {"kind": "CLARIFICATION",
+                  "reasoning": "Basket headings in the order summary live in checkout 2.1 with no declared flag, alongside the receipt correction; grouping of saved carts is cart 1.5 under basket_v2. Undoing headings alone would require splicing checkout 2.1; no existing artifact or declared flag separates it, so a clarification (or a proposal that explicitly drops the heading request) is expected, not a hybrid."}
+}

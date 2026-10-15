@@ -1,0 +1,10 @@
+[project]
+name = "rollbackwitness"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["falkordb==1.8.0", "redis==8.1.0", "pydantic==2.14.1", "fastapi", "uvicorn", "httpx"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+markers = ["live: calls the live LLM provider (needs GEMINI_API_KEY and network)"]

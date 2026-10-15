@@ -1,0 +1,36 @@
+# Local tooling and agent state
+runtime/
+.worktrees/
+
+# Environments, credentials and local settings
+.venv/
+.uv-cache/
+.env
+.env.*
+!.env.example
+*.local
+
+# Python and test/build artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Optional frontend dependencies/output
+node_modules/
+coverage/
+
+# Local generated evidence; curated fixtures/evals remain tracked
+artifacts/
+evals/results/
+*.log
+
+# Review scratch output (large, regenerable)
+evals/reviews/scratch/
+.superpowers/

@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RollbackWitness — rollback check (synthetic fixture)</title>
+<style>
+:root{
+  --bg:#e8ecf0; --panel:#ffffff; --ink:#18212b; --mute:#546170; --line:#c9d1da; --soft:#f2f5f8;
+  --fail:#a8231b; --fail-bg:#fbe9e7; --pass:#17693c; --pass-bg:#e4f4ea; --unk:#8a5a00; --unk-bg:#fdf0d2;
+  --accent:#1f4f8f; --mono:"Cascadia Mono","Consolas","SF Mono",Menlo,monospace;
+  --sans:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+html{font-size:15px}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.45}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1240px;margin:0 auto;padding:20px 28px 56px}
+header.top{display:flex;align-items:baseline;gap:18px;flex-wrap:wrap;margin-bottom:14px}
+header.top h1{font-size:1.5rem;margin:0;letter-spacing:-.01em}
+header.top p{margin:0;color:var(--mute)}
+.mode-banner{margin:0 0 14px;padding:10px 14px;font-weight:700;border-left:8px solid var(--unk);background:var(--unk-bg);color:#5c3b00}
+.mode-banner.live{border-color:var(--pass);background:var(--pass-bg);color:#0e4727}
+.mode-banner .model{font-family:var(--mono);font-weight:600}
+section.step{background:var(--panel);border:1px solid var(--line);border-left:6px solid var(--line);margin:0 0 14px;padding:16px 20px}
+section.step.active{border-left-color:var(--accent)}
+section.step>h2{font-size:1.05rem;margin:0 0 10px}
+section.step>h2 small{font-weight:400;color:var(--mute);margin-left:8px}
+h3{font-size:.95rem;margin:16px 0 6px}
+label{display:block;font-weight:600;margin-bottom:4px}
+textarea,input[type=text],select{font:inherit;width:100%;padding:8px 10px;border:1px solid #8693a1;background:#fff;color:var(--ink);border-radius:3px}
+textarea{min-height:64px;resize:vertical}
+.row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end}
+.row>div{flex:1 1 220px}
+.row>div.narrow{flex:0 0 190px}
+button{font:inherit;font-weight:600;padding:8px 16px;border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:3px;cursor:pointer}
+button.secondary{background:#fff;color:var(--accent)}
+button:disabled{opacity:.55;cursor:wait}
+button.approve{background:#1b2430;border-color:#1b2430}
+.hint{color:var(--mute);font-size:.9rem;margin:6px 0 0}
+.err{margin:10px 0 0;padding:9px 12px;border-left:6px solid var(--fail);background:var(--fail-bg);color:#6e140f;white-space:pre-wrap}
+.note{margin:10px 0 0;padding:9px 12px;border-left:6px solid var(--accent);background:var(--soft)}
+table{border-collapse:collapse;width:100%}
+th,td{border-bottom:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{font-size:.85rem;color:var(--mute);font-weight:600;background:var(--soft)}
+.mono,.hash,code{font-family:var(--mono);font-size:.86rem}
+.hash{cursor:pointer;border-bottom:1px dotted var(--mute);word-break:break-all}
+.chg{font-weight:700;color:var(--accent)}
+.keep{color:var(--mute)}
+blockquote{margin:6px 0;padding:6px 12px;border-left:4px solid var(--line);background:var(--soft)}
+blockquote .src{display:block;color:var(--mute);margin-top:4px}
+.badge{display:inline-block;font-weight:800;letter-spacing:.02em;padding:6px 18px;font-size:2rem;border:3px solid;line-height:1.15}
+.badge.BLOCKED{color:var(--fail);background:var(--fail-bg);border-color:var(--fail)}
+.badge.NEEDS_EVIDENCE{color:var(--unk);background:var(--unk-bg);border-color:var(--unk)}
+.badge.BOUNDED_PASS{color:var(--pass);background:var(--pass-bg);border-color:var(--pass)}
+.badge.small{font-size:1rem;padding:3px 10px;border-width:2px}
+.caption{margin:8px 0 0;font-weight:600}
+.contrast{display:flex;gap:0;flex-wrap:wrap;margin:14px 0 0;border:1px solid var(--line)}
+.contrast .cell{flex:1 1 280px;padding:12px 16px}
+.contrast .cell+.cell{border-left:1px solid var(--line)}
+.contrast .k{font-size:.9rem;color:var(--mute)}
+.contrast .v{font-size:1.5rem;font-weight:800}
+.v.GREEN,.v.PASS{color:var(--pass)} .v.FAIL,.v.RED{color:var(--fail)} .v.UNKNOWN{color:var(--unk)}
+.cellbtn{all:unset;box-sizing:border-box;cursor:pointer;display:inline-block;margin:1px 2px 1px 0;padding:3px 10px;font-weight:700;font-size:.85rem;border:2px solid;min-width:84px;text-align:center}
+.cellbtn.PASS{color:var(--pass);background:var(--pass-bg);border-color:var(--pass)}
+.cellbtn.FAIL{color:var(--fail);background:var(--fail-bg);border-color:var(--fail)}
+.cellbtn.UNKNOWN{color:var(--unk);background:var(--unk-bg);border-color:var(--unk)}
+.cellbtn.NONE{color:var(--mute);background:var(--soft);border-color:var(--line);border-style:dashed}
+.cellbtn.sel{box-shadow:0 0 0 3px var(--ink)}
+.cellbtn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.na{color:var(--mute)}
+dl.kv{display:grid;grid-template-columns:max-content 1fr;gap:4px 16px;margin:8px 0}
+dl.kv dt{color:var(--mute)} dl.kv dd{margin:0;word-break:break-word}
+.chain{display:flex;flex-wrap:wrap;align-items:stretch;gap:0;margin:8px 0}
+.node{border:2px solid var(--ink);background:#fff;padding:6px 10px;min-width:110px;max-width:230px}
+.node .lbl{font-size:.78rem;color:var(--mute)}
+.node .id{font-family:var(--mono);font-size:.82rem;word-break:break-all}
+.edge{align-self:center;padding:0 6px;font-family:var(--mono);font-size:.78rem;color:var(--accent);text-align:center;max-width:150px}
+.edge::after{content:"";display:block;border-top:2px solid var(--accent);margin-top:2px}
+details{margin-top:12px} summary{cursor:pointer;font-weight:600}
+.cmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:8px}
+.cmp>div{border:1px solid var(--line);padding:10px 14px}
+.cmp .sel{border:2px solid var(--accent)}
+.tabs{display:flex;gap:8px;margin-bottom:10px}
+.tabs button{background:#fff;color:var(--accent)} .tabs button[aria-pressed=true]{background:var(--accent);color:#fff}
+.sim{border:2px dashed var(--ink);padding:10px 14px;margin-top:10px}
+.sim .tag{font-weight:800}
+footer{margin-top:20px;padding-top:12px;border-top:1px solid var(--line);color:var(--mute);font-size:.88rem;display:flex;gap:24px;flex-wrap:wrap}
+@media (min-width:1700px){html{font-size:16px}.wrap{max-width:1500px}}
+@media (prefers-reduced-motion:no-preference){.badge{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <h1>RollbackWitness</h1>
+  <p>Can this rollback read the data the newer release already saved? Synthetic fixture; local simulation only.</p>
+</header>
+<div id="app"></div>
+<footer id="foot"><span>Synthetic fixture — not production data</span></footer>
+</div>
+
+<script>
+"use strict";
+const DEFAULT_REQUEST = "Undo the basket rollout, but keep the receipt correction.";
+const CAPTION_PASS = "byte/shape readability of modeled records only — not production safety";
+const S = { inv: null, view: 0, busy: null, error: null, sel: null, form: {req: DEFAULT_REQUEST, mode: "live", replay: "", alt: "", scope: "", approver: ""} };
+
+function el(tag, attrs, ...kids){
+  const n = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs||{})){
+    if (v===null||v===undefined||v===false) continue;
+    if (k==="class") n.className=v;
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+    else if (v===true) n.setAttribute(k,"");
+    else n.setAttribute(k,v);
+  }
+  for (const c of kids.flat(Infinity)){ if (c===null||c===undefined||c===false) continue; n.append(c.nodeType?c:document.createTextNode(String(c))); }
+  return n;
+}
+function hash(v, n=14){
+  if (v===null||v===undefined) return el("span",{class:"na"},"null");
+  const s=String(v);
+  const t=el("span",{class:"hash",tabindex:"0",role:"button",title:s+" (click to expand)"}, s.length>n+2?s.slice(0,n)+"…":s);
+  let open=false;
+  const flip=()=>{open=!open;t.textContent=open||s.length<=n+2?s:s.slice(0,n)+"…";};
+  t.addEventListener("click",flip); t.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();flip();}});
+  return t;
+}
+async function api(method, path, body){
+  const r = await fetch(path,{method, headers: body?{"Content-Type":"application/json"}:{}, body: body?JSON.stringify(body):undefined});
+  let data=null; try{ data=await r.json(); }catch(e){}
+  if(!r.ok){
+    let d = data && (data.reason||data.detail);
+    if (Array.isArray(d)) d = d.map(x=>(x.loc||[]).join(".")+": "+x.msg).join("\n");
+    throw new Error("HTTP "+r.status+" — "+(d||r.statusText));
+  }
+  return data;
+}
+async function run(label, fn){
+  S.busy=label; S.error=null; render();
+  try{ await fn(); }catch(e){ S.error=e.message; }
+  S.busy=null; render();
+}
+const cur = () => S.inv && S.inv.attempts[Math.min(S.view, S.inv.attempts.length-1)];
+const disp = a => a && a.report ? a.report.verification.disposition : null;
+
+/* ---------- actions ---------- */
+function start(){
+  const f=S.form;
+  run("Asking the agent — it is querying the graph…", async()=>{
+    const body={request_text:f.req, mode:f.mode}; if(f.mode==="replay") body.replay_path=f.replay;
+    S.inv = await api("POST","/api/investigations",body); S.view=0; S.sel=null;
+  });
+}
+async function refresh(){ S.inv = await api("GET","/api/investigations/"+S.inv.id); }
+function confirmScope(a){
+  run("Running graph queries and reader probes…", async()=>{
+    await api("POST",`/api/investigations/${S.inv.id}/plans/${a.plan_hash}/confirm-scope`,{confirmed_by:S.form.scope.trim()});
+    await refresh(); S.sel=null;
+  });
+}
+function askAlt(){
+  run("Asking the agent for an alternative…", async()=>{
+    const body = S.inv.mode==="replay" ? {replay_path:S.form.alt} : {};
+    S.inv = await api("POST",`/api/investigations/${S.inv.id}/alternative`,body);
+    S.view = S.inv.attempts.length-1; S.sel=null;
+  });
+}
+function approve(a){
+  run("Recording approval…", async()=>{
+    await api("POST",`/api/investigations/${S.inv.id}/plans/${a.plan_hash}/approve`,{approved_by:S.form.approver.trim()});
+    await refresh();
+  });
+}
+function simulate(a){
+  run("Running local simulation…", async()=>{
+    await api("POST",`/api/investigations/${S.inv.id}/plans/${a.plan_hash}/simulate`);
+    await refresh();
+  });
+}
+
+/* ---------- views ---------- */
+function field(label, id, key, opts={}){
+  const inp = el("input",{type:"text",id,value:S.form[key],placeholder:opts.ph||"",autocomplete:"off"});
+  inp.addEventListener("input",()=>{S.form[key]=inp.value; if(opts.after) opts.after();});
+  return el("div",{class:opts.cls||""}, el("label",{for:id},label), inp);
+}
+
+function requestView(){
+  const f=S.form;
+  const ta=el("textarea",{id:"req"}); ta.value=f.req; ta.addEventListener("input",()=>f.req=ta.value);
+  const sel=el("select",{id:"mode"}, el("option",{value:"live"},"Live — the agent answers now"), el("option",{value:"replay"},"Replay — saved transcript, not live"));
+  sel.value=f.mode; sel.addEventListener("change",()=>{f.mode=sel.value; render();});
+  return el("section",{class:"step"+(S.inv?"":" active")},
+    el("h2",{},"1. Request"),
+    el("label",{for:"req"},"What should the rollback do?"), ta,
+    el("div",{class:"row",style:"margin-top:10px"},
+      el("div",{class:"narrow",style:"flex-basis:300px"}, el("label",{for:"mode"},"Grounding"), sel),
+      f.mode==="replay"? field("Replay transcript path","replay","replay",{ph:"artifacts/grounding/<file>.json"}):null,
+      el("div",{class:"narrow",style:"flex:0 0 auto"}, el("button",{onclick:start,disabled:!!S.busy||!f.req.trim()||(f.mode==="replay"&&!f.replay.trim())}, S.inv?"Start over":"Ask the agent"))));
+}
+
+function modeBanner(){
+  const g=S.inv.grounding;
+  return el("div",{class:"mode-banner"+(g.live?" live":""),role:"status"},
+    g.live? "LIVE grounding — answered by " : "REPLAY — not live. Saved transcript, replayed as: ",
+    el("span",{class:"model"},g.model));
+}
+
+function proposalView(a){
+  const g=a.grounding;
+  const sec=el("section",{class:"step"+(S.inv&&!a.report?" active":"")}, el("h2",{},"2. Agent proposal", el("small",{}, a.plan? "plan "+a.plan_hash.slice(0,18)+"…":"")));
+  if(a.validation_errors.length) sec.append(el("div",{class:"err",role:"alert"}, "Proposal rejected by trusted validation:\n"+a.validation_errors.join("\n")));
+  if(a.clarification){
+    sec.append(el("div",{class:"note"}, el("strong",{},"The agent needs you to decide: "), a.clarification.question),
+      a.clarification.unresolved.length? el("p",{class:"hint"},"Could not bind to one artifact: ", a.clarification.unresolved.join("; ")):null);
+    cites(sec, a.clarification.citations||[]);
+  }
+  if(a.plan){
+    const rows=a.plan.fleet.map(f=>el("tr",{},
+      el("td",{},f.service), el("td",{}, el("span",{class:"mono"},f.release_id)),
+      el("td",{class:"mono"}, Object.keys(f.flags).length? Object.entries(f.flags).map(([k,v])=>k+"="+v).join(", "):"—"),
+      el("td",{}, el("span",{class:f.changed?"chg":"keep"}, f.changed?"CHANGE":"keep"))));
+    sec.append(el("table",{}, el("thead",{},el("tr",{},el("th",{},"Service"),el("th",{},"Proposed release"),el("th",{},"Flags"),el("th",{},"vs. current"))), el("tbody",{},rows)));
+    if(g.result && g.result.rationale) sec.append(el("p",{},el("strong",{},"Agent rationale: "), g.result.rationale));
+    cites(sec, a.citations||[]);
+  }
+  if(g.tool_calls && g.tool_calls.length){
+    sec.append(el("details",{}, el("summary",{},`Agent tool calls (${g.tool_calls.length})`),
+      el("pre",{class:"mono",style:"white-space:pre-wrap;margin:6px 0"}, g.tool_calls.map(c=>JSON.stringify(c)).join("\n"))));
+  }
+  return sec;
+}
+function cites(sec, list){
+  if(!list.length) return;
+  sec.append(el("h3",{},"Cited source text (exact quotes)"));
+  for(const c of list) sec.append(el("blockquote",{}, c.quote, el("span",{class:"src mono"}, c.excerpt_id+" · ", hash(c.content_hash,18))));
+}
+
+function scopeView(a){
+  const sec=el("section",{class:"step"+(a.plan&&!a.report?" active":"")}, el("h2",{},"3. Confirm scope for checking", el("small",{},"human step — this does not approve any action")));
+  if(a.report){
+    const c=a.report.scope_confirmation;
+    sec.append(el("p",{},"Scope confirmed by ", el("strong",{},c.confirmed_by), " at ", el("span",{class:"mono"},c.confirmed_at), "."));
+    return sec;
+  }
+  sec.append(el("p",{class:"hint",style:"margin-top:0"},"You are confirming which fleet gets checked against retained state. Approving a rollout is a separate, later step."),
+    el("div",{class:"row"}, field("Operator name","scope","scope",{ph:"your name (not the model)",after:()=>{const b=document.getElementById("scopebtn"); if(b) b.disabled=!!S.busy||!S.form.scope.trim();}}),
+      el("div",{class:"narrow",style:"flex:0 0 auto"}, el("button",{id:"scopebtn",onclick:()=>confirmScope(a),disabled:!!S.busy||!S.form.scope.trim()},"Confirm scope for checking"))));
+  return sec;
+}
+
+function probeOf(rep){ const m={}; for(const r of rep.verification.receipts) m[r.obligation_hash]=r; return m; }
+
+function resultView(a){
+  const rep=a.report, v=rep.verification, rm=probeOf(rep);
+  const sec=el("section",{class:"step active"}, el("h2",{},"4. Result"));
+  sec.append(el("div",{}, el("span",{class:"badge "+v.disposition},v.disposition)));
+  if(v.disposition==="BOUNDED_PASS") sec.append(el("p",{class:"caption"},CAPTION_PASS));
+  if(v.disposition==="NEEDS_EVIDENCE") sec.append(el("p",{class:"caption"},"Some applicable evidence is missing or unresolved — this is not a pass."));
+
+  // startup vs reader probe
+  const startup=rep.startup_checks||{};
+  for(const [svc,sc] of Object.entries(startup)){
+    const obs=v.obligations.filter(o=>o.tuple.service===svc);
+    if(!obs.length) continue;
+    const rs=obs.map(o=>rm[o.obligation_hash]);
+    let r = rs.some(x=>x&&x.result==="FAIL")?"FAIL": rs.some(x=>!x||x.result==="UNKNOWN")?"UNKNOWN":"PASS";
+    sec.append(el("div",{class:"contrast"},
+      el("div",{class:"cell"}, el("div",{class:"k"},`${svc} — Startup check (${sc.release_id})`), el("div",{class:"v "+sc.result},"Startup check: "+sc.result), el("div",{class:"hint mono"},sc.codec_path+" · exit "+sc.exit)),
+      el("div",{class:"cell"}, el("div",{class:"k"},`${svc} — probe on retained records`), el("div",{class:"v "+r},"Retained-state reader probe: "+r), el("div",{class:"hint"},obs.length+" obligation(s) for this service"))));
+  }
+
+  // matrix
+  sec.append(el("h3",{},"Reader × retained record"));
+  if(!v.obligations.length) sec.append(el("p",{class:"hint"},"No reader/record obligations were derived for this plan."));
+  else{
+    const readers=[...new Map(v.obligations.map(o=>[o.tuple.release_id,o.tuple.service])).entries()];
+    const recs=[...new Map(v.obligations.map(o=>[o.tuple.record_id,o])).values()];
+    if(S.sel===null || !v.obligations.some(o=>o.obligation_hash===S.sel)){
+      const blk=v.blocking_receipts[0]; S.sel = blk || v.obligations[0].obligation_hash;
+    }
+    const head=el("tr",{}, el("th",{},"Reader release"), recs.map(o=>el("th",{}, el("div",{class:"mono"},o.tuple.record_id), el("div",{style:"font-weight:400"},"format "+o.tuple.format_id), el("div",{style:"font-weight:400"},"writer "), el("span",{class:"mono",style:"font-weight:400"},o.writer_release_id===null?"null (unknown)":o.writer_release_id))));
+    const body=readers.map(([rid,svc])=>el("tr",{}, el("td",{}, el("div",{class:"mono"},rid), el("div",{class:"hint"},svc)),
+      recs.map(rc=>{
+        const obs=v.obligations.filter(o=>o.tuple.release_id===rid&&o.tuple.record_id===rc.tuple.record_id);
+        if(!obs.length) return el("td",{}, el("span",{class:"na",title:"No obligation for this pair in this plan"},"—"));
+        return el("td",{}, obs.map(o=>{ const r=rm[o.obligation_hash]; const k=r?r.result:"NONE";
+          return el("button",{class:`cellbtn ${k}${S.sel===o.obligation_hash?" sel":""}`,"aria-pressed":S.sel===o.obligation_hash,
+            title:"route "+o.tuple.route_id, onclick:()=>{S.sel=o.obligation_hash;render();}}, r?r.result:"no receipt"); }));
+      })));
+    sec.append(el("div",{style:"overflow-x:auto"}, el("table",{}, el("thead",{},head), el("tbody",{},body))));
+    const ob=v.obligations.find(o=>o.obligation_hash===S.sel);
+    if(ob) sec.append(detailView(ob, rm[ob.obligation_hash], v.blocking_receipts.includes(ob.obligation_hash)));
+  }
+
+  // gaps
+  sec.append(el("h3",{},`Gaps (${v.gaps.length})`));
+  if(!v.gaps.length) sec.append(el("p",{class:"hint"},"No gaps recorded."));
+  else sec.append(el("table",{}, el("thead",{},el("tr",{},el("th",{},"Kind"),el("th",{},"Subject"),el("th",{},"Detail"))),
+    el("tbody",{}, v.gaps.map(g=>el("tr",{}, el("td",{class:"mono"},g.kind), el("td",{class:"mono"},g.subject), el("td",{},g.detail))))));
+
+  // queries
+  const qs=rep.queries||[];
+  sec.append(el("details",{}, el("summary",{},`Fixed graph queries executed (${qs.length})`),
+    el("table",{}, el("thead",{},el("tr",{},el("th",{},"Query"),el("th",{},"Rows"),el("th",{},"Truncated"))),
+      el("tbody",{}, qs.map(q=>el("tr",{}, el("td",{class:"mono"},q.name), el("td",{},String(q.rows)), el("td",{},q.truncated?"YES":"no")))))));
+  return sec;
+}
+
+function detailView(ob, r, blocking){
+  const box=el("div",{style:"margin-top:14px;border:1px solid var(--line);padding:12px 16px"});
+  box.append(el("h3",{style:"margin-top:0"},"Receipt for "+ob.tuple.release_id+" reading "+ob.tuple.record_id));
+  if(r){
+    const kv=[["Result",r.result],["Harness exit",r.harness_exit===null?"null (timeout)":String(r.harness_exit)],["error_type",r.error_type],["message",r.message],
+      ["Evidence hash",hash(r.evidence_hash,20)],["Obligation hash",hash(r.obligation_hash,20)],["Payload hash",hash(r.tuple.payload_hash,20)],["Duration",r.duration_ms+" ms"]];
+    box.append(el("dl",{class:"kv"}, kv.map(([k,v])=>[el("dt",{},k), el("dd",{}, v===null||v===undefined?el("span",{class:"na"},"null"):(typeof v==="string"?el("span",{class:k==="Result"?"mono":""},v):v))])));
+    if(r.stdout_excerpt) box.append(el("details",{}, el("summary",{},"Probe output excerpt"), el("pre",{class:"mono",style:"white-space:pre-wrap"},r.stdout_excerpt)));
+  } else box.append(el("p",{},"No receipt exists for this obligation (obligation hash ", hash(ob.obligation_hash,20), ")."));
+  box.append(el("h3",{},blocking?"Witness path — why this blocks":"Witness path"));
+  const chain=el("div",{class:"chain"});
+  ob.witness_path.forEach((h,i)=>{
+    chain.append(el("div",{class:"node"}, el("div",{class:"lbl"},h.label), el("div",{class:"id",title:h.id},h.display||h.id)));
+    if(h.rel_to_next) chain.append(el("div",{class:"edge"},h.rel_to_next));
+  });
+  box.append(chain);
+  return box;
+}
+
+function altView(){
+  const a=cur(), d=disp(a);
+  const plans=S.inv.attempts.filter(x=>x.plan);
+  const sec=el("section",{class:"step"}, el("h2",{},"5. Alternatives"));
+  const can=(d==="BLOCKED"||d==="NEEDS_EVIDENCE") && S.inv.attempts.length<2 && S.view===S.inv.attempts.length-1;
+  if(can){
+    sec.append(el("p",{style:"margin-top:0"},"The agent may propose one alternative from the verification facts above. It will need its own scope confirmation."),
+      el("div",{class:"row"}, S.inv.mode==="replay"? field("Replay transcript for the alternative","alt","alt",{ph:"artifacts/grounding/<file>.json"}):null,
+        el("div",{class:"narrow",style:"flex:0 0 auto"}, el("button",{class:"secondary",onclick:askAlt,disabled:!!S.busy||(S.inv.mode==="replay"&&!S.form.alt.trim())},"Ask agent for an alternative"))));
+  } else if(S.inv.attempts.length>=2) sec.append(el("p",{class:"hint",style:"margin-top:0"},"Plan limit reached (2)."));
+  if(plans.length>=2){
+    sec.append(el("div",{class:"cmp"}, plans.map(p=>{
+      const i=S.inv.attempts.indexOf(p), dd=disp(p);
+      return el("div",{class:S.view===i?"sel":""},
+        el("div",{}, el("strong",{},p.plan.label||("Plan "+(i+1))), " "),
+        dd? el("span",{class:"badge small "+dd},dd): el("span",{class:"hint"},"not checked yet"),
+        el("p",{}, "Changes: ", p.plan.fleet.filter(f=>f.changed).map(f=>f.service+" → "+f.release_id+(Object.keys(f.flags).length?" {"+Object.entries(f.flags).map(([k,v])=>k+"="+v).join(", ")+"}":"")).join("; ")||"none"),
+        el("button",{class:"secondary",onclick:()=>{S.view=i;S.sel=null;render();}},"View this plan"));
+    })));
+  }
+  return sec.childNodes.length>1? sec : null;
+}
+
+function actionView(a){
+  const d=disp(a);
+  if(d!=="BOUNDED_PASS") return null;               // not rendered at all unless this plan is BOUNDED_PASS
+  const sec=el("section",{class:"step active"}, el("h2",{},"6. Approve and simulate", el("small",{},"LOCAL SIMULATION ONLY")));
+  sec.append(el("p",{class:"caption",style:"margin-top:0"},CAPTION_PASS));
+  if(!a.approval){
+    sec.append(el("div",{class:"row"}, field("Approver name","approver","approver",{ph:"your name (not the model)",after:()=>{const b=document.getElementById("apprbtn"); if(b) b.disabled=!!S.busy||!S.form.approver.trim();}}),
+      el("div",{class:"narrow",style:"flex:0 0 auto"}, el("button",{id:"apprbtn",class:"approve",onclick:()=>approve(a),disabled:!!S.busy||!S.form.approver.trim()},"Approve local simulation"))));
+  } else {
+    sec.append(el("p",{},"Approved by ", el("strong",{},a.approval.approved_by), " at ", el("span",{class:"mono"},a.approval.approved_at), "."));
+    sec.append(el("button",{onclick:()=>simulate(a),disabled:!!S.busy},"Run local simulation"));
+  }
+  if(a.simulation){
+    const s=a.simulation;
+    sec.append(el("div",{class:"sim"}, el("div",{class:"tag"},"LOCAL SIMULATION ONLY — no deployment performed"),
+      el("dl",{class:"kv"},
+        el("dt",{},"applied"), el("dd",{class:"mono"}, String(s.applied)+(s.applied?"":"  (duplicate request — no-op)")),
+        el("dt",{},"idempotency key"), el("dd",{}, hash(s.idempotency_key,24)),
+        el("dt",{},"previous fleet hash"), el("dd",{}, hash(s.previous_fleet_hash,24)),
+        el("dt",{},"new fleet hash"), el("dd",{}, hash(s.new_fleet_hash,24)),
+        el("dt",{},"applied at"), el("dd",{class:"mono"}, s.applied_at))));
+  }
+  return sec;
+}
+
+function render(){
+  const app=document.getElementById("app");
+  const ae=document.activeElement, keep=ae&&ae.id;
+  app.replaceChildren();
+  app.append(requestView());
+  if(S.busy) app.append(el("div",{class:"note",role:"status"},S.busy));
+  if(S.error) app.append(el("div",{class:"err",role:"alert"},S.error));
+  if(S.inv){
+    const a=cur();
+    if(S.inv.attempts.length>1) app.append(el("div",{class:"tabs"}, S.inv.attempts.map((x,i)=>
+      el("button",{"aria-pressed":S.view===i,onclick:()=>{S.view=i;S.sel=null;render();}}, (x.plan&&x.plan.label)||("Attempt "+(i+1))))));
+    app.append(modeBanner2(a), proposalView(a));
+    if(a.plan) app.append(scopeView(a));
+    if(a.report) app.append(resultView(a));
+    const alt=altView(); if(alt) app.append(alt);
+    const act=actionView(a); if(act) app.append(act);
+    const f=document.getElementById("foot");
+    f.replaceChildren(el("span",{},"Synthetic fixture — not production data"),
+      el("span",{},"FalkorDB snapshot: ",el("span",{class:"mono"},S.inv.snapshot_id)),
+      el("span",{},"Manifest hash: ",hash(S.inv.snapshot_manifest_hash,24)));
+  }
+  if(keep){ const n=document.getElementById(keep); if(n){ n.focus(); if(n.setSelectionRange&&n.type==="text"){const l=n.value.length;n.setSelectionRange(l,l);} } }
+}
+function modeBanner2(a){
+  const g=a.grounding;
+  return el("div",{class:"mode-banner"+(g.live?" live":""),role:"status"},
+    g.live? "LIVE grounding — answered by " : "REPLAY — not live. Saved transcript; model recorded as ",
+    el("span",{class:"model"},g.model));
+}
+render();
+</script>
+</body>
+</html>
