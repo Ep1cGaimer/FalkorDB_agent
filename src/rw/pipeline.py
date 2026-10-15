@@ -24,7 +24,15 @@ from .contracts import (
     VerificationResult,
     h,
 )
-from .verification import REPO_ROOT, build_evidence, dispose, load_manifest, materialize_plan, validate_citations
+from .verification import (
+    REPO_ROOT,
+    build_evidence,
+    dispose,
+    load_manifest,
+    load_release_declarations,
+    materialize_plan,
+    validate_citations,
+)
 
 FIXTURE_ROOT = REPO_ROOT / "fixtures" / "shop"
 ALL_SNAPSHOTS = ["snap-001", "snap-002-partial", "snap-003-orphan"]
@@ -91,7 +99,8 @@ class Session:
         inventories = {s: G.store_inventory(self.g, self.snapshot_id, s) for s in stores}
         path_rows, path_log = G.obligation_paths(self.g, plan_id, self.snapshot_id)
         evidence = build_evidence(plan, self.manifest, self.manifest_hash, route_rows, route_log, inventories,
-                                  path_rows, path_log, P.probe_spec_hash, P.environment_hash())
+                                  path_rows, path_log, P.probe_spec_hash, P.environment_hash(),
+                                  declarations=load_release_declarations(FIXTURE_ROOT))
 
         payload_paths = {b["batch_id"]: b.get("payload_path") for _, rows, _ in inventories.values() for b in rows}
         written: set[str] = set()

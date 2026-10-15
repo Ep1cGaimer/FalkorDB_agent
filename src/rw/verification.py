@@ -31,6 +31,7 @@ from .contracts import (
     WitnessHop,
     bh,
     h,
+    short,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -51,6 +52,55 @@ def load_manifest(fixture_root: Path, snapshot: str) -> tuple[dict, str]:
 
 def snapshot_node_id(manifest: dict) -> str:
     return "snapshot:" + manifest["snapshot"]
+
+
+# --------------------------------------------------------------------------- release declarations
+
+def _release_dir_files(release_dir: Path) -> list[list[str]]:
+    """Every file of a release dir as ``[posix relpath, byte hash]``, sorted by relpath."""
+    return [
+        [path.relative_to(release_dir).as_posix(), bh(path.read_bytes())]
+        for path in sorted(release_dir.rglob("*"))
+        if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc"
+    ]
+
+
+def _repo_rel(path: Path) -> str:
+    resolved = path.resolve()
+    try:
+        return resolved.relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        return resolved.as_posix()
+
+
+def load_release_declarations(fixture_root: Path) -> dict[str, dict]:
+    """Parse every release declaration straight from disk, independently of the graph.
+
+    The artifact hash is recomputed exactly as docs/CONTRACTS.md "Identity rules" prescribes, so a
+    graph row that no longer matches the shipped artifact cannot define a route for the checker.
+    """
+    declarations: dict[str, dict] = {}
+    releases_dir = Path(fixture_root) / "releases"
+    for release_dir in sorted(releases_dir.iterdir()):
+        declaration_path = release_dir / "release.json"
+        if not release_dir.is_dir() or not declaration_path.is_file():
+            continue
+        declaration = json.loads(declaration_path.read_text(encoding="utf-8"))
+        service = declaration["service"]
+        artifact_hash = h(_release_dir_files(release_dir))
+        release_id = f"release:{service}:{short(artifact_hash)}"
+        codec = release_dir / "codec.py"
+        declarations[release_id] = {
+            "service": service,
+            "version": declaration["version"],
+            "artifact_hash": artifact_hash,
+            "codec_path": _repo_rel(codec),
+            "codec_hash": bh(codec.read_bytes()),
+            "routes": {f"route:{release_id}:{route['name']}": route
+                       for route in declaration.get("routes", [])},
+            "no_state_read": bool(declaration.get("no_state_read", False)),
+        }
+    return declarations
 
 
 # --------------------------------------------------------------------------- grounding validation
@@ -153,8 +203,14 @@ def build_evidence(
     path_log: dict,
     probe_spec_for: Callable[[str], str],
     environment_hash: str,
+    *,
+    declarations: dict[str, dict],
 ) -> GraphEvidence:
-    """Turn graph rows into canonical obligations plus every unresolved gap."""
+    """Turn graph rows into canonical obligations plus every unresolved gap.
+
+    ``declarations`` is the independently loaded output of :func:`load_release_declarations`; the
+    graph's route set and route fields are only trusted insofar as they match it.
+    """
     plan_hash = plan.plan_hash()
     plan_id = plan.plan_id()
     gaps: list[Gap] = []
@@ -175,33 +231,78 @@ def build_evidence(
         gap(GapKind.INVALID_FLEET, plan_id,
             f"fleet services {sorted(plan_services)} != snapshot services {sorted(manifest_services)}")
 
-    # --- executing readers per candidate deployment
+    # --- executing readers per candidate deployment, checked against the shipped declarations
     by_deployment: dict[str, list[dict]] = {}
     for r in route_rows:
         by_deployment.setdefault(r["service"], []).append(r)
-    routes: dict[str, dict] = {}  # route_id -> row
+    routes: dict[str, dict] = {}  # route_id -> trusted, declaration-backed route facts
+    declared_route_stores: dict[str, str] = {}  # every declared route -> its declared store
     stores_read: set[str] = set()
     for entry in plan.fleet:
+        decl = declarations.get(entry.release_id)
+        if decl is None:
+            gap(GapKind.INVALID_FLEET, entry.release_id,
+                "no independently loaded declaration for this release")
+            continue
         rows = by_deployment.get(entry.service)
         if not rows:
             gap(GapKind.INVALID_FLEET, entry.service, "no candidate deployment found in the graph for this service")
             continue
         if any(r["release_id"] != entry.release_id for r in rows):
             gap(GapKind.INVALID_FLEET, entry.service, "graph deployment runs a different release than the plan")
-        declared = [r for r in rows if r.get("route_id")]
-        if not declared:
-            if not rows[0].get("no_state_read"):
-                gap(GapKind.ROUTE_EVIDENCE_MISSING, entry.release_id,
-                    "release declares no reader routes and no no_state_read evidence")
-            continue
-        for r in declared:
-            routes[r["route_id"]] = r
-            if r.get("read_domain") != "ALL_KEYS":
-                gap(GapKind.READ_DOMAIN_UNKNOWN, r["route_id"], f"read_domain={r.get('read_domain')!r}")
-            if not r.get("store_id"):
-                gap(GapKind.STORE_MISSING, r["route_id"], "route has no READS_FROM store")
+
+        declared_routes: dict[str, dict] = decl["routes"]
+        graph_routes = {r["route_id"]: r for r in rows if r.get("route_id")}
+        for route_id in sorted(set(declared_routes) - set(graph_routes)):
+            gap(GapKind.ROUTE_DECLARATION_MISMATCH, route_id, "declared route missing from graph")
+        for route_id in sorted(set(graph_routes) - set(declared_routes)):
+            gap(GapKind.ROUTE_DECLARATION_MISMATCH, route_id, "graph route not declared by the release")
+        graph_codec_hashes = {r.get("codec_hash") for r in graph_routes.values()}
+        for graph_codec_hash in sorted((v for v in graph_codec_hashes if v != decl["codec_hash"]), key=str):
+            gap(GapKind.ROUTE_DECLARATION_MISMATCH, entry.release_id,
+                f"codec_hash differs: graph={graph_codec_hash!r} declared={decl['codec_hash']!r}")
+
+        for route_id, route in sorted(declared_routes.items()):
+            declared_store = "store:" + route["reads_from"] if route.get("reads_from") else None
+            if route.get("read_domain") != "ALL_KEYS":
+                gap(GapKind.READ_DOMAIN_UNKNOWN, route_id, f"read_domain={route.get('read_domain')!r}")
+            if not declared_store:
+                gap(GapKind.STORE_MISSING, route_id, "route has no READS_FROM store")
             else:
-                stores_read.add(r["store_id"])
+                declared_route_stores[route_id] = declared_store
+                stores_read.add(declared_store)
+
+            row = graph_routes.get(route_id)
+            if row is None:
+                continue  # already reported as declared-but-missing
+            for field, graph_value, declared_value in (
+                ("entry", row.get("entry"), route.get("entry")),
+                ("read_domain", row.get("read_domain"), route.get("read_domain")),
+                ("store_id", row.get("store_id"), declared_store),
+                ("route_name", row.get("route_name"), route.get("name")),
+                ("route_contract_hash", row.get("route_contract_hash"), h(route)),
+            ):
+                if graph_value != declared_value:
+                    gap(GapKind.ROUTE_DECLARATION_MISMATCH, route_id,
+                        f"{field} differs: graph={graph_value!r} declared={declared_value!r}")
+            routes[route_id] = {
+                "route_id": route_id,
+                "service": entry.service,
+                "deployment_id": row["deployment_id"],
+                "release_id": entry.release_id,
+                "version": decl["version"],
+                "codec_hash": decl["codec_hash"],
+                "codec_path": decl["codec_path"],
+                "store_id": declared_store,
+                "route_name": route.get("name"),
+                "entry": route.get("entry"),
+                "read_domain": route.get("read_domain"),
+                "route_contract_hash": h(route),
+            }
+
+        if not declared_routes and not decl["no_state_read"]:
+            gap(GapKind.ROUTE_EVIDENCE_MISSING, entry.release_id,
+                "release declares no reader routes and no no_state_read evidence")
 
     # --- retained state per read store, compared with the independent manifest
     manifest_stores = {"store:" + s["name"]: s for s in manifest["stores"]}
@@ -237,8 +338,8 @@ def build_evidence(
             if not b.get("format_id"):
                 gap(GapKind.FORMAT_UNKNOWN, b["batch_id"], "record format not established")
         batches_by_store[store_id] = g_records
-        for route_id, r in routes.items():
-            if r.get("store_id") == store_id:
+        for route_id, route_store_id in declared_route_stores.items():
+            if route_store_id == store_id:
                 for rid in set(m_records) | set(g_records):
                     expected_pairs.add((route_id, rid))
 

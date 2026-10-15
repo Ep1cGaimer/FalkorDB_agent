@@ -80,6 +80,7 @@ class GapKind(str, Enum):
     RECEIPT_UNKNOWN = "RECEIPT_UNKNOWN"              # probe ran but harness error/timeout
     RECEIPT_INAPPLICABLE = "RECEIPT_INAPPLICABLE"    # receipt tuple differs from obligation tuple
     STALE_SNAPSHOT = "STALE_SNAPSHOT"
+    ROUTE_DECLARATION_MISMATCH = "ROUTE_DECLARATION_MISMATCH"  # graph route set/fields != shipped release.json
 
 
 # --------------------------------------------------------------------------- source & grounding

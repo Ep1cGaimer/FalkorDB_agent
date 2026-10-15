@@ -1,6 +1,8 @@
 """Disposition/completeness rules of the trusted checker, on hand-built graph rows."""
 from __future__ import annotations
 
+import uuid
+
 from rw.contracts import (
     Citation,
     Disposition,
@@ -9,8 +11,16 @@ from rw.contracts import (
     GroundingProposal,
     ProbeReceipt,
     ProbeResult,
+    h,
 )
-from rw.verification import build_evidence, dispose, materialize_plan, validate_citations
+from rw.verification import (
+    REPO_ROOT,
+    build_evidence,
+    dispose,
+    load_release_declarations,
+    materialize_plan,
+    validate_citations,
+)
 
 SNAP = "snapshot:snap-x"
 MHASH = "sha256:manifest"
@@ -28,6 +38,14 @@ RELEASES = {
     "checkout": [{"release_id": "release:checkout:b", "declared_flags": []}],
 }
 
+# the shipped declaration of every hand-built release: one reader route over "kv"
+ROUTE = {"name": "read", "reads_from": "kv", "entry": "read", "read_domain": "ALL_KEYS", "contract": "c"}
+DECL = {
+    "release:cart:new": {"service": "cart", "version": "1.5", "routes": [ROUTE]},
+    "release:cart:old": {"service": "cart", "version": "1.4", "routes": [ROUTE]},
+    "release:checkout:b": {"service": "checkout", "version": "2.0", "routes": [ROUTE]},
+}
+
 
 def manifest(coverage="COMPLETE", records=("r1", "r2")):
     return {
@@ -35,6 +53,22 @@ def manifest(coverage="COMPLETE", records=("r1", "r2")):
         "deployments": [{"service": "cart"}, {"service": "checkout"}],
         "stores": [{"name": "kv", "coverage": coverage,
                     "records": [{"record_id": r, "payload_hash": f"ph-{r}"} for r in records]}],
+    }
+
+
+def declarations(spec=None):
+    """The independently loaded declaration dict for these hand-built releases."""
+    return {
+        rid: {
+            "service": s["service"],
+            "version": s["version"],
+            "artifact_hash": f"ah-{rid}",
+            "codec_path": f"{rid}.py",
+            "codec_hash": f"codec-{rid}",
+            "routes": {f"route:{rid}:{r['name']}": dict(r) for r in s["routes"]},
+            "no_state_read": bool(s.get("no_state_read", False)),
+        }
+        for rid, s in (spec or DECL).items()
     }
 
 
@@ -47,21 +81,28 @@ def plan_for(cart_release="release:cart:old", flags=None):
     return plan
 
 
-def route_rows(plan, checkout_routes=True, no_state_read=False):
+def route_rows(plan, checkout_routes=True, decls=None):
+    """Graph rows as the importer would write them from the given declarations."""
+    decls = decls if decls is not None else declarations()
     rows = []
     for f in plan.fleet:
         dep = f"deployment:{plan.plan_id()}:{f.service}"
-        if f.service == "checkout" and not checkout_routes:
+        decl = decls[f.release_id]
+        routes = [] if (f.service == "checkout" and not checkout_routes) else list(decl["routes"].values())
+        if not routes:
             rows.append({"service": f.service, "deployment_id": dep, "release_id": f.release_id,
-                         "codec_hash": "c", "codec_path": "p", "no_state_read": no_state_read,
-                         "route_id": None, "route_name": None, "entry": None, "read_domain": None,
-                         "route_contract_hash": None, "store_id": None})
+                         "codec_hash": decl["codec_hash"], "codec_path": decl["codec_path"],
+                         "no_state_read": decl["no_state_read"], "route_id": None, "route_name": None,
+                         "entry": None, "read_domain": None, "route_contract_hash": None, "store_id": None})
             continue
-        rows.append({"service": f.service, "deployment_id": dep, "release_id": f.release_id,
-                     "codec_hash": f"codec-{f.release_id}", "codec_path": f"{f.release_id}.py",
-                     "no_state_read": False, "route_id": f"route:{f.release_id}:read",
-                     "route_name": "read", "entry": "read", "read_domain": "ALL_KEYS",
-                     "route_contract_hash": "rc", "store_id": "store:kv"})
+        for route in routes:
+            rows.append({"service": f.service, "deployment_id": dep, "release_id": f.release_id,
+                         "codec_hash": decl["codec_hash"], "codec_path": decl["codec_path"],
+                         "no_state_read": decl["no_state_read"],
+                         "route_id": f"route:{f.release_id}:{route['name']}", "route_name": route["name"],
+                         "entry": route.get("entry"), "read_domain": route.get("read_domain"),
+                         "route_contract_hash": h(route),
+                         "store_id": "store:" + route["reads_from"]})
     return rows
 
 
@@ -90,13 +131,14 @@ def path_rows(routes, records=("r1", "r2"), skip=()):
     return rows
 
 
-def evidence(plan, *, man=None, routes=None, inv=None, paths=None, path_truncated=False):
-    routes = routes if routes is not None else route_rows(plan)
+def evidence(plan, *, man=None, routes=None, inv=None, paths=None, path_truncated=False, decls=None):
+    decls = decls if decls is not None else declarations()
+    routes = routes if routes is not None else route_rows(plan, decls=decls)
     return build_evidence(
         plan, man or manifest(), MHASH, routes, {"name": "plan_reader_routes", "params": {}, "rows": 0},
         inv or inventory(), paths if paths is not None else path_rows(routes),
         {"name": "obligation_paths", "params": {}, "rows": 0, "truncated": path_truncated},
-        lambda entry: f"spec-{entry}", ENV)
+        lambda entry: f"spec-{entry}", ENV, declarations=decls)
 
 
 def receipt(ob, result, **tuple_changes):
@@ -174,6 +216,97 @@ def test_equal_count_wrong_ids_detected():
     assert any(g.kind == GapKind.INVENTORY_MISMATCH and "r9" in g.detail for g in ev.gaps)
 
 
+# --------------------------------------------------------------------------- declaration vs graph
+
+LEGACY = {"name": "legacy", "reads_from": "kv", "entry": "read_legacy",
+          "read_domain": "ALL_KEYS", "contract": "c"}
+LEGACY_ID = "route:release:cart:old:legacy"
+CART_OLD_ID = "route:release:cart:old:read"
+
+
+def two_route_declarations():
+    return declarations({**DECL, "release:cart:old": {**DECL["release:cart:old"], "routes": [ROUTE, LEGACY]}})
+
+
+def test_declared_route_missing_from_graph_is_a_gap():
+    """F1: dropping one of two EXECUTES_ROUTE edges must not hide the lost reader's pairs."""
+    decls = two_route_declarations()
+    plan = plan_for()
+    routes = [r for r in route_rows(plan, decls=decls) if r["route_id"] != LEGACY_ID]
+    ev = evidence(plan, routes=routes, decls=decls)
+    assert any(g.kind == GapKind.ROUTE_DECLARATION_MISMATCH and g.subject == LEGACY_ID
+               and g.detail == "declared route missing from graph" for g in ev.gaps)
+    res = dispose(ev, [receipt(o, ProbeResult.PASS) for o in ev.obligations])
+    assert res.disposition == Disposition.NEEDS_EVIDENCE
+    assert len(res.obligations) == 4
+    assert any(g.kind == GapKind.INVENTORY_MISMATCH and g.subject == f"{LEGACY_ID}|r2" for g in res.gaps)
+
+
+def test_graph_entry_cannot_override_the_declared_reader():
+    """F3: a graph route renamed to `health` must not change the entry the probe runs."""
+    declared = {**ROUTE, "entry": "read_cart"}
+    decls = declarations({**DECL, "release:cart:old": {**DECL["release:cart:old"], "routes": [declared]}})
+    plan = plan_for()
+    routes = route_rows(plan, decls=decls)
+    for r in routes:
+        if r["route_id"] == CART_OLD_ID:
+            r["entry"] = "health"
+    ev = evidence(plan, routes=routes, decls=decls)
+    assert any(g.kind == GapKind.ROUTE_DECLARATION_MISMATCH and "entry differs" in g.detail for g in ev.gaps)
+    cart = [o for o in ev.obligations if o.tuple.service == "cart"]
+    assert cart and all(o.reader_entry == "read_cart" for o in cart)
+    assert all(o.tuple.probe_spec_hash == "spec-read_cart" for o in cart)
+
+
+def test_tampered_route_contract_hash_is_a_gap():
+    decls = declarations()
+    plan = plan_for()
+    routes = route_rows(plan, decls=decls)
+    for r in routes:
+        if r["route_id"] == CART_OLD_ID:
+            r["route_contract_hash"] = "sha256:tampered"
+    ev = evidence(plan, routes=routes, decls=decls)
+    assert any(g.kind == GapKind.ROUTE_DECLARATION_MISMATCH and "route_contract_hash differs" in g.detail
+               for g in ev.gaps)
+    cart = [o for o in ev.obligations if o.tuple.service == "cart"]
+    assert cart and all(o.tuple.route_contract_hash == h(ROUTE) for o in cart)
+
+
+def test_release_without_declaration_is_invalid_fleet():
+    full = declarations()
+    plan = plan_for()
+    routes = route_rows(plan, decls=full)
+    ev = evidence(plan, routes=routes, decls=declarations({"release:checkout:b": DECL["release:checkout:b"]}))
+    assert any(g.kind == GapKind.INVALID_FLEET and g.subject == "release:cart:old"
+               and g.detail == "no independently loaded declaration for this release" for g in ev.gaps)
+    res = dispose(ev, [receipt(o, ProbeResult.PASS) for o in ev.obligations])
+    assert res.disposition == Disposition.NEEDS_EVIDENCE and len(res.obligations) == 2
+
+
+def test_real_fixture_declarations_match_the_imported_graph():
+    """The loader's release IDs must equal the IDs the importer actually wrote."""
+    from rw import graph as G
+
+    decls = load_release_declarations(REPO_ROOT / "fixtures" / "shop")
+    assert len(decls) == 4
+    db = G.connect(host="127.0.0.1", port=6379)
+    name = f"rw_test_{uuid.uuid4().hex[:8]}"
+    try:
+        G.reset_and_import(db, name, REPO_ROOT / "fixtures" / "shop", ["snap-001"])
+        g = db.select_graph(name)
+        graph_ids = set()
+        for service in sorted({d["service"] for d in decls.values()}):
+            rows, _ = G.releases_for_service(g, service)
+            graph_ids |= {r["release_id"] for r in rows}
+        assert graph_ids == set(decls)
+    finally:
+        try:
+            db.select_graph(name).delete()
+        except Exception:
+            pass
+        db.close()
+
+
 def test_truncation_and_orphan_writer_are_gaps():
     plan = plan_for()
     ev = evidence(plan, inv=inventory(writer=False), path_truncated=True)
@@ -184,11 +317,15 @@ def test_truncation_and_orphan_writer_are_gaps():
 
 def test_missing_route_evidence_vs_declared_no_read():
     plan = plan_for()
-    routes = route_rows(plan, checkout_routes=False, no_state_read=False)
-    ev = evidence(plan, routes=routes)
+    no_routes = {**DECL, "release:checkout:b": {**DECL["release:checkout:b"], "routes": []}}
+    decls = declarations(no_routes)
+    routes = route_rows(plan, checkout_routes=False, decls=decls)
+    ev = evidence(plan, routes=routes, decls=decls)
     assert GapKind.ROUTE_EVIDENCE_MISSING in {g.kind for g in ev.gaps}
-    routes = route_rows(plan, checkout_routes=False, no_state_read=True)
-    ev = evidence(plan, routes=routes)
+    stateless = {**no_routes, "release:checkout:b": {**no_routes["release:checkout:b"], "no_state_read": True}}
+    decls = declarations(stateless)
+    routes = route_rows(plan, checkout_routes=False, decls=decls)
+    ev = evidence(plan, routes=routes, decls=decls)
     res = dispose(ev, [receipt(o, ProbeResult.PASS) for o in ev.obligations])
     assert res.disposition == Disposition.BOUNDED_PASS and len(res.obligations) == 2
 
@@ -197,7 +334,7 @@ def test_stale_manifest_is_a_gap():
     plan = plan_for()
     routes = route_rows(plan)
     ev = build_evidence(plan, manifest(), "sha256:changed", routes, {"name": "r"}, inventory(),
-                        path_rows(routes), {"name": "p"}, lambda e: "s", ENV)
+                        path_rows(routes), {"name": "p"}, lambda e: "s", ENV, declarations=declarations())
     assert GapKind.STALE_SNAPSHOT in {g.kind for g in ev.gaps}
 
 
