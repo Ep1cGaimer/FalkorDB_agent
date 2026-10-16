@@ -64,6 +64,9 @@ class EvidenceDrift(SimulationRefused):
         super().__init__(EVIDENCE_DRIFT_REASON)
 
 
+LIVE_PROVIDER_PREFIXES = ("groq:", "gemini:")
+
+
 class RequestBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -108,6 +111,8 @@ class Attempt:
         if plan is not None:
             plan["citations"] = citations
         return {"grounding": self.grounding.model_dump(mode="json"),
+                "is_live_provider": bool(self.grounding.live and isinstance(self.grounding.model, str)
+                                         and self.grounding.model.startswith(LIVE_PROVIDER_PREFIXES)),
                 "transcript": self.transcript, "plan": plan,
                 "plan_hash": self.plan.plan_hash() if self.plan else None,
                 "citations": citations, "validation_errors": self.errors,
@@ -170,11 +175,16 @@ class Investigation:
             if excerpt_log["truncated"]:
                 raise SimulationRefused("citation kind query is truncated")
             kinds = {row["excerpt_id"]: row["kind"] for row in excerpt_rows}
+            owners = {row["excerpt_id"]: row["release_id"] for row in excerpt_rows}
+        else:
+            owners = {}
 
         def stamp_kind(value):
             if isinstance(value, dict):
                 if isinstance(value.get("excerpt_id"), str):
                     value["kind"] = kinds.get(value["excerpt_id"])
+                    # trusted owner of the excerpt, so the UI never matches release ids by string
+                    value.setdefault("release_id", owners.get(value["excerpt_id"]))
                 for child in value.values():
                     stamp_kind(child)
             elif isinstance(value, list):

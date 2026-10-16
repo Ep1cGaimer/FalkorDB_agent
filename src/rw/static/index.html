@@ -33,7 +33,7 @@ h1{font-size:2.1rem;line-height:1.1;margin:0;letter-spacing:-.015em}
 .lede{margin:4px 0 0;font-size:1.15rem;font-style:italic;color:var(--mute)}
 
 /* a section = gutter name + content; rules, not cards */
-.sec{display:grid;grid-template-columns:150px minmax(0,1fr);gap:0 28px;padding:26px 0;border-top:1px solid var(--rule)}
+.sec{scroll-margin-top:56px;display:grid;grid-template-columns:150px minmax(0,1fr);gap:0 28px;padding:26px 0;border-top:1px solid var(--rule)}
 .sec>h2{margin:3px 0 0;font-size:1rem;font-weight:700;color:var(--mute)}
 .sec>.body{min-width:0}
 .sec.first{margin-top:22px;border-top:2px solid var(--ink)}
@@ -146,7 +146,8 @@ pre.out{white-space:pre-wrap;margin:8px 0 0;padding:10px 12px;background:var(--w
 .picker option.q{color:var(--mute)}
 select.picker{text-overflow:ellipsis}
 .row>.wide{flex:2 1 460px}
-.snap{flex:0 1 26rem}
+.snap{flex:1 1 34rem;max-width:36rem}
+.snap select{text-overflow:clip}
 footer{max-width:1100px;margin:0 auto;padding:18px 28px 48px;border-top:1px solid var(--rule);color:var(--mute);font-size:.92rem}
 footer p{margin:2px 0}
 @media (min-width:1700px){html{font-size:18px}.wrap,footer{max-width:1320px}}
@@ -221,7 +222,6 @@ const cur = () => S.inv && S.inv.attempts[Math.min(S.view, S.inv.attempts.length
 const isAsk = a => !!(a && a.clarification);
 const disp = a => a && a.report ? a.report.verification.disposition : null;
 const labels = () => (S.inv && S.inv.release_labels) || {};
-const relOfExcerpt = id => { const hex=(id.split(":")[1]||""); return Object.keys(labels()).find(r=>r.endsWith(":"+hex)); };
 const lab = rid => labels()[rid] || rid;
 /* --- replay matcher: pure helpers, loaded by tests/js/replay_matcher.test.mjs under node --test --- */
 const withAnswer = (req,q,a) => `${req}\n\nAgent asked: ${q}\nOperator answered: ${a}`;   // mirrors pipeline.with_answer
@@ -314,12 +314,12 @@ function replayPicker(id, key, label, items){
 function cites(list, only){
   const out=[];
   for(const c of list){
-    const rid=relOfExcerpt(c.excerpt_id), svc=rid?lab(rid).split(" ")[0]:null;
+    const rid=c.release_id, svc=rid?lab(rid).split(" ")[0]:null;
     if(only && svc!==only) continue;
     out.push(c);
   }
   return out.map(c=>{
-    const rid=relOfExcerpt(c.excerpt_id);
+    const rid=c.release_id;
     const detail=el("span",{class:"mono",hidden:true}, c.excerpt_id+"  ", hash(c.content_hash));
     const btn=el("button",{class:"link",type:"button"},"source ↗");
     btn.addEventListener("click",()=>{detail.hidden=!detail.hidden;});
@@ -331,7 +331,7 @@ function cites(list, only){
 function bar(){
   const b=document.getElementById("bar"); b.replaceChildren();
   const a=cur();
-  const live = a ? a.grounding.live : S.form.mode==="live";
+  const live = a ? !!a.is_live_provider : S.form.mode==="live";
   b.append(el("span",{}, el("b",{},"Synthetic fixture"), " — not production data"));
   b.append(el("span",{},"snapshot ", el("span",{class:"mono"},(S.inv?S.inv.snapshot_id:"snapshot:"+S.form.snapshot).replace(/^snapshot:/,""))));
   b.append(el("span",{},FALKOR));
@@ -342,7 +342,9 @@ function bar(){
   const down = S.error && [0,502,503].includes(S.error.status);
   if(!a && S.form.mode==="live" && down) b.append(el("span",{class:"replay"},"Live model unavailable"));
   else if(!a && S.form.mode==="live") b.append(el("span",{class:"live"},"LIVE — not yet run"));
-  else b.append(live? el("span",{class:"live"},"LIVE ●") : el("span",{class:"replay"},"REPLAY — not live"));
+  else if(live) b.append(el("span",{class:"live"},"LIVE ●"));
+  else if(!a || (!a.grounding.live && /^replay:/.test(a.grounding.model||""))) b.append(el("span",{class:"replay"},"REPLAY — not live"));
+  else b.append(el("span",{class:"replay"},"NOT LIVE — "+(a.grounding.model||"unknown model")));
 }
 
 function requestView(){
@@ -362,7 +364,8 @@ function requestView(){
   const SNAPS=[["snap-001","snap-001 — complete inventory"],["snap-002-partial","snap-002-partial — coverage PARTIAL"],
     ["snap-003-orphan","snap-003-orphan — record with unknown writer/format"]];
   const snapSel=el("select",{id:"snapshot",title:"Which retained-state inventory the check runs against"}, SNAPS.map(([v,t])=>el("option",{value:v},t)));
-  snapSel.value=f.snapshot; snapSel.addEventListener("change",()=>{f.snapshot=snapSel.value; render();});
+  const snapTitle=()=>{snapSel.title=SNAPS.find(([v])=>v===snapSel.value)[1];};
+  snapSel.value=f.snapshot; snapTitle(); snapSel.addEventListener("change",()=>{f.snapshot=snapSel.value; snapTitle(); render();});
   const snap=el("div",{class:"snap"}, el("label",{for:"snapshot"},"Snapshot"), snapSel);
   const go=el("button",{type:"button",onclick:start,disabled:!!S.busy||!f.req.trim()||(replay&&!f.replay)}, S.inv?"Investigate again":"Investigate");
   return el("section",{class:"sec first"}, el("h2",{},"Request"), el("div",{class:"body"},

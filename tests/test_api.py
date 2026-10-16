@@ -723,3 +723,38 @@ def test_incomplete_snapshots_need_evidence_and_cannot_be_approved(tmp_path, sna
             assert client.post(plan_url(state) + "/simulate").status_code == 409
     finally:
         seed.g.delete()
+
+
+def test_citations_carry_trusted_release_id(api):
+    """Each citation names the release that owns its excerpt, taken from the graph rows."""
+    from rw import graph
+
+    client, _, original_app = api
+    state = create(client)
+    inv = original_app.state.investigations[state["id"]]
+    rows, _ = graph.releases_for_service(inv.session.g, "cart")
+    v14 = next(r["release_id"] for r in rows if r["version"] == "1.4")
+    for cites in (state["citations"], state["plan"]["citations"], state["grounding"]["result"]["citations"]):
+        assert cites[0]["release_id"] == v14
+        assert cites[0]["kind"] == "changelog"
+
+
+def test_is_live_provider_requires_real_provider_model(api, tmp_path):
+    """Only live results from a groq:/gemini: model count as live; fakes and replays never do."""
+    client, _, original_app = api
+    state = create(client)
+    assert state["grounding"]["live"] is True and state["grounding"]["model"] == "fake-grounder"
+    assert state["is_live_provider"] is False
+    assert state["attempts"][0]["is_live_provider"] is False
+
+    inv = original_app.state.investigations[state["id"]]
+    source = inv.attempts[0].grounding
+    for model, live, expected in (("groq:llama-x", True, True), ("gemini:flash-x", True, True),
+                                  ("groq:llama-x", False, False), ("deterministic-smoke", True, False),
+                                  ("operator-specified", True, False)):
+        def ground(request, tools, alternative_context=None, model=model, live=live):
+            return source.model_copy(update={"model": model, "live": live}), None
+        app = create_app(session_factory=lambda: inv.session, ground_function=ground,
+                         db_path=tmp_path / f"live-{model}-{live}.sqlite")
+        with TestClient(app) as other:
+            assert create(other)["is_live_provider"] is expected, (model, live)
