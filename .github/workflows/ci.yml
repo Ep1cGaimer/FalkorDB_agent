@@ -1,0 +1,49 @@
+# Offline checks for RollbackWitness: unit/integration tests against a real FalkorDB and the
+# deterministic end-to-end smoke. Read-only: no secrets, no live model calls, no deploy step.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      falkordb:
+        # Same pinned server the project is verified against (docker-compose.yml).
+        image: falkordb/falkordb:6.0.2@sha256:107455e862a824e45e8e9f5a7fbfdf5e00a08b14e13eae2577c72fd9e3f59ba6
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Set up environment (Python 3.12 via uv)
+        run: sh scripts/setup.sh
+
+      - name: Offline test suite (live-model tests excluded)
+        run: .venv/bin/python -m pytest -q -m "not live"
+
+      - name: Deterministic end-to-end smoke (no model key)
+        run: .venv/bin/python scripts/smoke.py
