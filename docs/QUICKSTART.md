@@ -5,7 +5,10 @@ FalkorDB container. There is no production data, no deployment and no external s
 optional live model provider. Read this together with [CONTRACTS.md](CONTRACTS.md) (what the code
 promises) and [STATUS.md](STATUS.md) (what has actually been observed).
 
-Expected durations are for the reference machine (Windows 11, Docker Desktop, uv 0.11.19).
+Observed output below is from the reference machine (Windows 11, Docker Desktop, uv 0.11.19).
+
+Commands are written once, OS-neutrally: `.venv/bin/python` means
+`.venv\Scripts\python.exe` on Windows PowerShell, and script paths use `/` (Windows accepts both).
 
 ## 0. Prerequisites
 
@@ -13,18 +16,19 @@ Expected durations are for the reference machine (Windows 11, Docker Desktop, uv
 |---|---|---|
 | Docker + Compose v2 | Docker Desktop | the FalkorDB container |
 | uv | 0.11.19 | creates `.venv`, installs dependencies, fetches Python 3.12 |
-| Git | any recent | clone the branch |
+| Git | any recent | clone the repository |
 | Python 3.12 | not required on PATH | uv installs/uses 3.12 for `.venv` |
 
-## 1. Clone the branch
+## 1. Clone
 
 ```sh
-git clone https://github.com/Ep1cGaimer/FalkorDB_agent.git rollbackwitness
+git clone --branch main https://github.com/Ep1cGaimer/FalkorDB_agent.git rollbackwitness
 cd rollbackwitness
 ```
 
-The clone has no `.env` (git-ignored). That only matters for the optional live steps in §6; the whole
-non-live suite and the deterministic acceptance proof run without any credential.
+The clone has no `.env` (git-ignored); `.env.example` in the repository root lists the variables that
+are read. That only matters for the optional live steps in §6 — the whole non-live suite and the
+deterministic acceptance proof run without any credential.
 
 ## 2. Start FalkorDB
 
@@ -71,8 +75,8 @@ See [MCP.md](MCP.md) for absolute-path host configuration and the human handoff 
 
 ## 4. Run the tests
 
-```powershell
-.venv\Scripts\python.exe -m pytest -q -m "not live"
+```sh
+.venv/bin/python -m pytest -q -m "not live"
 ```
 
 The suite needs the container from §2. See [STATUS.md](STATUS.md) for current observed base and
@@ -82,9 +86,9 @@ Live-marked tests call a model provider and need the selected provider's credent
 
 Two more checks that need **no model at all**:
 
-```powershell
-.venv\Scripts\python.exe -m pytest tests/test_acceptance_oracle.py -q     # 8 passed
-.venv\Scripts\python.exe evals\relational_control.py                     # SQL control
+```sh
+.venv/bin/python -m pytest tests/test_acceptance_oracle.py -q
+.venv/bin/python evals/relational_control.py
 ```
 
 The first is the deterministic end-to-end proof: 8 fixture cases A–H driven through the real server
@@ -104,21 +108,21 @@ A tie is the honest result: the control is not handicapped and is not claimed to
 
 Live (needs §6):
 
-```powershell
-.venv\Scripts\python.exe scripts\investigate.py "Roll cart back to the build it ran before the basket rollout, but keep the receipt correction." --confirm-as alice
+```sh
+.venv/bin/python scripts/investigate.py "Roll cart back to the build it ran before the basket rollout, but keep the receipt correction." --confirm-as alice
 ```
 
 Replay of a saved transcript (the CLI labels this `REPLAY — not live`; the browser uses
 `Replay · not live`):
 
-```powershell
-.venv\Scripts\python.exe scripts\investigate.py "Roll cart back to the build it ran before the basket rollout, but keep the receipt correction." --replay artifacts\grounding\<file>.json --confirm-as alice --no-alternative
+```sh
+.venv/bin/python scripts/investigate.py "Roll cart back to the build it ran before the basket rollout, but keep the receipt correction." --replay artifacts/grounding/<file>.json --confirm-as alice --no-alternative
 ```
 
-Transcripts are written to `artifacts/grounding/` (git-ignored), so a fresh clone has none: run the
-live command once, or point `--replay` at a transcript you saved. `--no-alternative` is needed when
-you hold a single transcript — a `BLOCKED` result normally asks the agent for one alternative, which
-would need a second transcript.
+Transcripts are written to `artifacts/grounding/` (git-ignored) and no transcript is committed, so
+replay needs at least one local live run first: either run the live command once, or point `--replay`
+at a transcript you saved yourself. `--no-alternative` is needed when you hold a single transcript — a
+`BLOCKED` result normally asks the agent for one alternative, which would need a second transcript.
 
 Without a configured provider key, the live command stops with `GroundingError: all models failed`
 and structured sanitized error summaries. Check the selected provider's key in `.env` (§6).
@@ -147,7 +151,7 @@ Request: 'Roll cart back to the build it ran before the basket rollout, but keep
 Report: artifacts\reports\ac67aa0e0768dde7.json
 ```
 
-The contrast case (`--replay artifacts\grounding\c329bc7f5ad843a2.json`) keeps cart 1.5 with
+The contrast case (`--replay artifacts/grounding/c329bc7f5ad843a2.json`) keeps cart 1.5 with
 `basket_v2=false` and passes the same probes (again, rationale/citations elided):
 
 ```text
@@ -170,7 +174,8 @@ the console (§7) and are separate human steps.
 
 ## 6. Live grounding (optional)
 
-Create a git-ignored `.env` in the repository root:
+Create a git-ignored `.env` in the repository root by copying `.env.example` (which lists the
+variable) and filling it in:
 
 ```text
 GROQ_API_KEY=<your key>
@@ -205,8 +210,8 @@ This makes live provider calls and saves the exact scorer output plus test evide
 
 ## 7. Console
 
-```powershell
-.venv\Scripts\python.exe scripts\serve.py
+```sh
+.venv/bin/python scripts/serve.py
 ```
 
 Then open <http://127.0.0.1:8000>. The workspace opens with the actual fixture fleet and retained
@@ -229,8 +234,8 @@ and browser verification instructions.
 
 ## 8. Same bytes, same hashes
 
-```powershell
-.venv\Scripts\python.exe -c "from pathlib import Path; import hashlib; [print(p.parent.name, hashlib.sha256(p.read_bytes()).hexdigest()) for p in sorted(Path('fixtures/shop/snapshots').glob('*/manifest.json'))]"
+```sh
+.venv/bin/python -c "from pathlib import Path; import hashlib; [print(p.parent.name, hashlib.sha256(p.read_bytes()).hexdigest()) for p in sorted(Path('fixtures/shop/snapshots').glob('*/manifest.json'))]"
 ```
 
 Expected (these are the values the committed fixture produces):
