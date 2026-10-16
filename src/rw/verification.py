@@ -508,8 +508,21 @@ def build_evidence(
             "reader/record pair expected from routes x inventory is missing from the graph path query")
 
     obligations.sort(key=lambda o: (o.tuple.service, o.tuple.route_id, o.tuple.record_id))
+
+    # --- every release this evidence rests on, including writers that produced retained state
+    dependencies = {entry.release_id for entry in plan.fleet}
+    for store_id in sorted(stores_read):
+        for record in manifest_stores.get(store_id, {}).get("records", []):
+            writer = record.get("writer")
+            if (isinstance(writer, dict) and _established(writer.get("service"))
+                    and _established(writer.get("version"))):
+                resolved = release_by_version.get((writer["service"], writer["version"]))
+                if resolved is not None:
+                    dependencies.add(resolved)
+
     return GraphEvidence(plan_hash=plan_hash, obligations=obligations, gaps=gaps, queries=queries,
-                         snapshot_id=plan.snapshot_id, snapshot_manifest_hash=manifest_hash)
+                         snapshot_id=plan.snapshot_id, snapshot_manifest_hash=manifest_hash,
+                         dependencies=sorted(dependencies))
 
 
 # --------------------------------------------------------------------------- disposition
@@ -566,12 +579,15 @@ def dispose(evidence: GraphEvidence, receipts: list[ProbeReceipt]) -> Verificati
         gaps=gaps,
         blocking_receipts=sorted(blocking),
         computed_at=_now(),
+        dependencies=list(evidence.dependencies),
     )
 
 
 # --------------------------------------------------------------------------- revalidation (F4)
 
 FIXTURE_PREFIX = "fixtures/shop/"
+
+_NO_WRITER = object()  # sentinel: this (store, record) had no obligation, so no verified writer
 
 
 def fixture_file(path: str, fixture_root: Path) -> Path:
@@ -673,6 +689,36 @@ def revalidate(verification: VerificationResult, fixture_root: Path, environment
     except (OSError, ValueError, KeyError) as exc:
         declarations = {}
         drift(f"release declarations cannot be read: {exc}")
+
+    # C2: a release whose bytes changed no longer produces its content-addressed id, so every
+    # dependency (fleet release or resolved writer release) must still be declared, whether or not
+    # any obligation names it.
+    for release_id in verification.dependencies:
+        if release_id not in declarations:
+            drift(f"release {release_id} is no longer declared by the fixture")
+
+    # C2: the manifest's writer for each read record must still resolve the way it did when the
+    # verification was taken; a re-pointed or vanished writer is drift even if every obligation hash
+    # still matches.
+    verified_writers = {(o.tuple.store_id, o.tuple.record_id): o.writer_release_id
+                        for o in verification.obligations}
+    releases_by_version = release_index_by_service_version(declarations)
+    for store in (manifest or {}).get("stores", []):
+        store_id = "store:" + str(store.get("name"))
+        for record in store.get("records", []):
+            rid = record.get("record_id")
+            writer = record.get("writer")
+            fresh_writer = None
+            if (isinstance(writer, dict) and _established(writer.get("service"))
+                    and _established(writer.get("version"))):
+                fresh_writer = releases_by_version.get((writer["service"], writer["version"]))
+            known = verified_writers.get((store_id, rid), _NO_WRITER)
+            if known is not _NO_WRITER and known != fresh_writer:
+                drift(f"writer resolution for record {rid} in {store_id} changed: "
+                      f"fresh={fresh_writer} verified={known}")
+            elif fresh_writer is not None and fresh_writer not in verification.dependencies:
+                drift(f"writer resolution for record {rid} in {store_id} changed: "
+                      f"fresh={fresh_writer} is not a release this verification depended on")
 
     for obligation in verification.obligations:
         t = obligation.tuple

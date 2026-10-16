@@ -226,6 +226,10 @@ class GraphEvidence(Frozen):
     queries: list[dict[str, Any]]  # {"name","params","rows","truncated"} — the fixed queries actually executed
     snapshot_id: str = ""               # plan-level binding; never inferred from an obligation
     snapshot_manifest_hash: str = ""    # manifest bytes the evidence was built against
+    # every release the evidence depends on: the fleet's releases plus every writer release the
+    # manifest resolves for a store the fleet reads. Revalidation uses it to notice that evidence
+    # outside the reader obligations (a writer-only artifact) changed.
+    dependencies: list[str] = Field(default_factory=list)
 
 
 class VerificationResult(Frozen):
@@ -239,6 +243,9 @@ class VerificationResult(Frozen):
     blocking_receipts: list[str]   # obligation hashes with applicable FAIL
     semantic_scope: str = SEMANTIC_SCOPE
     computed_at: str
+    # sorted release ids the evidence depends on (fleet releases + resolved writer releases); a
+    # dependency that is no longer declared means the bytes behind this verification changed
+    dependencies: list[str] = Field(default_factory=list)
 
     def verification_hash(self) -> str:
         # computed_at excluded so a rerun on identical evidence yields the same hash

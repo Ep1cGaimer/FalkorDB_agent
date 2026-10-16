@@ -308,6 +308,50 @@ def test_changed_payload_bytes_block_approval_and_simulation(tmp_path):
         session.g.delete()
 
 
+def test_changed_writer_only_release_blocks_approval(tmp_path):
+    """C2 at the API boundary: cart 1.4 wrote a retained record, so its bytes gate approval.
+
+    cart 1.4 is neither in the proposed fleet nor a reader obligation, so only the verification's
+    dependency set can notice that its artifact changed.
+    """
+    from rw import graph
+    from rw.pipeline import Session
+
+    fixture = tmp_path / "shop"
+    shutil.copytree(Path(__file__).resolve().parents[1] / "fixtures/shop", fixture)
+    name = "rw_test_api_" + uuid4().hex
+    session = Session(snapshot="snap-001", graph_name=name, fixture_root=fixture)
+
+    def ground(request, tools, alternative_context=None):
+        rows, log = graph.releases_for_service(session.g, "cart")
+        assert not log["truncated"]
+        release = next(row for row in rows if row["version"] == "1.5")
+        proposal = GroundingProposal(changes=[FleetEntry(service="cart", release_id=release["release_id"],
+                                                         flags={"basket_v2": False})],
+                                     citations=[], rationale="keep 1.5 with the basket rollout off")
+        return GroundingResult(request_text=request, result=proposal, model="fake-grounder", live=True), None
+
+    app = create_app(session_factory=lambda: Session(snapshot="snap-001", graph_name=name,
+                                                     reimport=False, fixture_root=fixture),
+                     ground_function=ground, db_path=tmp_path / "sim.sqlite", transcript_dir=tmp_path)
+    try:
+        with TestClient(app) as client:
+            state = create(client)
+            passing = confirm(client, state)
+            assert passing["verification"]["disposition"] == "BOUNDED_PASS"
+
+            changelog = fixture / "releases" / "cart-1.4" / "CHANGELOG.md"
+            changelog.write_bytes(changelog.read_bytes() + b"\n- extra note\n")
+
+            refused = client.post(plan_url(state) + "/approve", json={"approved_by": "oncall:alice"})
+            assert refused.status_code == 409, refused.text
+            drift = refused.json()["detail"]["drift"]
+            assert any("is no longer declared by the fixture" in line for line in drift), drift
+            assert client.get(f"/api/investigations/{state['id']}").json()["approval"] is None
+    finally:
+        session.g.delete()
+
+
 def test_root():
     with TestClient(create_app()) as client:
         response = client.get("/")

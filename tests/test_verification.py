@@ -591,6 +591,21 @@ def test_zero_obligation_evidence_keeps_the_snapshot_binding():
 
 # --------------------------------------------------------------------------- F4: revalidation
 
+def test_evidence_dependencies_cover_the_fleet_and_resolved_writers():
+    """C2: dependencies are every fleet release plus every writer release the manifest resolves."""
+    plan = plan_for()
+    ev = evidence(plan)
+    assert ev.dependencies == sorted(["release:cart:old", "release:checkout:b", "release:cart:new"])
+    res = dispose(ev, [receipt(o, ProbeResult.PASS) for o in ev.obligations])
+    assert res.dependencies == ev.dependencies
+
+
+def test_dependencies_drop_a_writer_the_manifest_cannot_resolve():
+    plan = plan_for()
+    ev = evidence(plan, man=manifest(writer=("cart", "9.9")))
+    assert ev.dependencies == sorted(["release:cart:old", "release:checkout:b"])
+
+
 def test_fixture_file_maps_repo_relative_paths_into_the_real_fixture_and_a_copy(tmp_path):
     """The stored path is repo-relative; the same path must resolve inside a copy of the fixture."""
     relative = "fixtures/shop/releases/cart-1.5/codec.py"
@@ -645,6 +660,43 @@ def fixture_copy(tmp_path):
     root = tmp_path / "shop"
     shutil.copytree(FIXTURE_ROOT, root)
     return root
+
+
+@pytest.fixture(scope="module")
+def empty_inventory_pass(tmp_path_factory):
+    """A real BOUNDED_PASS verification of snap-001 whose store carries no records (C2 case 2)."""
+    from rw import graph as G
+
+    root = tmp_path_factory.mktemp("empty-inventory") / "shop"
+    shutil.copytree(FIXTURE_ROOT, root)
+    path = root / "snapshots" / "snap-001" / "manifest.json"
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    for store in manifest["stores"]:
+        store["records"] = []
+    path.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
+
+    name = "rw_test_" + uuid.uuid4().hex[:8]
+    session = Session(snapshot="snap-001", graph_name=name, fixture_root=root)
+    try:
+        rows, _ = G.releases_for_service(session.g, "cart")
+        release = next(r for r in rows if r["version"] == "1.5")
+        plan, errors = session.plan_from_proposal(
+            GroundingProposal(changes=[FleetEntry(service="cart", release_id=release["release_id"],
+                                                  flags={"basket_v2": False})],
+                              citations=[], rationale="empty inventory control"),
+            "undo the basket rollout", origin="fixture")
+        assert not errors and plan is not None
+        report = session.verify(plan, ScopeConfirmation(plan_hash=plan.plan_hash(),
+                                                       confirmed_by="test-operator",
+                                                       confirmed_at="2026-10-16T00:00:00Z"))
+        result = VerificationResult.model_validate(report["verification"])
+        assert result.disposition == Disposition.BOUNDED_PASS and not result.obligations and not result.gaps
+        yield result, root
+    finally:
+        try:
+            session.g.delete()
+        except Exception:
+            pass
 
 
 def release_id_for(verified: VerificationResult, codec_fragment: str) -> str:
@@ -729,3 +781,39 @@ def test_revalidate_flags_a_changed_route_contract(verified_pass, fixture_copy):
     drifted = verified_pass.model_copy(update={"obligations": [tampered] + list(verified_pass.obligations[1:])})
     errors = revalidate(drifted, fixture_copy, P.environment_hash, P.probe_spec_hash)
     assert any("route contract" in e and first.tuple.route_id in e and "sha256:tampered" in e for e in errors)
+
+
+def test_revalidate_flags_a_changed_writer_only_release(verified_pass, fixture_copy):
+    """C2: a release that only wrote retained state is still evidence the rollback depends on."""
+    changelog = fixture_copy / "releases" / "cart-1.4" / "CHANGELOG.md"
+    changelog.write_bytes(changelog.read_bytes() + b"\n- extra note\n")
+    errors = revalidate(verified_pass, fixture_copy, P.environment_hash, P.probe_spec_hash)
+    assert errors, "changing the writer-only cart 1.4 artifact must be drift"
+    assert any("is no longer declared by the fixture" in e for e in errors), errors
+    # it is neither a fleet release nor an obligation's release, so only the dependency set can see it
+    assert not any("cart-1.4" in o.reader_codec_path for o in verified_pass.obligations)
+
+
+def test_revalidate_flags_a_changed_writer_resolution(verified_pass, fixture_copy):
+    """C2: each read store's manifest writer must still resolve the way it did at verification."""
+    path = fixture_copy / "snapshots" / "snap-001" / "manifest.json"
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    records = manifest["stores"][0]["records"]
+    record = next(r for r in records if r["record_id"] == "saved-cart-1001")
+    record["writer"] = {"service": "cart", "version": "1.5"}
+    path.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
+    errors = revalidate(verified_pass, fixture_copy, P.environment_hash, P.probe_spec_hash)
+    assert any("writer resolution for record saved-cart-1001" in e for e in errors), errors
+
+
+def test_revalidate_flags_a_changed_fleet_release_with_no_obligations(empty_inventory_pass, tmp_path):
+    """C2: even a zero-obligation verification depends on the fleet's release bytes."""
+    verification, root = empty_inventory_pass
+    assert not verification.obligations
+    copy = tmp_path / "shop"
+    shutil.copytree(root, copy)
+    assert revalidate(verification, copy, P.environment_hash, P.probe_spec_hash) == []
+    changelog = copy / "releases" / "cart-1.5" / "CHANGELOG.md"
+    changelog.write_bytes(changelog.read_bytes() + b"\n- extra note\n")
+    errors = revalidate(verification, copy, P.environment_hash, P.probe_spec_hash)
+    assert any("is no longer declared by the fixture" in e for e in errors), errors

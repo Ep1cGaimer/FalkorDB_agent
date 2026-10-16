@@ -249,16 +249,28 @@ leaves its pairs reported as missing.
 `dispose` takes the snapshot binding from the evidence itself, never from the first obligation, so
 zero-obligation evidence keeps a non-empty binding.
 
+`GraphEvidence.dependencies` (copied onto `VerificationResult.dependencies`) is the sorted list of
+every release the evidence rests on: every fleet release from the plan, plus every writer release the
+manifest resolves for a store the fleet reads. `revalidate` checks it independently of the
+obligations, so a writer-only artifact that no reader obligation names still counts as evidence.
+
+Two Batch rows claiming one `record_id` in a store are never collapsed: the conflict is an
+`INVENTORY_MISMATCH` gap (`conflicting batches for one record: <batch ids>`), and an obligation is
+built only for a path row whose batch and payload hash equal the independent manifest record.
+
 `revalidate(verification, fixture_root, environment_hash_fn, probe_spec_fn)` returns one
 human-readable drift line per distinct fact, or `[]` when the bytes behind a verification are still
 current. It fails closed on: a fresh `bh(manifest.json)` for `verification.snapshot_id`; per
 obligation the payload bytes resolved through the fresh manifest record, `bh(reader codec bytes)`,
-`environment_hash_fn()` and `probe_spec_fn(obligation.reader_entry)`; and that `fixture_root/releases`
-still declares `tuple.release_id` with the same `h(route_dict)` for `tuple.route_id`. A missing or
+`environment_hash_fn()` and `probe_spec_fn(obligation.reader_entry)`; that `fixture_root/releases`
+still declares `tuple.release_id` with the same `h(route_dict)` for `tuple.route_id`; that every
+`verification.dependencies` release id is still declared (content-addressed, so presence ⇔ unchanged
+bytes — this is what catches a writer-only artifact); and that each read store's manifest record
+still resolves its writer to the same release. A missing or
 unreadable file is a drift line, not an exception. Both hash functions already include the harness
 hash, which is why they bind the harness too. Callers: `api.py` `/approve` and `/simulate`, which
-answer HTTP 409 `{"reason", "drift"}` — no action may be taken on evidence that no longer exists as
-verified.
+answer HTTP 409 `{"detail": {"reason", "drift"}, "reason": "<reason>"}` — no action may be taken on
+evidence that no longer exists as verified.
 
 ### `src/rw/probes.py` (owner: Sol)
 
