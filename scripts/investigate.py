@@ -3,6 +3,8 @@
   .venv/Scripts/python.exe scripts/investigate.py "Undo the basket rollout, but keep the receipt correction."
   ... --confirm-as alice      # non-interactive: the operator named on the command line confirms scope
   ... --replay artifacts/grounding/<file>.json   # labeled replay of a saved live transcript
+  ... --fleet cart=1.5:basket_v2=false --fleet checkout=2.1 --confirm-as alice
+      # no model key needed; omitted services retain their current release
 
 Scope confirmation is a human step; this script never approves or simulates an action.
 """
@@ -10,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -17,8 +20,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from rw import config, grounding  # noqa: E402
-from rw.contracts import CandidatePlan, ScopeConfirmation  # noqa: E402
-from rw.pipeline import Session, run_investigation, save_report  # noqa: E402
+from rw.contracts import CandidatePlan, FleetEntry, GroundingProposal, ScopeConfirmation  # noqa: E402
+from rw.pipeline import ALL_SNAPSHOTS, Session, run_investigation, save_report  # noqa: E402
 
 
 def _print_plan(plan: CandidatePlan, labels: dict[str, str]) -> None:
@@ -29,17 +32,71 @@ def _print_plan(plan: CandidatePlan, labels: dict[str, str]) -> None:
         print(f"    [{mark}] {f.service:9s} {labels.get(f.release_id, f.release_id)}{flags}")
 
 
-def main() -> int:
-    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+def parse_fleet(value: str) -> tuple[str, str, dict[str, bool]]:
+    """SERVICE=VERSION[:FLAG=true|false[,FLAG=true|false...]]."""
+    match = re.fullmatch(r"([a-zA-Z0-9_-]+)=([a-zA-Z0-9_.-]+)(?::(.+))?", value)
+    if not match:
+        raise argparse.ArgumentTypeError("fleet syntax: SERVICE=VERSION[:FLAG=true|false,...]")
+    service, version, flag_text = match.groups()
+    flags = {}
+    for item in flag_text.split(",") if flag_text else []:
+        flag = re.fullmatch(r"([a-zA-Z0-9_-]+)=(true|false)", item)
+        if not flag:
+            raise argparse.ArgumentTypeError("fleet flags must be FLAG=true or FLAG=false")
+        name, enabled = flag.groups()
+        if name in flags:
+            raise argparse.ArgumentTypeError(f"duplicate fleet flag: {name}")
+        flags[name] = enabled == "true"
+    return service, version, flags
+
+
+def resolve_fleet(g, entries) -> GroundingProposal:
+    """Resolve display versions against complete graph rows, never synthesize artifact IDs."""
+    from rw import graph as G
+
+    changes = []
+    seen = set()
+    for service, version, flags in entries:
+        if service in seen:
+            raise ValueError(f"duplicate fleet service: {service}")
+        seen.add(service)
+        rows, log = G.releases_for_service(g, service)
+        if log["truncated"]:
+            raise ValueError(f"release inventory is truncated for {service}")
+        if not rows:
+            raise ValueError(f"unknown service: {service}")
+        matches = [r for r in rows if r["version"] == version]
+        if len(matches) != 1:
+            raise ValueError(f"unknown or ambiguous version: {service}={version}")
+        release = matches[0]
+        declared = {f["name"] for f in release.get("declared_flags") or []}
+        unknown = sorted(set(flags) - declared)
+        if unknown:
+            raise ValueError(f"unknown flags for {service}={version}: {', '.join(unknown)}")
+        changes.append(FleetEntry(service=service, release_id=release["release_id"], flags=flags))
+    return GroundingProposal(changes=changes, citations=[], rationale="Operator-specified existing artifacts")
+
+
+def main(argv=None) -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     config.load_env()  # .env before anything reads the environment; never prints a value
     ap = argparse.ArgumentParser()
-    ap.add_argument("request")
-    ap.add_argument("--snapshot", default="snap-001")
+    ap.add_argument("request", nargs="?")
+    ap.add_argument("--fleet", action="append", type=parse_fleet,
+                    help="skip agent; repeat SERVICE=VERSION[:FLAG=true|false,...]; omitted services stay current")
+    ap.add_argument("--snapshot", default="snap-001", choices=ALL_SNAPSHOTS)
     ap.add_argument("--confirm-as", help="operator name confirming scope without a prompt")
     ap.add_argument("--replay", help="saved grounding transcript (labeled replay, not live)")
     ap.add_argument("--no-alternative", action="store_true")
     ap.add_argument("--answer", help="operator's answer if the agent asks a clarification (one round)")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
+    if args.fleet and (args.replay or args.answer):
+        ap.error("--fleet cannot be combined with --replay or --answer")
+    if not args.request:
+        if not args.fleet:
+            ap.error("request is required unless --fleet is supplied")
+        args.request = "Verify the operator-specified fleet"
 
     session = Session(snapshot=args.snapshot)
     from rw import graph as G
@@ -78,8 +135,30 @@ def main() -> int:
             print(f"  Operator answers: {reply}")
         return reply or None
 
-    result = run_investigation(args.request, ground=ground, confirm=confirm, answer=answer, session=session,
-                               allow_alternative=not args.no_alternative)
+    if args.fleet:
+        print("\n[OPERATOR-SPECIFIED FLEET — no agent involved]")
+        try:
+            proposal = resolve_fleet(session.g, args.fleet)
+            plan, errors = session.plan_from_proposal(proposal, args.request, origin="fixture",
+                                                       label="operator-specified fleet")
+            if errors or plan is None:
+                raise ValueError("; ".join(errors) or "fleet could not be materialized")
+        except ValueError as exc:
+            print(f"Fleet error: {exc}; nothing verified", file=sys.stderr)
+            return 2
+        confirmation = confirm(plan)
+        att = {"grounding": {"model": "operator-specified", "live": False,
+                             "result": proposal.model_dump(mode="json")}}
+        if confirmation is None:
+            att.update(outcome="SCOPE_NOT_CONFIRMED", plan=plan.model_dump(mode="json"))
+        else:
+            report = session.verify(plan, confirmation)
+            att.update(outcome=report["verification"]["disposition"], report=report)
+        result = {"request": args.request, "snapshot": session.snapshot_id,
+                  "manifest_hash": session.manifest_hash, "attempts": [att]}
+    else:
+        result = run_investigation(args.request, ground=ground, confirm=confirm, answer=answer, session=session,
+                                   allow_alternative=not args.no_alternative)
     for i, att in enumerate(result["attempts"], 1):
         g = att["grounding"]
         print(f"\n== Attempt {i}: {att['outcome']}  (model={g['model']}, live={g['live']})")
