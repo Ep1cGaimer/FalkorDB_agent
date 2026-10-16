@@ -23,7 +23,7 @@ from rw.contracts import (
     h,
 )
 from rw.pipeline import FIXTURE_ROOT, Session, run_investigation, summarize_for_agent
-from rw.verification import load_manifest
+from rw.verification import load_manifest, load_release_declarations
 
 
 # --------------------------------------------------------------------------- F7: rejected grounding
@@ -229,6 +229,42 @@ def test_verify_maps_an_unreadable_manifest_to_a_stale_snapshot_gap(copied_fixtu
         v = report["verification"]
         assert v["disposition"] == "NEEDS_EVIDENCE"
         assert [g["kind"] for g in v["gaps"]] == ["STALE_SNAPSHOT"]
+        assert v["obligations"] == [] and v["receipts"] == []
+    finally:
+        try:
+            session.g.delete()
+        except Exception:
+            pass
+
+
+def test_verify_reports_a_duplicated_release_id_as_an_invalid_fleet_gap(tmp_path):
+    """#7a: two fixture dirs claiming one release identity is unresolved evidence, never a 500."""
+    root = tmp_path / "shop"
+    shutil.copytree(FIXTURE_ROOT, root)
+    shutil.copytree(root / "releases" / "cart-1.4", root / "releases" / "cart-1.4-duplicate")
+    duplicate_id = next(rid for rid, decl in load_release_declarations(FIXTURE_ROOT).items()
+                        if (decl["service"], decl["version"]) == ("cart", "1.4"))
+
+    name = "rw_test_" + uuid.uuid4().hex[:8]
+    session = Session(snapshot="snap-001", graph_name=name, fixture_root=root)
+    try:
+        rows, _ = G.releases_for_service(session.g, "cart")
+        release = next(r for r in rows if r["version"] == "1.5")
+        proposal = GroundingProposal(
+            changes=[FleetEntry(service="cart", release_id=release["release_id"], flags={"basket_v2": False})],
+            citations=[], rationale="keep 1.5 with the basket rollout off")
+        plan, errors = session.plan_from_proposal(proposal, "undo the basket rollout", origin="fixture")
+        assert not errors and plan is not None
+
+        report = session.verify(plan, ScopeConfirmation(plan_hash=plan.plan_hash(), confirmed_by="oncall:alice",
+                                                        confirmed_at="2026-10-16T00:00:00Z"))
+        v = report["verification"]
+        assert v["disposition"] == "NEEDS_EVIDENCE"
+        gaps = [g for g in v["gaps"] if g["kind"] == "INVALID_FLEET"]
+        assert len(gaps) == 1, v["gaps"]
+        assert gaps[0]["subject"] == duplicate_id
+        assert (root / "releases" / "cart-1.4").as_posix() in gaps[0]["detail"]
+        assert (root / "releases" / "cart-1.4-duplicate").as_posix() in gaps[0]["detail"]
         assert v["obligations"] == [] and v["receipts"] == []
     finally:
         try:

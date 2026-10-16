@@ -82,6 +82,33 @@ def test_parse_fleet_bad_syntax(text):
         investigate.parse_fleet(text)
 
 
+def test_smoke_takes_the_server_address_from_the_environment(monkeypatch):
+    """#7d: the smoke run honours RW_FALKORDB_HOST/RW_FALKORDB_PORT, defaulting to loopback."""
+    monkeypatch.delenv("RW_FALKORDB_HOST", raising=False)
+    monkeypatch.delenv("RW_FALKORDB_PORT", raising=False)
+    assert smoke.target() == ("127.0.0.1", 6379)
+    monkeypatch.setenv("RW_FALKORDB_HOST", "falkor.example")
+    monkeypatch.setenv("RW_FALKORDB_PORT", "7001")
+    assert smoke.target() == ("falkor.example", 7001)
+
+
+def test_smoke_connects_to_the_configured_server(monkeypatch, capsys):
+    """The configured endpoint is what main() connects to; the connection is refused before any server."""
+    monkeypatch.setenv("RW_FALKORDB_HOST", "falkor.example")
+    monkeypatch.setenv("RW_FALKORDB_PORT", "7001")
+    monkeypatch.setattr(smoke.config, "load_env", lambda: None)
+    seen = []
+
+    def refuse(host, port):
+        seen.append((host, port))
+        raise RuntimeError("stop before the real server")
+
+    monkeypatch.setattr(smoke.graph, "connect", refuse)
+    assert smoke.main() == 1
+    assert seen == [("falkor.example", 7001)]
+    assert "FAIL deterministic-smoke incomplete" in capsys.readouterr().out
+
+
 def release_rows(g, service):
     return ([{"release_id": "exact-graph-release", "version": "1.5",
               "declared_flags": [{"name": "basket_v2", "default": True}]}]
@@ -170,5 +197,40 @@ def test_operator_fleet_uses_fixture_origin_and_bypasses_agent(monkeypatch, caps
         report = saved[0]["attempts"][0]["report"]
         assert report["plan"]["origin"] == "fixture"
         assert report["scope_confirmation"]["confirmed_by"] == "tester"
+    finally:
+        session.g.delete()
+
+
+@pytest.mark.parametrize("name", ["", "   "], ids=["empty", "whitespace"])
+def test_operator_fleet_without_a_named_operator_never_verifies(monkeypatch, capsys, tmp_path, name):
+    """#7d: an empty operator name stops at SCOPE_NOT_CONFIRMED: no prompt, no verify, clean output."""
+    from rw.pipeline import Session
+
+    graph_name = "rw_test_" + uuid4().hex[:8]
+    session = Session(snapshot="snap-001", graph_name=graph_name)
+
+    def no_prompt(*args, **kwargs):
+        pytest.fail("an empty confirmation must not read stdin")
+
+    def no_verify(*args, **kwargs):
+        pytest.fail("an unconfirmed scope reached verification")
+
+    monkeypatch.setattr("builtins.input", no_prompt)
+    monkeypatch.setattr(session, "verify", no_verify)
+    monkeypatch.setattr(investigate, "Session", lambda **kwargs: session)
+    saved = []
+    monkeypatch.setattr(investigate, "save_report",
+                        lambda result: saved.append(result) or tmp_path / "report.json")
+    try:
+        assert investigate.main(["--fleet", "cart=1.4", "--confirm-as", name]) == 0
+        output = capsys.readouterr()
+        assert "OPERATOR-SPECIFIED FLEET — no agent involved" in output.out
+        assert "SCOPE_NOT_CONFIRMED" in output.out
+        assert "DISPOSITION" not in output.out
+        assert not output.err
+        attempt = saved[0]["attempts"][0]
+        assert attempt["outcome"] == "SCOPE_NOT_CONFIRMED"
+        assert "report" not in attempt
+        assert attempt["plan"]["origin"] == "fixture"
     finally:
         session.g.delete()

@@ -588,9 +588,10 @@ def _handle_call(name: Any, args: dict, tools: Any, excerpts: dict, releases: di
     Read tools, argument validation, excerpt collection, the audit trail and the unknown-tool
     answer live here exactly once — no provider re-implements them.
 
-    A terminal call whose only failures are citation-check errors gets ONE correction round: the
+    A terminal call whose ONLY failures are citation-check errors gets ONE correction round: the
     loop stays open and the model receives the exact failed citations plus the quoting rule, so it
-    can resend verbatim quotes. A second invalid terminal call ends the loop as before.
+    can resend verbatim quotes. A call with any non-citation error, or a second invalid terminal
+    call, ends the loop as before.
     """
     state = state if state is not None else {}
     if name in TERMINAL_TOOLS:
@@ -601,7 +602,7 @@ def _handle_call(name: Any, args: dict, tools: Any, excerpts: dict, releases: di
             events.append({"type": "tool", "name": name, "args": _jsonable(args), "error": msg})
             return {"error": msg}, None
         bad_citations = _citation_errors(errs)
-        if bad_citations and not state.get("citation_correction_used"):
+        if errs and len(bad_citations) == len(errs) and not state.get("citation_correction_used"):
             state["citation_correction_used"] = True
             msg = (f"{name} rejected: citation check failed: " + "; ".join(bad_citations)
                    + f". {CITATION_RULE}. Resend {name} with quotes copied exactly from the excerpt text.")

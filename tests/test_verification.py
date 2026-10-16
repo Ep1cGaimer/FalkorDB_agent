@@ -278,6 +278,29 @@ def test_path_row_whose_batch_is_not_the_manifest_match_is_a_gap():
     assert res.disposition == Disposition.NEEDS_EVIDENCE
 
 
+def test_path_row_mismatch_names_the_reader_route_and_release():
+    """#7b: two readers on one bad record must produce two lines a operator can tell apart.
+
+    The unbound path rows of both reader routes over ``r1`` describe the same mismatch text, so the
+    route (and its reader release) must be named in the gap detail; the subject stays the batch it is
+    about.
+    """
+    plan = plan_for()
+    routes = route_rows(plan)
+    paths = path_rows(routes)
+    for row in paths:
+        if row["record_id"] == "r1":
+            row["payload_hash"] = "ph-tampered"
+    ev = evidence(plan, routes=routes, paths=paths)
+    assert len(ev.obligations) == 2  # only the two r2 pairs still match the manifest
+    lines = [g for g in ev.gaps if g.kind == GapKind.INVENTORY_MISMATCH and g.subject == "batch:r1"]
+    assert len(lines) == 2
+    details = {g.detail for g in lines}
+    assert len(details) == 2  # distinguishable lines, not one line repeated
+    assert any(CART_OLD_ID in d and "release:cart:old" in d for d in details), details
+    assert any("route:release:checkout:b:read" in d and "release:checkout:b" in d for d in details), details
+
+
 def test_path_row_payload_hash_disagreeing_with_the_manifest_is_a_gap():
     """C1(b): the obligation's payload hash must equal the manifest record's, not the graph's."""
     plan = plan_for()
@@ -540,6 +563,22 @@ def test_null_manifest_writer_is_a_gap_even_with_a_graph_edge():
     ev = evidence(plan, man=manifest(writer=None))
     assert len(writers(ev)) == 2  # one per batch, never more
     assert all(g.detail == "manifest writer is unknown" for g in writers(ev))
+
+
+def test_missing_graph_writer_edge_pins_the_no_written_by_wording():
+    """#7c: the manifest writer resolves, the graph batch carries no WRITTEN_BY edge.
+
+    A resolvable manifest writer with an absent graph edge is a WRITER_UNKNOWN gap per batch whose
+    wording is pinned here, so a later rephrase cannot quietly turn it into a contradiction.
+    """
+    plan = plan_for()
+    ev = evidence(plan, inv=inventory(writer=False))
+    found = writers(ev)
+    assert len(found) == 2  # one line per batch, never more
+    assert {g.subject for g in found} == {"batch:r1", "batch:r2"}
+    assert all(g.detail == "no WRITTEN_BY writer release" for g in found)
+    res = dispose(ev, [receipt(o, ProbeResult.PASS) for o in ev.obligations])
+    assert res.disposition == Disposition.NEEDS_EVIDENCE
 
 
 def test_manifest_writer_contradicting_the_graph_writer_is_a_gap():
@@ -878,6 +917,38 @@ def test_revalidate_flags_a_changed_fleet_release_with_no_obligations(empty_inve
     changelog.write_bytes(changelog.read_bytes() + b"\n- extra note\n")
     errors = revalidate(verification, copy, P.environment_hash, P.probe_spec_hash)
     assert any("is no longer declared by the fixture" in e for e in errors), errors
+
+
+def test_revalidate_scopes_writer_checks_to_the_stores_the_declared_routes_read(empty_inventory_pass, tmp_path):
+    """#5: a zero-obligation verification still covers the stores its fleet's declared routes read.
+
+    This verification has no obligations, so the only thing that can put ``cart-cache`` in scope is the
+    route-derived half of the read-store derivation. A record added to that store whose writer resolves
+    to a release this verification never depended on must therefore be reported as drift; dropping the
+    route half makes the same check silently disappear.
+    """
+    verification, root = empty_inventory_pass
+    assert not verification.obligations
+    copy = tmp_path / "shop"
+    shutil.copytree(root, copy)
+    path = copy / "snapshots" / "snap-001" / "manifest.json"
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    store = next(s for s in manifest["stores"] if s["name"] == "cart-cache")
+    assert store["records"] == []
+    payload = copy / "payloads" / "saved-cart-1001.bin"
+    store["records"] = [{"record_id": "saved-cart-drift", "format": "cart/v1",
+                         "payload": "payloads/saved-cart-1001.bin",
+                         "payload_hash": bh(payload.read_bytes()),
+                         "writer": {"service": "checkout", "version": "2.0"}}]
+    path.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
+
+    unread_writer = next(rid for rid, decl in load_release_declarations(copy).items()
+                         if (decl["service"], decl["version"]) == ("checkout", "2.0"))
+    assert unread_writer not in verification.dependencies  # it never wrote anything the fleet read
+
+    errors = revalidate(verification, copy, P.environment_hash, P.probe_spec_hash)
+    assert (f"writer resolution for record saved-cart-drift in store:cart-cache changed: "
+            f"fresh={unread_writer} is not a release this verification depended on") in errors, errors
 
 
 def test_revalidate_ignores_a_store_the_fleet_does_not_read(unread_store_pass):

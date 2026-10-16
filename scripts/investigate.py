@@ -120,7 +120,13 @@ def main(argv=None) -> int:
 
     def confirm(plan: CandidatePlan):
         _print_plan(plan, labels)
-        who = args.confirm_as or input("  Confirm this scope for checking? Type your name (blank = no): ").strip()
+        # An explicitly empty or whitespace-only --confirm-as is a refusal, not a confirmation: it must
+        # not fall through to a prompt (a scripted run would block on stdin) and must never verify under
+        # a blank operator name.
+        if args.confirm_as is not None:
+            who = args.confirm_as.strip()
+        else:
+            who = input("  Confirm this scope for checking? Type your name (blank = no): ").strip()
         if not who:
             return None
         return ScopeConfirmation(plan_hash=plan.plan_hash(), confirmed_by=who,

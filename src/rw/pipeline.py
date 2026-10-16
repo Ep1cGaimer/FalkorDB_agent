@@ -27,8 +27,10 @@ from .contracts import (
 )
 from .verification import (
     REPO_ROOT,
+    DuplicateReleaseId,
     build_evidence,
     dispose,
+    duplicate_release_evidence,
     load_manifest,
     load_release_declarations,
     materialize_plan,
@@ -94,14 +96,9 @@ class Session:
 
         if confirmation.plan_hash != plan.plan_hash():
             raise ValueError("scope confirmation does not match this plan")
-        # Re-read the manifest from disk at verification time: the plan is bound to specific manifest
-        # bytes, so a snapshot that changed after the plan was built must show up as STALE_SNAPSHOT
-        # instead of being certified from the copy cached at session construction. A manifest that is
-        # now missing or invalid is unresolved evidence (NEEDS_EVIDENCE), never a raised request.
-        try:
-            manifest, manifest_hash = load_manifest(self.fixture_root, self.snapshot)
-        except (OSError, ValueError) as exc:
-            evidence = unreadable_manifest_evidence(plan, f"{type(exc).__name__}: {exc}")
+
+        def unresolved(evidence) -> dict[str, Any]:
+            """A verification taken with no graph work: the plan binding survives, the gaps are all we have."""
             result = dispose(evidence, [])
             return {
                 "startup_checks": {},
@@ -113,6 +110,22 @@ class Session:
                 "verification_hash": result.verification_hash(),
                 "queries": [],
             }
+
+        # Re-read the manifest from disk at verification time: the plan is bound to specific manifest
+        # bytes, so a snapshot that changed after the plan was built must show up as STALE_SNAPSHOT
+        # instead of being certified from the copy cached at session construction. A manifest that is
+        # now missing or invalid is unresolved evidence (NEEDS_EVIDENCE), never a raised request.
+        try:
+            manifest, manifest_hash = load_manifest(self.fixture_root, self.snapshot)
+        except (OSError, ValueError) as exc:
+            return unresolved(unreadable_manifest_evidence(plan, f"{type(exc).__name__}: {exc}"))
+        # Re-read the release declarations independently of the graph too. Two directories claiming one
+        # release id make every obligation ambiguous, so that is unresolved evidence as well; the gap
+        # names the duplicated id and both directories instead of escaping as a request error.
+        try:
+            declarations = load_release_declarations(self.fixture_root)
+        except DuplicateReleaseId as exc:
+            return unresolved(duplicate_release_evidence(plan, exc))
         plan_id = G.write_plan(self.g, plan)
         route_rows, route_log = G.plan_reader_routes(self.g, plan_id)
         stores = sorted({r["store_id"] for r in route_rows if r.get("store_id")})
@@ -120,7 +133,7 @@ class Session:
         path_rows, path_log = G.obligation_paths(self.g, plan_id, self.snapshot_id)
         evidence = build_evidence(plan, manifest, manifest_hash, route_rows, route_log, inventories,
                                   path_rows, path_log, P.probe_spec_hash, P.environment_hash(),
-                                  declarations=load_release_declarations(self.fixture_root))
+                                  declarations=declarations)
 
         payload_paths = {b["batch_id"]: b.get("payload_path") for _, rows, _ in inventories.values() for b in rows}
         written: set[str] = set()
