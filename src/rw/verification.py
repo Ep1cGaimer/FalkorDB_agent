@@ -67,6 +67,18 @@ def unreadable_manifest_evidence(plan: CandidatePlan, detail: str) -> GraphEvide
                   detail=f"cannot re-read the snapshot manifest: {detail}")])
 
 
+def duplicate_release_evidence(plan: CandidatePlan, exc: DuplicateReleaseId) -> GraphEvidence:
+    """Evidence for a fixture whose release identity is ambiguous: no obligations, one invalid fleet gap.
+
+    The duplicated release id is the subject and the detail names both directories that claim it, so
+    ``Session.verify`` can report NEEDS_EVIDENCE instead of raising out of the request.
+    """
+    return GraphEvidence(
+        plan_hash=plan.plan_hash(), obligations=[], queries=[],
+        snapshot_id=plan.snapshot_id, snapshot_manifest_hash=plan.snapshot_manifest_hash,
+        gaps=[Gap(kind=GapKind.INVALID_FLEET, subject=exc.release_id, detail=str(exc))])
+
+
 # --------------------------------------------------------------------------- release declarations
 
 def _release_dir_files(release_dir: Path) -> list[list[str]]:
@@ -86,6 +98,21 @@ def _repo_rel(path: Path) -> str:
         return resolved.as_posix()
 
 
+class DuplicateReleaseId(ValueError):
+    """Two release directories claim one content-addressed release id.
+
+    Ambiguity is unresolved evidence, not a crash: the caller turns this into an ``INVALID_FLEET``
+    gap naming the duplicated id and both directories, because a fixture with two claimants for one
+    release identity cannot be verified.
+    """
+
+    def __init__(self, release_id: str, first: Path, second: Path):
+        super().__init__(f"duplicate release_id {release_id} declared by two release directories: "
+                         f"{first.as_posix()} and {second.as_posix()}")
+        self.release_id = release_id
+        self.dirs = (first, second)
+
+
 def load_release_declarations(fixture_root: Path) -> dict[str, dict]:
     """Parse every release declaration straight from disk, independently of the graph.
 
@@ -93,6 +120,7 @@ def load_release_declarations(fixture_root: Path) -> dict[str, dict]:
     graph row that no longer matches the shipped artifact cannot define a route for the checker.
     """
     declarations: dict[str, dict] = {}
+    dirs_by_release: dict[str, Path] = {}
     releases_dir = Path(fixture_root) / "releases"
     for release_dir in sorted(releases_dir.iterdir()):
         declaration_path = release_dir / "release.json"
@@ -104,8 +132,10 @@ def load_release_declarations(fixture_root: Path) -> dict[str, dict]:
         release_id = f"release:{service}:{short(artifact_hash)}"
         if release_id in declarations:
             # Two directories with identical declared bytes would make the release identity
-            # ambiguous; fail closed rather than let one shadow the other.
-            raise ValueError(f"duplicate release_id {release_id} declared by two release directories")
+            # ambiguous; fail closed rather than let one shadow the other. The error carries both
+            # directories so the caller can report which two dirs conflict.
+            raise DuplicateReleaseId(release_id, dirs_by_release[release_id], release_dir)
+        dirs_by_release[release_id] = release_dir
         codec = release_dir / "codec.py"
         declarations[release_id] = {
             "service": service,
