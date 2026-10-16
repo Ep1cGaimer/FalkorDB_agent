@@ -2,9 +2,9 @@
 
 The user authorized focused code changes after the initial environment-only attempts failed. This report supersedes that earlier implementation restriction. The [pre-fix live results](ISSUE_3_LIVE_RESULTS.md) remain historical evidence, not results for this patch.
 
-Base commit: `771ce3814e7ad8bb6c5902e4ac9de83a711abbee`. Changes are local and uncommitted. All records and release artifacts are synthetic.
+Base commit: `771ce3814e7ad8bb6c5902e4ac9de83a711abbee`. Issue #3 changes are in commit `c78b3f24b834f03be1151e1dd1aaf1c576a75c0a` on [PR #13](https://github.com/Ep1cGaimer/FalkorDB_agent/pull/13). All records and release artifacts are synthetic.
 
-**Result:** issue #3's local acceptance is verified: three live control-test passes and three same-model product runs, with unchanged tested source. The [recorded comparison](ISSUE_3_COMPARISON.md) contains the exact scorer output and interpretation. This is local evidence; the GitHub issue remains untouched.
+**Result:** issue #3's local acceptance is verified: three live control-test passes and three same-model product runs, with unchanged tested source. The [recorded comparison](ISSUE_3_COMPARISON.md) contains the exact scorer output and interpretation. The GitHub issue remains open for maintainer review.
 
 ## What the investigation established
 
@@ -121,4 +121,4 @@ The runner prints its unique output directory under `artifacts/issue-3/`. It con
 
 The runner stops after a failed pair and retains it. It does not rerun entire experiments until they pass. A one-pair pilot can be run with `--runs 1`; its successful completion does not satisfy the three-pass issue criterion. A comparison result may be a tie or a control win; neither is rewritten as a product win.
 
-Only local verification is covered here. No commit, push, deployment, GitHub comment or issue closure has been performed.
+The implementation is pushed for review in PR #13. No deployment or issue closure has been performed.

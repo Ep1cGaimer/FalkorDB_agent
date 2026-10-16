@@ -18,6 +18,8 @@ New to the codebase? Read the [project guide with examples and Mermaid diagrams]
 
 The [issue #3 implementation report](docs/ISSUE_3_FIX_REPORT.md) explains the tool-call and rate-limit changes, why each was needed, and their verification results. The [recorded live comparison](docs/ISSUE_3_COMPARISON.md) includes all three passing control tests, the product results and the exact scorer output.
 
+For the free-tier operating choice and the browser check of the sanitized quota message, see the [issue #4 quota plan](docs/ISSUE_4_QUOTA.md).
+
 ## The thirty-second story
 
 1. The agent grounds the request in release notes and code, cites exact quotes, and asks when the fix to keep and the change to undo live in the same artifact.

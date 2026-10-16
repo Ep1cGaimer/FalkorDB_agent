@@ -184,12 +184,12 @@ Never commit or paste that file. The provider chain comes from `RW_GROUNDING_MOD
 `groq:openai/gpt-oss-120b,groq:qwen/qwen3.8-27b`. `GEMINI_API_KEY` is optional and only used when a
 `gemini:` entry is selected.
 
-Earlier free-tier runs (see [STATUS.md](STATUS.md)) exhausted the GPT-OSS daily allowance and
-failed on Qwen's input/output allowance. Those are historical observations, not a permanent
-statement that these models cannot run the control. The issue #3 patch reduces avoidable wire
-context, paces requests and records actual usage; its live comparison pins Qwen with a 1000-token
-completion cap. Account limits still apply, and an oversized request or exhausted daily allowance
-can still fail. See [the verification report](ISSUE_3_FIX_REPORT.md) for the measured results.
+The tested free-tier profile is `groq:qwen/qwen3.8-27b` with a 1000-token completion cap. It
+completed all three paired control/product runs in the recorded comparison. Four transient HTTP 429
+responses were recovered, so this profile reduces the workload but does not promise uninterrupted
+access. Groq applies limits at the organization level; some accounts separate input and output
+allowances, and the exact limits are shown on your [Groq Limits page](https://console.groq.com/docs/rate-limits).
+See the [issue #4 decision and browser check](ISSUE_4_QUOTA.md) for the chosen budget profile.
 
 The current client requires tool calls, caps completion tokens at 2048 by default, uses `medium`
 reasoning effort for GPT-OSS, and paces subsequent requests from reported rate-limit headers.
