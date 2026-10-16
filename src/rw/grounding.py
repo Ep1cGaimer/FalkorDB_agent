@@ -382,14 +382,16 @@ def _retrying_post(url: str, body: dict, headers: dict, key: str,
             r = httpx.post(url, json=body, timeout=timeout_s, verify=_tls_context(), headers=headers)
             if r.status_code == 200:
                 return r.json()
-            last = f"HTTP {r.status_code}: {r.text[:200].replace(key, '***')}"
+            redacted = r.text.replace(key, "***") if key else r.text
+            last = f"HTTP {r.status_code}: {redacted[:200]}"
             if r.status_code not in (408, 429, 500, 502, 503, 504):
                 raise GroundingError(f"{label} request failed (not retryable): {last}")
             if r.status_code == 429 and _quota_refused(r):  # TPD / request too large: waiting cannot help
                 raise GroundingError(f"{label} request failed (not retryable): {last}")
             wait = _retry_after_s(r)
         except httpx.TransportError as e:  # TLS resets, timeouts, connection errors
-            last = f"{type(e).__name__}: {str(e)[:200].replace(key, '***')}"
+            redacted = str(e).replace(key, "***") if key else str(e)
+            last = f"{type(e).__name__}: {redacted[:200]}"
         if attempt < attempts - 1:
             sleep(wait if wait is not None else min(RETRY_MAX_S, RETRY_MIN_S * 2 ** attempt))
     raise GroundingError(f"{label} request failed after {attempts} attempts; last error: {last}")

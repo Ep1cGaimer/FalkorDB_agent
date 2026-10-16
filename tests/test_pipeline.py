@@ -16,6 +16,7 @@ from rw import graph as G
 from rw.contracts import (
     CandidatePlan,
     FleetEntry,
+    GroundingClarification,
     GroundingProposal,
     GroundingResult,
     ScopeConfirmation,
@@ -92,6 +93,68 @@ def test_grounding_without_validation_errors_still_reaches_confirmation():
 
     assert out["attempts"][0]["outcome"] == "SCOPE_NOT_CONFIRMED"
     assert seen and seen[0].plan_id() == plan.plan_id()
+
+
+# --------------------------------------------------------------------------- I4: replay request binding
+
+def _replay_transcript(path: Path, request_text: str) -> Path:
+    """A gemini-shaped transcript that reads the fleet, then proposes a valid cart-1.4 fleet.
+
+    Valid on purpose: without the request-binding guard the loop would materialize and confirm
+    this proposal under whatever request text the caller passed.
+    """
+    path.write_text(json.dumps({
+        "request_text": request_text, "provider": "gemini", "alternative_context": None,
+        "events": [
+            {"type": "model", "response": {"candidates": [{"content": {"parts": [
+                {"functionCall": {"name": "current_fleet", "args": {}}}]}}]}},
+            {"type": "tool", "name": "current_fleet", "log": "read-only",
+             "rows": [{"release_id": "release:cart:1.4", "service": "cart", "declared_flags": []}]},
+            {"type": "model", "response": {"candidates": [{"content": {"parts": [
+                {"functionCall": {"name": "propose_fleet", "args": {
+                    "changes": [{"service": "cart", "release_id": "release:cart:1.4"}],
+                    "citations": [], "rationale": "replayed proposal"}}}]}}]}},
+        ]}, indent=2), encoding="utf-8")
+    return path
+
+
+def test_replayed_transcript_of_a_different_request_is_refused(tmp_path):
+    """A replay bound to another request must not be confirmed for this one."""
+    from rw import grounding
+
+    bound = _replay_transcript(tmp_path / "other.json", "a different request")
+    plan = CandidatePlan(scope_id="fixture-shop", snapshot_id="snapshot:snap-001",
+                         snapshot_manifest_hash=h("stub-manifest"), request_text_hash=h("roll cart back"),
+                         fleet=[FleetEntry(service="cart", release_id="release:cart:1.4")],
+                         source_hashes=[], origin="fixture", label="candidate 1")
+    seen: list = []
+    out = run_investigation(
+        "roll cart back",
+        ground=lambda request, tools, alternative_context=None: (grounding.replay(bound), bound),
+        confirm=lambda candidate: (seen.append(candidate), None)[1],
+        session=_StubSession(plan=plan))
+
+    attempt = out["attempts"][0]
+    assert attempt["outcome"] == "REQUEST_MISMATCH"
+    assert attempt["grounding"]["request_text"] == "a different request"
+    assert seen == [] and "plan" not in attempt and "report" not in attempt
+
+
+def test_grounding_bound_to_another_request_stops_before_clarification():
+    """The same guard stops a mismatched clarification before the operator is asked."""
+    asked: list = []
+
+    def ground(request_text, tools, alternative_context=None):
+        return GroundingResult(request_text="not the request",
+                               result=GroundingClarification(question="which build?", unresolved=[]),
+                               model="fake", live=True), None
+
+    out = run_investigation("roll cart back", ground=ground, confirm=lambda plan: None,
+                            answer=lambda clar: asked.append(clar) or "cart 1.4",
+                            session=_StubSession())
+
+    assert out["attempts"][0]["outcome"] == "REQUEST_MISMATCH"
+    assert asked == [] and "request_with_answer" not in out
 
 
 # --------------------------------------------------------------------------- F5: manifest re-read

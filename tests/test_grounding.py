@@ -282,6 +282,24 @@ def test_transport_error_text_is_redacted_too(monkeypatch):
     assert "after 2 attempts" in str(ei.value)
 
 
+@pytest.mark.parametrize("kind", ["http", "transport"])
+def test_a_key_that_starts_past_the_truncation_point_is_still_redacted(monkeypatch, kind):
+    """Redaction must happen before truncation, or a key at char 185+ leaks its prefix."""
+    key = "SECRETKEY0123456789AB"
+    noise = "x" * 185 + key
+
+    def fake_post(*a, **kw):
+        if kind == "http":
+            return httpx.Response(503, text=noise)
+        raise httpx.ConnectError(noise)
+
+    monkeypatch.setattr(grounding.httpx, "post", fake_post)
+    with pytest.raises(grounding.GroundingError) as ei:
+        grounding.make_groq_transport(api_key=key, sleep=lambda s: None, retries=1)({})
+    message = str(ei.value)
+    assert key not in message and key[:12] not in message and "***" in message
+
+
 @pytest.mark.parametrize("body", [
     # both real Groq refusals that waiting cannot clear (observed live: TPD exhaustion, prompt too big)
     '{"error":{"message":"Rate limit reached for model `openai/gpt-oss-120b` on tokens per day (TPD): '

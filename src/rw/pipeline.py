@@ -203,6 +203,13 @@ def run_investigation(request_text: str, *, ground: Callable[..., tuple[Groundin
         entry: dict[str, Any] = {"grounding": grounding.model_dump(mode="json"),
                                  "transcript": str(transcript) if transcript else None}
         out["attempts"].append(entry)
+        if grounding.request_text != request_text:
+            # A replay can carry a proposal authored for a different request; binding it to the
+            # current text would let the report answer a question nobody asked. Stop before the
+            # clarification, materialization and confirmation steps.
+            entry["outcome"] = "REQUEST_MISMATCH"
+            entry["bound_request"] = grounding.request_text
+            break
         if isinstance(grounding.result, GroundingClarification):
             entry["outcome"] = "CLARIFICATION"
             reply = answer(grounding.result) if (answer and not clarified) else None
