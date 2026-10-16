@@ -565,6 +565,22 @@ def test_null_manifest_writer_is_a_gap_even_with_a_graph_edge():
     assert all(g.detail == "manifest writer is unknown" for g in writers(ev))
 
 
+def test_missing_graph_writer_edge_pins_the_no_written_by_wording():
+    """#7c: the manifest writer resolves, the graph batch carries no WRITTEN_BY edge.
+
+    A resolvable manifest writer with an absent graph edge is a WRITER_UNKNOWN gap per batch whose
+    wording is pinned here, so a later rephrase cannot quietly turn it into a contradiction.
+    """
+    plan = plan_for()
+    ev = evidence(plan, inv=inventory(writer=False))
+    found = writers(ev)
+    assert len(found) == 2  # one line per batch, never more
+    assert {g.subject for g in found} == {"batch:r1", "batch:r2"}
+    assert all(g.detail == "no WRITTEN_BY writer release" for g in found)
+    res = dispose(ev, [receipt(o, ProbeResult.PASS) for o in ev.obligations])
+    assert res.disposition == Disposition.NEEDS_EVIDENCE
+
+
 def test_manifest_writer_contradicting_the_graph_writer_is_a_gap():
     plan = plan_for()
     ev = evidence(plan, man=manifest(writer=("cart", "1.4")))  # resolves to release:cart:old
