@@ -716,12 +716,28 @@ def revalidate(verification: VerificationResult, fixture_root: Path, environment
 
     # C2: the manifest's writer for each read record must still resolve the way it did when the
     # verification was taken; a re-pointed or vanished writer is drift even if every obligation hash
-    # still matches.
+    # still matches. Only the stores this verification actually read are in scope: a store no fleet
+    # route reads was never part of the evidence, so its writer must not invent drift (the false
+    # "is not a release this verification depended on" would otherwise block a valid approval).
+    # Read stores come from the obligations and — so a zero-obligation verification (an empty
+    # inventory) still covers the stores its fleet reads — from the routes the still-declared
+    # dependencies name.
+    read_stores = {o.tuple.store_id for o in verification.obligations}
+    for release_id in verification.dependencies:
+        declaration = declarations.get(release_id)
+        if declaration is None:
+            continue
+        for route in (declaration.get("routes") or {}).values():
+            if route.get("reads_from"):
+                read_stores.add("store:" + route["reads_from"])
+
     verified_writers = {(o.tuple.store_id, o.tuple.record_id): o.writer_release_id
                         for o in verification.obligations}
     releases_by_version = release_index_by_service_version(declarations)
     for store in (manifest or {}).get("stores", []):
         store_id = "store:" + str(store.get("name"))
+        if store_id not in read_stores:
+            continue
         for record in store.get("records", []):
             rid = record.get("record_id")
             writer = record.get("writer")

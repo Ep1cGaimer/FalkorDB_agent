@@ -708,6 +708,58 @@ def empty_inventory_pass(tmp_path_factory):
             pass
 
 
+@pytest.fixture(scope="module")
+def unread_store_pass(tmp_path_factory):
+    """A real BOUNDED_PASS verification of snap-001 whose manifest also carries a store no route reads.
+
+    ``audit-log`` is a second store with one record whose writer resolves to a declared release
+    (checkout 2.0) that the verified fleet never reads; revalidating the unchanged tree must be
+    clean, because a store the fleet does not read is not evidence this verification depended on.
+    """
+    from rw import graph as G
+
+    root = tmp_path_factory.mktemp("unread-store") / "shop"
+    shutil.copytree(FIXTURE_ROOT, root)
+    path = root / "snapshots" / "snap-001" / "manifest.json"
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    manifest["stores"].append({
+        "coverage": "COMPLETE",
+        "kind": "kv-log",
+        "name": "audit-log",
+        "records": [{
+            "format": "cart/v1",
+            "payload": "payloads/saved-cart-1001.bin",
+            "payload_hash": bh((root / "payloads" / "saved-cart-1001.bin").read_bytes()),
+            "record_id": "audit-9001",
+            "writer": {"service": "checkout", "version": "2.0"},
+        }],
+    })
+    path.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
+
+    name = "rw_test_" + uuid.uuid4().hex[:8]
+    session = Session(snapshot="snap-001", graph_name=name, fixture_root=root)
+    try:
+        rows, _ = G.releases_for_service(session.g, "cart")
+        release = next(r for r in rows if r["version"] == "1.5")
+        plan, errors = session.plan_from_proposal(
+            GroundingProposal(changes=[FleetEntry(service="cart", release_id=release["release_id"],
+                                                  flags={"basket_v2": False})],
+                              citations=[], rationale="unread-store control"),
+            "undo the basket rollout", origin="fixture")
+        assert not errors and plan is not None
+        report = session.verify(plan, ScopeConfirmation(plan_hash=plan.plan_hash(),
+                                                       confirmed_by="test-operator",
+                                                       confirmed_at="2026-10-16T00:00:00Z"))
+        result = VerificationResult.model_validate(report["verification"])
+        assert result.disposition == Disposition.BOUNDED_PASS and not result.gaps
+        yield result, root
+    finally:
+        try:
+            session.g.delete()
+        except Exception:
+            pass
+
+
 def release_id_for(verified: VerificationResult, codec_fragment: str) -> str:
     """The exact release id a reader's obligations carry (ids embed the artifact hash)."""
     return next(o.tuple.release_id for o in verified.obligations if codec_fragment in o.reader_codec_path)
@@ -826,3 +878,19 @@ def test_revalidate_flags_a_changed_fleet_release_with_no_obligations(empty_inve
     changelog.write_bytes(changelog.read_bytes() + b"\n- extra note\n")
     errors = revalidate(verification, copy, P.environment_hash, P.probe_spec_hash)
     assert any("is no longer declared by the fixture" in e for e in errors), errors
+
+
+def test_revalidate_ignores_a_store_the_fleet_does_not_read(unread_store_pass):
+    """C2 scope: a manifest store no fleet route reads is not evidence this verification depends on.
+
+    Its record's writer still resolves to checkout 2.0, but that release was never a dependency of the
+    verification, so revalidating the unchanged tree must report no drift rather than a false
+    "is not a release this verification depended on" that would block a valid approval.
+    """
+    verification, root = unread_store_pass
+    assert {o.tuple.store_id for o in verification.obligations} == {"store:cart-cache"}
+    declarations = load_release_declarations(root)
+    unread_writer = next(rid for rid, d in declarations.items()
+                         if (d["service"], d["version"]) == ("checkout", "2.0"))
+    assert unread_writer not in verification.dependencies  # it only wrote the store nothing reads
+    assert revalidate(verification, root, P.environment_hash, P.probe_spec_hash) == []
