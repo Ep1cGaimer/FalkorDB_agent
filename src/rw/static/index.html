@@ -218,7 +218,13 @@ const disp = a => a && a.report ? a.report.verification.disposition : null;
 const labels = () => (S.inv && S.inv.release_labels) || {};
 const relOfExcerpt = id => { const hex=(id.split(":")[1]||""); return Object.keys(labels()).find(r=>r.endsWith(":"+hex)); };
 const lab = rid => labels()[rid] || rid;
+/* --- replay matcher: pure helpers, loaded by tests/js/replay_matcher.test.mjs under node --test --- */
 const withAnswer = (req,q,a) => `${req}\n\nAgent asked: ${q}\nOperator answered: ${a}`;   // mirrors pipeline.with_answer
+const replayMatches = (transcripts, requestText, question, answer) => {
+  const bound = withAnswer(requestText, question, String(answer==null?"":answer).trim());
+  return (transcripts||[]).filter(t=>t.request_text===bound);
+};
+/* --- end replay matcher --- */
 const transcriptModel = file => { const t=S.transcripts.find(x=>x.replay_path===file); return t?t.model:null; };
 
 /* ---------- actions ---------- */
@@ -281,18 +287,23 @@ function field(label, id, key, opts={}){
   inp.addEventListener("input",()=>{S.form[key]=inp.value; if(opts.after) opts.after();});
   return el("div",{class:opts.cls||"grow"}, el("label",{for:id},label), inp);
 }
-function replayPicker(id, key, label, items){
-  const wrap=el("div",{class:"grow"}, el("label",{for:id},label));
+function fillPicker(wrap, id, key, label, items){
   if(!items.length){
-    wrap.append(el("p",{class:"hint",style:"margin:0"}, "No saved run in artifacts/grounding matches. Replay can only reuse a transcript recorded for this exact text."));
-    S.form[key]=""; return wrap;
+    wrap.replaceChildren(el("label",{for:id},label),
+      el("p",{class:"hint",style:"margin:0"}, "No saved run in artifacts/grounding matches. Replay can only reuse a transcript recorded for this exact text."));
+    S.form[key]=""; return;
   }
   const sel=el("select",{id,class:"picker"}, items.map(t=>el("option",{value:t.replay_path},
     `${t.outcome==="question"?"asks a question":t.outcome==="proposal"?"proposes a fleet":"saved run"} · ${t.model} · ${t.replay_path.replace(".json","").slice(0,8)}`)));
   if(!items.some(t=>t.replay_path===S.form[key])) S.form[key]=items[0].replay_path;
   sel.value=S.form[key];
   sel.addEventListener("change",()=>{ S.form[key]=sel.value; if(key==="replay"){ const t=S.transcripts.find(x=>x.replay_path===sel.value); if(t){S.form.req=t.request_text;} render(); }});
-  wrap.append(sel); return wrap;
+  wrap.replaceChildren(el("label",{for:id},label), sel);
+}
+function replayPicker(id, key, label, items){
+  const wrap=el("div",{class:"grow"});
+  fillPicker(wrap, id, key, label, items);
+  return wrap;
 }
 function cites(list, only){
   const out=[];
@@ -306,7 +317,7 @@ function cites(list, only){
     const detail=el("span",{class:"mono",hidden:true}, c.excerpt_id+"  ", hash(c.content_hash));
     const btn=el("button",{class:"link",type:"button"},"source ↗");
     btn.addEventListener("click",()=>{detail.hidden=!detail.hidden;});
-    return el("p",{class:"quote"}, el("q",{},c.quote), el("span",{class:"src"}, (rid?lab(rid):"unmatched release")+" changelog · ", btn, " ", detail));
+    return el("p",{class:"quote"}, el("q",{},c.quote), el("span",{class:"src"}, (rid?lab(rid):"unmatched release")+" "+(c.kind||"excerpt")+" · ", btn, " ", detail));
   });
 }
 
@@ -366,12 +377,20 @@ function askView(a, answerable){
   body.append(...cites(c.citations||[]));
   if(answerable){
     const ta=el("textarea",{id:"answer",placeholder:"Your answer decides the fleet. The agent gets one question per investigation."}); ta.value=S.form.answer;
-    ta.addEventListener("input",()=>{S.form.answer=ta.value; const b=document.getElementById("answerbtn"); if(b) b.disabled=!!S.busy||!ta.value.trim()||(S.inv.mode==="replay"&&!S.form.answerReplay);});
-    const bound=withAnswer(S.inv.request_text,c.question,S.form.answer.trim());
-    const items=S.inv.mode==="replay"? S.transcripts.filter(t=>t.request_text===bound):[];
+    const btn=el("button",{id:"answerbtn",type:"button",onclick:sendAnswer},"Answer");
+    const pick=el("div",{class:"grow"});
+    const refresh=()=>{
+      // Recompute the matching replay as the answer is typed. The textarea is never re-created, so
+      // focus and caret stay put while the picker and the Answer button update.
+      if(S.inv.mode==="replay")
+        fillPicker(pick,"answerpick","answerReplay","Saved run for this answer",
+          replayMatches(S.transcripts, S.inv.request_text, c.question, S.form.answer));
+      btn.disabled=!!S.busy||!S.form.answer.trim()||(S.inv.mode==="replay"&&!S.form.answerReplay);
+    };
+    ta.addEventListener("input",()=>{S.form.answer=ta.value; refresh();});
+    refresh();
     body.append(el("div",{style:"margin-top:16px"}, el("label",{for:"answer"},"Your answer"), ta),
-      el("div",{class:"row"}, S.inv.mode==="replay"? replayPicker("answerpick","answerReplay","Saved run for this answer",items):null,
-        el("button",{id:"answerbtn",type:"button",onclick:sendAnswer,disabled:!!S.busy||!S.form.answer.trim()||(S.inv.mode==="replay"&&!S.form.answerReplay)},"Answer")),
+      el("div",{class:"row"}, S.inv.mode==="replay"?pick:null, btn),
       S.inv.mode==="replay"?el("p",{class:"hint"},"Replay only works with the exact answer text the saved run was recorded with — Guided demo fills it in."):null);
   }
   return sec.append(body), sec;

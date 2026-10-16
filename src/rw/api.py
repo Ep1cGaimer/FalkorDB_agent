@@ -147,6 +147,39 @@ class Investigation:
                 release_ids.add(value)
 
         collect(attempts)
+        # Citations carry the real excerpt kind (changelog / code) taken from the graph rows, so the
+        # UI labels a quote honestly instead of assuming every citation is a changelog.
+        excerpt_ids: set[str] = set()
+
+        def gather(value):
+            if isinstance(value, dict):
+                if isinstance(value.get("excerpt_id"), str):
+                    excerpt_ids.add(value["excerpt_id"])
+                for child in value.values():
+                    gather(child)
+            elif isinstance(value, list):
+                for child in value:
+                    gather(child)
+
+        gather(attempts)
+        kinds: dict[str, str] = {}
+        if excerpt_ids:
+            excerpt_rows, excerpt_log = graph.get_excerpts(self.session.g, sorted(excerpt_ids))
+            if excerpt_log["truncated"]:
+                raise SimulationRefused("citation kind query is truncated")
+            kinds = {row["excerpt_id"]: row["kind"] for row in excerpt_rows}
+
+        def stamp_kind(value):
+            if isinstance(value, dict):
+                if isinstance(value.get("excerpt_id"), str):
+                    value["kind"] = kinds.get(value["excerpt_id"])
+                for child in value.values():
+                    stamp_kind(child)
+            elif isinstance(value, list):
+                for child in value:
+                    stamp_kind(child)
+
+        stamp_kind(attempts)
         services = set(current)
         services.update(r.split(":", 2)[1] for r in release_ids if r.count(":") >= 2)
         releases = {}

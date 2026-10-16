@@ -188,6 +188,34 @@ def test_clarification(tmp_path):
         session.g.delete()
 
 
+def test_citations_carry_the_real_excerpt_kind(api, tmp_path):
+    """A code-excerpt citation is labeled 'code' from the graph rows, not assumed to be a changelog."""
+    from rw import graph
+
+    client, _, original_app = api
+    state = create(client)
+    assert state["citations"][0]["kind"] == "changelog"
+    assert state["plan"]["citations"][0]["kind"] == "changelog"
+    assert state["grounding"]["result"]["citations"][0]["kind"] == "changelog"
+
+    inv = original_app.state.investigations[state["id"]]
+    history, _ = graph.release_history(inv.session.g, inv.session.snapshot_id, "cart")
+    code = next(ex for row in history for ex in row["excerpts"] if ex["kind"] == "code")
+    source = inv.attempts[0].grounding
+    proposal = source.result.model_copy(update={"citations": [
+        Citation(excerpt_id=code["excerpt_id"], content_hash=code["content_hash"], quote=code["text"])]})
+
+    def code_ground(request, tools, alternative_context=None):
+        return source.model_copy(update={"result": proposal}), None
+
+    app = create_app(session_factory=lambda: inv.session, ground_function=code_ground,
+                     db_path=tmp_path / "kind.sqlite")
+    with TestClient(app) as other:
+        other_state = create(other)
+        assert other_state["citations"][0]["kind"] == "code"
+        assert other_state["plan"]["citations"][0]["kind"] == "code"
+
+
 @pytest.mark.parametrize("failure", ["adapter", "release", "citation"])
 def test_grounding_validation_errors_prevent_plan(api, tmp_path, failure):
     client, _, original_app = api
