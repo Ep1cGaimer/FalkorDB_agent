@@ -57,7 +57,7 @@ PROBE_1001 = call("run_reader_probe", service="cart", version="1.4", record_id="
 
 
 def final(fleet, disposition, evidence=None):
-    return call("final_answer", fleet=fleet, disposition=disposition, evidence=evidence or ["observed"])
+    return call("submit_assessment", fleet=fleet, disposition=disposition, evidence=evidence or ["observed"])
 
 
 # ------------------------------------------------------- OpenAI-compatible (Groq) fakes
@@ -121,7 +121,7 @@ def test_system_prompt_hints_nothing():
         assert hint not in prompt, f"system prompt leaks {hint!r}"
     # the same safety rules as the product's prompt, and the retained-record warning
     for rule in ("Never invent a hybrid build", "untrusted", "retained records may need checking",
-                 "Cite every claim", "call final_answer.", "at most 8 turns"):
+                 "Cite every claim", "call submit_assessment.", "at most 8 turns"):
         assert rule in prompt
 
 
@@ -139,7 +139,7 @@ def test_flat_context_has_every_file_and_no_payloads():
 # --------------------------------------------------------------------------- allowlist / probe wiring
 
 def test_dispatch_allowlist_is_exactly_the_declared_tools():
-    assert control.TOOLS == ("run_reader_probe", "final_answer")
+    assert control.TOOLS == ("run_reader_probe", "submit_assessment")
     assert set(control._DISPATCH) == {"run_reader_probe"}
     declared = [f["name"] for group in control._declarations() for f in group["functionDeclarations"]]
     assert declared == list(control.TOOLS)
@@ -284,7 +284,7 @@ def test_unusable_terminal_calls_are_reported_back_to_the_model(tmp_path):
     assert transcript["model_turns"] == 5
 
 
-def test_final_answer_completes_unlisted_services_from_the_snapshot(tmp_path):
+def test_submit_assessment_completes_unlisted_services_from_the_snapshot(tmp_path):
     transport = ScriptedTransport([final([{"service": "cart", "version": "1.4"}], "BLOCKED")])
     transcript, _ = control.run_control(transport=transport, artifact_dir=tmp_path)
     result = transcript["result"]
@@ -294,7 +294,7 @@ def test_final_answer_completes_unlisted_services_from_the_snapshot(tmp_path):
 
 
 def test_extra_terminal_keys_are_kept_verbatim(tmp_path):
-    transport = ScriptedTransport([call("final_answer", fleet=[{"service": "cart", "version": "1.4"}],
+    transport = ScriptedTransport([call("submit_assessment", fleet=[{"service": "cart", "version": "1.4"}],
                                         disposition="BLOCKED", evidence=["no probe ran"],
                                         unresolved=["scope of 'the basket rollout'"])])
     transcript, _ = control.run_control(transport=transport, artifact_dir=tmp_path)
@@ -318,7 +318,7 @@ def test_groq_control_round_trip_to_a_scored_answer(tmp_path):
     transport = FakeGroqTransport([
         groq_call("run_reader_probe", call_id="c1", service="cart", version="1.4",
                   record_id="saved-cart-2002"),
-        groq_call("final_answer", call_id="c2", fleet=[{"service": "cart", "version": "1.4"}],
+        groq_call("submit_assessment", call_id="c2", fleet=[{"service": "cart", "version": "1.4"}],
                   disposition="BLOCKED", evidence=["probe on saved-cart-2002 FAIL (ValueError)"]),
     ])
     transcript, path = control.run_control(transport=transport, artifact_dir=tmp_path)
@@ -329,7 +329,7 @@ def test_groq_control_round_trip_to_a_scored_answer(tmp_path):
                                              "checkout": {"version": "2.1", "flags": {}}}
     first = transport.bodies[0]
     assert first["messages"][0] == {"role": "system", "content": control.SYSTEM_PROMPT}
-    assert first["tool_choice"] == "auto" and first["temperature"] == 0
+    assert first["tool_choice"] == "required" and first["temperature"] == 0
     assert [t["function"]["name"] for t in first["tools"]] == list(control.TOOLS)
     # the probe reply binds to the model's own tool_call_id and carries the observed FAIL
     replies = [m for m in transport.bodies[1]["messages"] if m.get("role") == "tool"]
@@ -348,7 +348,7 @@ def test_groq_control_unknown_tool_and_text_nudge(tmp_path):
     transport = FakeGroqTransport([
         text_only,
         groq_call("delete_everything", call_id="c1", graph="other"),
-        groq_call("final_answer", call_id="c2", fleet=[{"service": "cart", "version": "1.4"}],
+        groq_call("submit_assessment", call_id="c2", fleet=[{"service": "cart", "version": "1.4"}],
                   disposition="BLOCKED", evidence=["no probe ran"]),
     ])
     transcript, _ = control.run_control(transport=transport, artifact_dir=tmp_path)
@@ -375,7 +375,7 @@ def test_control_chain_restarts_with_the_next_model(tmp_path, monkeypatch):
             if spec == "groq:m1" or len(n) == 1:
                 return groq_call("run_reader_probe", call_id=f"{spec}-{len(n)}", service="cart",
                                  version="1.4", record_id="saved-cart-1001")
-            return groq_call("final_answer", call_id="m2-2", fleet=[{"service": "cart", "version": "1.4"}],
+            return groq_call("submit_assessment", call_id="m2-2", fleet=[{"service": "cart", "version": "1.4"}],
                              disposition="BLOCKED", evidence=["probe PASS"])
         tr.model_used, tr.provider = spec, "groq"
         return tr
@@ -402,6 +402,62 @@ def test_control_reports_all_models_failing(tmp_path, monkeypatch):
     monkeypatch.setattr(grounding, "make_transport", make_transport)
     with pytest.raises(grounding.GroundingError, match="groq:m1 down.*groq:m2 down"):
         control.run_control(artifact_dir=tmp_path, models=["groq:m1", "groq:m2"])
+    saved = list(tmp_path.glob("llm_flat_*.json"))
+    assert len(saved) == 1
+    failed = json.loads(saved[0].read_text())
+    assert failed["aborted"] and failed["result"] is None and failed["partial_evidence_unavailable"]
+    assert [attempt["model"] for attempt in failed["abandoned"]] == ["groq:m1", "groq:m2"]
+    fixtures = scoring.fixture_index()
+    snapshot = scoring.manifest_index()
+    assert scoring.run_from_control(failed, fixtures, snapshot)["aborted"]
+
+
+def test_control_uses_the_same_bounded_rejection_correction(tmp_path):
+    from rw import grounding
+    bodies = []
+
+    def transport(body):
+        bodies.append(body)
+        if len(bodies) == 1:
+            raise grounding.ToolCallRejected({"code": "tool_use_failed", "failed_generation": "untrusted text"})
+        return groq_call("submit_assessment", fleet={"cart": {"version": "1.4"}, "checkout": {"version": "2.1"}},
+                         disposition="NEEDS_EVIDENCE", evidence=["Readers not checked"])
+
+    transport.provider, transport.model_used = "groq", GROQ_MODEL
+    transcript, _ = control.run_control(transport=transport, artifact_dir=tmp_path)
+    assert not transcript["aborted"] and transcript["model_turns"] == 2
+    assert transcript["probe_calls"] == [] and transcript["events"][0]["type"] == "model_error"
+    correction = bodies[1]["messages"][-1]["content"]
+    assert "submit_assessment" in correction and "run_reader_probe" in correction
+    assert "propose_fleet" not in correction and "untrusted text" not in correction
+
+
+def test_cli_loads_env_before_selecting_models(tmp_path, monkeypatch):
+    from rw import config, grounding
+    seen = []
+    monkeypatch.delenv("RW_GROUNDING_MODEL", raising=False)
+
+    def load_env():
+        seen.append("load_env")
+        monkeypatch.setenv("RW_GROUNDING_MODEL", "groq:configured-in-dotenv")
+
+    def run_control(*args, **kwargs):
+        seen.append("run_control")
+        assert kwargs["models"] == ["groq:configured-in-dotenv"]
+        return {"model": kwargs["models"][0], "model_turns": 1, "tool_call_count": 0, "probe_calls": [],
+                "aborted": False, "result": {"fleet": {}, "disposition": "NEEDS_EVIDENCE", "evidence": [],
+                                              "validation_errors": []}}, tmp_path / "transcript.json"
+
+    monkeypatch.setattr(config, "load_env", load_env)
+    monkeypatch.setattr(control, "run_control", run_control)
+    assert control.main([]) == 0
+    assert seen == ["load_env", "run_control"]
+
+
+def test_product_turn_counts_include_rejected_generations(tmp_path):
+    path = tmp_path / "transcript.json"
+    path.write_text(json.dumps({"events": [{"type": "model_error"}, {"type": "model"}, {"type": "tool"}]}))
+    assert scoring._turns_from_grounding_transcript(str(path)) == 2
 
 
 # --------------------------------------------------------------------------- scoring math
@@ -664,31 +720,24 @@ def test_live_control_runs_once(tmp_path):
 
     config.load_env()  # GROQ_API_KEY from the git-ignored .env; never printed
     chain = grounding.configured_models()
-    if not os.environ.get("GROQ_API_KEY"):
-        pytest.skip("no GROQ_API_KEY for the configured chain: " + ",".join(chain))
+    if not any(grounding.has_credentials(model) for model in chain):
+        pytest.skip("no provider key for the configured chain: " + ",".join(chain))
     print("LIVE CHAIN:", ",".join(chain))
 
-    last = None
-    for attempt in range(2):
-        try:
-            transcript, path = control.run_control(artifact_dir=tmp_path)
-        except grounding.GroundingError as exc:
-            last = exc
-            print(f"live control attempt {attempt + 1} failed: {exc}")
-            continue
-        print("LIVE CONTROL:", json.dumps({"model": transcript["model"], "provider": transcript["provider"],
-                                           "turns": transcript["model_turns"],
-                                           "tool_calls": transcript["tool_call_count"],
-                                           "probes": [p["result"] for p in transcript["probe_calls"]],
-                                           "result": transcript["result"]}, indent=2, default=str))
-        print("transcript:", path)
-        assert transcript["live"] is True
-        assert transcript["model"] in chain
-        assert transcript["aborted"] is False, transcript["validation_errors"]
-        assert transcript["result"]["disposition"] in control.DISPOSITIONS
-        assert set(transcript["result"]["fleet"]) == {"cart", "checkout"}
-        if transcript["result"]["disposition"] == "BOUNDED_PASS":
-            # no pass without evidence
-            assert transcript["probe_calls"], "claimed BOUNDED_PASS without probing anything"
-        return
-    raise AssertionError(f"live control failed on every attempt: {last}")
+    # One test execution is one conversation. Do not silently discard a failed trial and restart
+    # the whole experiment; transport retries and correction turns already have explicit bounds.
+    transcript, path = control.run_control(artifact_dir=tmp_path)
+    print("LIVE CONTROL:", json.dumps({"model": transcript["model"], "provider": transcript["provider"],
+                                       "turns": transcript["model_turns"],
+                                       "tool_calls": transcript["tool_call_count"],
+                                       "probes": [p["result"] for p in transcript["probe_calls"]],
+                                       "result": transcript["result"]}, indent=2, default=str))
+    print("transcript:", path)
+    assert transcript["live"] is True
+    assert transcript["model"] in chain
+    assert transcript["aborted"] is False, transcript["validation_errors"]
+    assert not transcript["validation_errors"], transcript["validation_errors"]
+    assert transcript["result"]["disposition"] in control.DISPOSITIONS
+    assert set(transcript["result"]["fleet"]) == {"cart", "checkout"}
+    if transcript["result"]["disposition"] == "BOUNDED_PASS":
+        assert transcript["probe_calls"], "claimed BOUNDED_PASS without probing anything"

@@ -5,6 +5,7 @@ Product: **RollbackWitness**, build mode. Current implementation branch: `feat/m
 synced with `main` at `d4ad437`, including PRs #14, #15 and #18. The issue #2 evaluation from
 main is preserved below. Synthetic fixture only — no production data or product deployment.
 
+For issue #3's comparison work, see [the implementation report](ISSUE_3_FIX_REPORT.md).
 
 Every row below is a command that was actually run, with its observed output. Nothing here is a plan
 or an estimate.

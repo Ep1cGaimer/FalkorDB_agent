@@ -78,7 +78,7 @@ See [MCP.md](MCP.md) for absolute-path host configuration and the human handoff 
 The suite needs the container from §2. See [STATUS.md](STATUS.md) for current observed base and
 MCP-enabled counts; SDK-dependent tests explicitly skip when the optional extra is absent.
 
-The 3 deselected tests call the live model provider and need `GROQ_API_KEY` (§6).
+Live-marked tests call a model provider and need the selected provider's credential (§6).
 
 Two more checks that need **no model at all**:
 
@@ -184,11 +184,27 @@ Never commit or paste that file. The provider chain comes from `RW_GROUNDING_MOD
 `groq:openai/gpt-oss-120b,groq:qwen/qwen3.8-27b`. `GEMINI_API_KEY` is optional and only used when a
 `gemini:` entry is selected.
 
-Free-tier reality (measured 2026-10-15, see [STATUS.md](STATUS.md)): `gpt-oss-120b` allows
-200k tokens/day and was exhausted by the slice-2 evaluation runs; `qwen3.8-27b` allows 7000 input /
-1000 output tokens per minute and rejects the flat-context control prompt. A live run may therefore
-fail fast with a quota refusal — the transcript records the abandoned attempt and the next chain
-entry is tried.
+Earlier free-tier runs (see [STATUS.md](STATUS.md)) exhausted the GPT-OSS daily allowance and
+failed on Qwen's input/output allowance. Those are historical observations, not a permanent
+statement that these models cannot run the control. The issue #3 patch reduces avoidable wire
+context, paces requests and records actual usage; its live comparison pins Qwen with a 1000-token
+completion cap. Account limits still apply, and an oversized request or exhausted daily allowance
+can still fail. See [the verification report](ISSUE_3_FIX_REPORT.md) for the measured results.
+
+The current client requires tool calls, caps completion tokens at 2048 by default, uses `medium`
+reasoning effort for GPT-OSS, and paces subsequent requests from reported rate-limit headers.
+Generated-call errors can be corrected within the same eight-turn budget. These changes do not
+increase the account's quota; see [the fix and verification report](ISSUE_3_FIX_REPORT.md).
+
+To collect the issue #3 comparison on one model (Linux/WSL):
+
+```bash
+RW_GROUNDING_MAX_COMPLETION_TOKENS=1000 \
+  .venv/bin/python evals/run_comparison.py --runs 3 --model groq:qwen/qwen3.8-27b
+```
+
+This makes live provider calls and saves the exact scorer output plus test evidence under a unique
+`artifacts/issue-3/` directory. A failed pair is retained and stops the run; skips do not count as passes.
 
 ## 7. Console
 

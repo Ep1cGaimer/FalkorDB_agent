@@ -301,10 +301,18 @@ A provider-neutral bounded tool loop (≤ 8 model turns) over the read-only tool
 
 Providers are chosen by `RW_GROUNDING_MODEL` (comma-separated `provider:model`; a bare entry means `gemini:`); the default chain is `groq:openai/gpt-oss-120b,groq:qwen/qwen3.8-27b`.
 
-- `groq` — OpenAI-compatible Chat Completions (`GROQ_API_KEY`, Bearer header only), `tool_choice: "auto"`, temperature 0. The assistant message with its `tool_calls` is replayed verbatim before the matching tool replies.
+- `groq` — OpenAI-compatible Chat Completions (`GROQ_API_KEY`, Bearer header only), `tool_choice: "required"`, `parallel_tool_calls: false`, temperature 0. Assistant content and `tool_calls` IDs/arguments are preserved before matching tool replies; provider-only reasoning metadata is not fed back. Tool-result JSON is compact UTF-8 with unchanged decoded values. Completion tokens are capped by `RW_GROUNDING_MAX_COMPLETION_TOKENS` (default 2048); GPT-OSS reasoning effort is set by `RW_GROUNDING_REASONING_EFFORT` (default `medium`, accepts `low`/`medium`/`high`).
 - `gemini` — `generateContent` (`GEMINI_API_KEY` in a header only), `functionCallingConfig.mode = ANY`, raw parts (thought signatures) preserved. Optional; used when a `gemini:` entry is selected.
 
 When a chain entry exhausts its retries the **whole conversation restarts** from turn 0 on the next entry — providers are never mixed. `GroundingResult.model` records the `provider:model` that actually answered, or `replay:<file>` with `live=False` for a saved transcript. Retries: 2–30 s exponential backoff, or the server's `Retry-After` (capped at 120 s); non-retryable are statuses outside 408/429/500/502/503/504 and Groq 429s whose body says `tokens per day` or `request too large` (waiting cannot clear those). The credential only ever travels in a header and is redacted from error text. Transcripts are saved under `artifacts/grounding/` for labeled replay.
+
+HTTP 400 `tool_use_failed` is a special generated-call rejection: the shared product/control loop records a `model_error` event, executes nothing from that response, and sends a trusted correction listing declared tool names. Each correction consumes a model turn within the existing cap; repeated rejection aborts without a proposal/pass. Replays preserve these error turns. Other 400s still fail the transport normally.
+
+The Groq transport records safe usage/rate metadata and settings in `transport_trace` / `transport_settings`. If reported remaining tokens are below a conservative byte-based request estimate plus the completion cap, it waits for the reported reset before the next call. Missing headers remain unknown. This estimate affects scheduling only, never disposition. Concurrent callers can still cause 429 responses, and daily exhaustion/oversized requests still fail closed.
+
+Repeated excerpt text is replaced by `text_already_returned: true` only for an `(excerpt_id, content_hash)` whose actual text survived the model-result cap. All unique source text and the full trusted citation-validation store remain available. A capped-away excerpt or changed hash is not suppressed. On provider failure, a separate grounding failure artifact preserves the successful prefix and transport metadata; it is not listed as a normal replay transcript.
+
+The standalone flat-context CLI now loads `.env`. Its version-4 protocol uses `submit_assessment` as the terminal function and retains aborted provider failures, explicitly marking partial history unavailable. The live control test runs one conversation per execution and selects its credential gate from the configured provider. `evals/run_comparison.py` pins one model, preserves live-test/JUnit evidence and product reports, counts rejected generations in model budgets, and invokes the independent scorer. See [ISSUE_3_FIX_REPORT.md](ISSUE_3_FIX_REPORT.md).
 
 ### `src/rw/simulation.py` (owner: Sol)
 
