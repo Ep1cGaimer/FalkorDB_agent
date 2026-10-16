@@ -67,7 +67,8 @@ Rules:
   the excerpts which release actually contains each requested behavior.
 - Flags may only be ones the release declares (declared_flags). Omit flags to use release defaults.
 - Cite exact quotes: every citation is an excerpt_id you retrieved plus a verbatim substring of its
-  text. Cite the evidence for each release you choose to keep or change.
+  text. Quotes must be exact contiguous substrings of the excerpt text; never elide with "..." or
+  paraphrase. Cite the evidence for each release you choose to keep or change.
 - Back every release you keep or change with a `changelog` excerpt that describes the behavior you
   rely on. A `code` excerpt may supplement that evidence, but a version string on its own (for
   example a health() return value) never shows what a build does or does not do.
@@ -568,21 +569,46 @@ def _user_message(request_text: str, alternative_context: str | None) -> str:
     return msg
 
 
+CITATION_RULE = ("quotes must be exact contiguous substrings of the excerpt text; "
+                 "never use '...' or paraphrase")
+
+
+def _citation_errors(errors: list[str]) -> list[str]:
+    """The trusted citation-check failures only; other validation errors are unrelated to quoting."""
+    return [e for e in errors if e.startswith("CITATION_")]
+
+
 def _handle_call(name: Any, args: dict, tools: Any, excerpts: dict, releases: dict,
-                 audit: list[dict], events: list[dict]) -> tuple[dict | None, tuple[Any, list[str]] | None]:
+                 audit: list[dict], events: list[dict],
+                 state: dict | None = None) -> tuple[dict | None, tuple[Any, list[str]] | None]:
     """Shared dispatch for one model tool call, whatever the provider's framing.
 
     Returns (payload_to_send_back, terminal) where `terminal` is the finished
     (proposal/clarification, errors) pair once a terminal tool call validates, else None.
     Read tools, argument validation, excerpt collection, the audit trail and the unknown-tool
     answer live here exactly once — no provider re-implements them.
+
+    A terminal call whose only failures are citation-check errors gets ONE correction round: the
+    loop stays open and the model receives the exact failed citations plus the quoting rule, so it
+    can resend verbatim quotes. A second invalid terminal call ends the loop as before.
     """
+    state = state if state is not None else {}
     if name in TERMINAL_TOOLS:
         try:
             res, errs = _finish(name, args, excerpts, releases)
         except (ValueError, KeyError, TypeError) as e:
             msg = f"invalid {name} call: {e}"
             events.append({"type": "tool", "name": name, "args": _jsonable(args), "error": msg})
+            return {"error": msg}, None
+        bad_citations = _citation_errors(errs)
+        if bad_citations and not state.get("citation_correction_used"):
+            state["citation_correction_used"] = True
+            msg = (f"{name} rejected: citation check failed: " + "; ".join(bad_citations)
+                   + f". {CITATION_RULE}. Resend {name} with quotes copied exactly from the excerpt text.")
+            audit.append({"name": name, "args": _jsonable(args), "rows": 0,
+                          "error": "citation_correction"})
+            events.append({"type": "citation_correction", "name": name, "args": _jsonable(args),
+                           "errors": bad_citations})
             return {"error": msg}, None
         events.append({"type": "terminal", "name": name, "args": _jsonable(args)})
         return None, (res, errs)
@@ -620,6 +646,7 @@ def _run_loop(request_text: str, tools: Any, transport: Callable[[dict], dict],
     releases: dict[str, dict] = {}
     audit: list[dict] = []
     events: list[dict] = []
+    state: dict = {"citation_correction_used": False}
 
     def aborted(reason: str):
         res = GroundingClarification(question=f"Grounding aborted: {reason}", unresolved=[])
@@ -637,7 +664,7 @@ def _run_loop(request_text: str, tools: Any, transport: Callable[[dict], dict],
         messages.append({"role": "assistant", "native": native, "text": text})
         for call in calls:
             payload, terminal = _handle_call(call.name, call.args or {}, tools, excerpts, releases,
-                                             audit, events)
+                                             audit, events, state)
             if terminal is not None:
                 res, errs = terminal
                 return res, errs, audit, events

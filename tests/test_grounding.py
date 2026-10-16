@@ -156,8 +156,10 @@ def test_model_content_hash_ignored(tmp_path):
 
 
 def test_unseen_release_and_excerpt_flagged(tmp_path):
-    gr, *_ = run([call("propose_fleet", changes=[{"service": "cart", "release_id": "release:cart:made-up"}],
-                       citations=[{"excerpt_id": "excerpt:nope", "quote": "x"}], rationale="r")], tmp_path)
+    bad = call("propose_fleet", changes=[{"service": "cart", "release_id": "release:cart:made-up"}],
+               citations=[{"excerpt_id": "excerpt:nope", "quote": "x"}], rationale="r")
+    # The first call's citation failure earns one correction round; the repeat ends the loop.
+    gr, *_ = run([bad, bad], tmp_path)
     assert isinstance(gr.result, GroundingProposal)
     assert gr.result.citations == []
     kinds = " ".join(gr.validation_errors)
@@ -167,11 +169,38 @@ def test_unseen_release_and_excerpt_flagged(tmp_path):
 def test_clarification_path(tmp_path):
     gr, *_ = run([call("release_history", service="cart"),
                   call("ask_clarification", question="Which change?", unresolved=["last week"],
-                       citations=[{"excerpt_id": EX_ID, "quote": "not in text"}])], tmp_path)
+                       citations=[{"excerpt_id": EX_ID, "quote": "not in text"}]),
+                  call("ask_clarification", question="Which change?", unresolved=["last week"],
+                       citations=[{"excerpt_id": EX_ID, "quote": "Receipt correction"}])], tmp_path)
     assert isinstance(gr.result, GroundingClarification)
     assert gr.result.unresolved == ["last week"]
-    assert any("CITATION_QUOTE_NOT_IN_EXCERPT" in e for e in gr.validation_errors)
+    assert gr.validation_errors == []  # the corrected, verbatim citation round passed
     assert gr.result.citations[0].content_hash == GOOD_HASH
+
+
+def test_elided_quote_gets_one_correction_round(tmp_path):
+    """A '...'-elided quote is rejected once, the model is told why, then a verbatim resend wins."""
+    elided = call("propose_fleet", changes=[{"service": "cart", "release_id": "release:cart:old"}],
+                  citations=[{"excerpt_id": EX_ID, "quote": "Receipt correction ... unrounded amounts."}],
+                  rationale="r")
+    fixed = call("propose_fleet", changes=[{"service": "cart", "release_id": "release:cart:old"}],
+                 citations=[{"excerpt_id": EX_ID, "quote": "Receipt correction"}], rationale="r")
+    gr, _, _, t = run([call("release_history", service="cart"), elided, fixed], tmp_path)
+    assert isinstance(gr.result, GroundingProposal) and gr.validation_errors == []
+    reply = t.bodies[2]["contents"][-1]["parts"][0]["functionResponse"]["response"]
+    assert "CITATION_QUOTE_NOT_IN_EXCERPT" in reply["error"]
+    assert "exact contiguous substrings" in reply["error"] and "never use '...'" in reply["error"]
+
+
+def test_two_invalid_terminal_calls_keep_validation_errors(tmp_path):
+    """Only one correction round: a second invalid terminal call ends the loop as before."""
+    bad = call("propose_fleet", changes=[{"service": "cart", "release_id": "release:cart:old"}],
+               citations=[{"excerpt_id": EX_ID, "quote": "Receipt correction ... amounts."}], rationale="r")
+    gr, _, _, t = run([call("release_history", service="cart"), bad, bad], tmp_path)
+    assert isinstance(gr.result, GroundingProposal)  # rejected downstream, never aborted
+    assert any(e.startswith("CITATION_QUOTE_NOT_IN_EXCERPT") for e in gr.validation_errors)
+    assert not grounding.is_aborted(gr)
+    assert len(t.bodies) == 3  # loop ended on the second terminal call, not at the turn cap
 
 
 def test_turn_cap_aborts_without_proposal(tmp_path):
@@ -182,11 +211,12 @@ def test_turn_cap_aborts_without_proposal(tmp_path):
 
 
 def test_unknown_tool_returns_error_to_model(tmp_path):
-    gr, _, _, t = run([call("drop_database", target="x"), PROPOSE], tmp_path)
+    gr, _, _, t = run([call("drop_database", target="x"), PROPOSE, PROPOSE], tmp_path)
     reply = t.bodies[1]["contents"][-1]["parts"][0]["functionResponse"]["response"]
     assert "unknown tool" in reply["error"]
     assert any(c.get("error") for c in gr.tool_calls)
-    assert isinstance(gr.result, GroundingProposal)  # PROPOSE still processed (flagged unseen release)
+    # A second PROPOSE ends the loop after the first call's citation-only failure (unseen excerpt).
+    assert isinstance(gr.result, GroundingProposal)
 
 
 def test_injection_in_excerpt_cannot_widen_dispatch(tmp_path):
