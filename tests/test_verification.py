@@ -919,6 +919,38 @@ def test_revalidate_flags_a_changed_fleet_release_with_no_obligations(empty_inve
     assert any("is no longer declared by the fixture" in e for e in errors), errors
 
 
+def test_revalidate_scopes_writer_checks_to_the_stores_the_declared_routes_read(empty_inventory_pass, tmp_path):
+    """#5: a zero-obligation verification still covers the stores its fleet's declared routes read.
+
+    This verification has no obligations, so the only thing that can put ``cart-cache`` in scope is the
+    route-derived half of the read-store derivation. A record added to that store whose writer resolves
+    to a release this verification never depended on must therefore be reported as drift; dropping the
+    route half makes the same check silently disappear.
+    """
+    verification, root = empty_inventory_pass
+    assert not verification.obligations
+    copy = tmp_path / "shop"
+    shutil.copytree(root, copy)
+    path = copy / "snapshots" / "snap-001" / "manifest.json"
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    store = next(s for s in manifest["stores"] if s["name"] == "cart-cache")
+    assert store["records"] == []
+    payload = copy / "payloads" / "saved-cart-1001.bin"
+    store["records"] = [{"record_id": "saved-cart-drift", "format": "cart/v1",
+                         "payload": "payloads/saved-cart-1001.bin",
+                         "payload_hash": bh(payload.read_bytes()),
+                         "writer": {"service": "checkout", "version": "2.0"}}]
+    path.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
+
+    unread_writer = next(rid for rid, decl in load_release_declarations(copy).items()
+                         if (decl["service"], decl["version"]) == ("checkout", "2.0"))
+    assert unread_writer not in verification.dependencies  # it never wrote anything the fleet read
+
+    errors = revalidate(verification, copy, P.environment_hash, P.probe_spec_hash)
+    assert (f"writer resolution for record saved-cart-drift in store:cart-cache changed: "
+            f"fresh={unread_writer} is not a release this verification depended on") in errors, errors
+
+
 def test_revalidate_ignores_a_store_the_fleet_does_not_read(unread_store_pass):
     """C2 scope: a manifest store no fleet route reads is not evidence this verification depends on.
 
