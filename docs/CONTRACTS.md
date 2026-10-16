@@ -325,7 +325,9 @@ the model approve, apply or deploy anything.
 | POST | `/api/investigations/{identifier}/alternative` | at most one alternative, only after `BLOCKED` / `NEEDS_EVIDENCE` |
 | POST | `/api/investigations/{identifier}/plans/{plan_hash}/approve` | human approval: only for `BOUNDED_PASS` and only on current bytes (409 with `{"detail": {"reason", "drift"}, "reason": "<reason>"}` when `revalidate` reports drift) |
 | POST | `/api/investigations/{identifier}/plans/{plan_hash}/simulate` | local idempotent simulation (409 on drift); never a deployment |
-| GET | `/` | the single-screen console (replay picker, `SYNTHETIC FIXTURE` and `BOUNDED_PASS` labels always visible) |
+| GET | `/api/snapshots` | read-only fixture manifests and their hashes for initial workspace context; does not initialize a graph or call a model |
+| GET | `/` | the investigation workspace (visible synthetic-fixture and live/replay context; exact disposition labels on checked candidates) |
+| GET | `/static/{path}` | same-origin CSS, browser modules and the SVG favicon; no frontend build step |
 
 ### ID-form clarification (binding)
 

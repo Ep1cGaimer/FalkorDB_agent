@@ -200,12 +200,19 @@ entry is tried.
 .venv\Scripts\python.exe scripts\serve.py
 ```
 
-Then open <http://127.0.0.1:8000>. The single screen carries the request, the agent's proposal with
-anchored quotes, the human scope confirmation, the verdict with the GREEN-vs-FAIL contrast, the
-witness chain, the reader×record matrix with receipts, and the action section (approval + local
-simulation) rendered only for `BOUNDED_PASS`. Replay mode is labeled `REPLAY — not live`, the
-`SYNTHETIC FIXTURE` label is always visible, and `BOUNDED_PASS` always carries its byte/shape caption.
-Approval is refused if the evidence bytes changed since verification.
+Then open <http://127.0.0.1:8000>. The workspace opens with the actual fixture fleet and retained
+records. Submit the request, review cited release changes, and confirm the fleet to execute checks.
+The review shows the startup-vs-reader contrast, actual failure, evidence path, matrix and next
+eligible action. Select a record or matrix cell to inspect its receipt, or open Cited sources to
+inspect the proposal's evidence. Demo setup holds live/replay selection, the recording and the
+retained-data scenario. Scope confirmation and simulation approval require explicit clicks,
+without name fields; the API records a local UI audit-origin label.
+
+Synthetic-fixture and replay context remain visible. Approval and local simulation are available
+only for `BOUNDED_PASS`, which carries its byte/shape limit. Approval is refused if relevant evidence
+bytes changed since verification. Restart any already-running server after the workspace refactor
+to load the static asset mount and snapshot endpoint. See [UI.md](UI.md) for the module layout
+and browser verification instructions.
 
 ## 8. Same bytes, same hashes
 

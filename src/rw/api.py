@@ -14,6 +14,7 @@ from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
 from .contracts import (Approval, CandidatePlan, Disposition, FleetEntry,
@@ -401,6 +402,19 @@ def create_app(*, session_factory: Callable | None = None,
         with inv.lock:
             return inv.public()
 
+    @app.get("/api/snapshots")
+    def list_snapshots():
+        """Read-only fixture context; does not initialize a graph or call a model."""
+        from .pipeline import ALL_SNAPSHOTS, FIXTURE_ROOT
+        from .verification import load_manifest
+
+        snapshots = []
+        for name in ALL_SNAPSHOTS:
+            manifest, manifest_hash = load_manifest(FIXTURE_ROOT, name)
+            snapshots.append({**manifest, "manifest_hash": manifest_hash,
+                              "snapshot_id": "snapshot:" + manifest["snapshot"]})
+        return snapshots
+
     @app.post("/api/investigations/{identifier}/plans/{plan_hash}/confirm-scope")
     def confirm_scope(identifier: str, plan_hash: str, body: ScopeRequest):
         inv = get_investigation(identifier)
@@ -532,6 +546,7 @@ def create_app(*, session_factory: Callable | None = None,
         return {"product": "RollbackWitness", "api": "/docs",
                 "investigations": "/api/investigations", "note": "LOCAL SIMULATION ONLY"}
 
+    app.mount("/static", StaticFiles(directory=Path(__file__).resolve().parent / "static"), name="static")
     return app
 
 
