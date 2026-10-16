@@ -23,7 +23,9 @@ from rw.contracts import (
     ProbeResult,
     ScopeConfirmation,
     VerificationResult,
+    bh,
     h,
+    short,
 )
 from rw.pipeline import FIXTURE_ROOT, Session
 from rw.verification import (
@@ -239,6 +241,79 @@ def test_equal_count_wrong_ids_detected():
     assert any(g.kind == GapKind.INVENTORY_MISMATCH and "r9" in g.detail for g in ev.gaps)
 
 
+# --------------------------------------------------------------------------- C1: conflicting batches
+
+def conflict_gaps(gaps):
+    return [g for g in gaps if g.kind == GapKind.INVENTORY_MISMATCH
+            and "conflicting batches for one record" in g.detail]
+
+
+def test_conflicting_graph_batches_for_one_record_are_a_gap():
+    """C1(a): two Batch rows claiming one record_id must never be collapsed silently."""
+    plan = plan_for()
+    routes = route_rows(plan)
+    cov, batches, log = inventory()["store:kv"]
+    batches.append({**batches[0], "batch_id": "batch:r1-conflict", "payload_hash": "ph-other"})
+    ev = evidence(plan, routes=routes, inv={"store:kv": (cov, batches, log)},
+                  paths=path_rows(routes))
+    found = conflict_gaps(ev.gaps)
+    assert found, [g.detail for g in ev.gaps]
+    assert found[0].subject == "store:kv|r1"
+    assert "batch:r1-conflict" in found[0].detail and "batch:r1" in found[0].detail
+    res = dispose(ev, [receipt(o, ProbeResult.PASS) for o in ev.obligations])
+    assert res.disposition != Disposition.BOUNDED_PASS
+
+
+def test_path_row_whose_batch_is_not_the_manifest_match_is_a_gap():
+    """C1(b): a path row that does not match the manifest batch never becomes an obligation."""
+    plan = plan_for()
+    routes = route_rows(plan)
+    paths = path_rows(routes)
+    paths.append({**paths[0], "batch_id": "batch:r1-conflict", "payload_hash": "ph-other"})
+    ev = evidence(plan, routes=routes, paths=paths)
+    assert len(ev.obligations) == 4  # the extra path row adds no obligation
+    assert any(g.kind == GapKind.INVENTORY_MISMATCH and g.subject == "batch:r1-conflict"
+               for g in ev.gaps)
+    res = dispose(ev, [receipt(o, ProbeResult.PASS) for o in ev.obligations])
+    assert res.disposition == Disposition.NEEDS_EVIDENCE
+
+
+def test_path_row_payload_hash_disagreeing_with_the_manifest_is_a_gap():
+    """C1(b): the obligation's payload hash must equal the manifest record's, not the graph's."""
+    plan = plan_for()
+    routes = route_rows(plan)
+    paths = path_rows(routes)
+    for row in paths:
+        if row["service"] == "cart" and row["record_id"] == "r1":
+            row["payload_hash"] = "ph-tampered"
+    ev = evidence(plan, routes=routes, paths=paths)
+    assert len(ev.obligations) == 3
+    assert any(g.kind == GapKind.INVENTORY_MISMATCH and g.subject == "batch:r1" for g in ev.gaps)
+    res = dispose(ev, [receipt(o, ProbeResult.PASS) for o in ev.obligations])
+    assert res.disposition == Disposition.NEEDS_EVIDENCE
+
+
+def test_path_row_for_a_record_the_manifest_does_not_carry_is_a_gap():
+    plan = plan_for()
+    routes = route_rows(plan)
+    paths = path_rows(routes)
+    paths.append({**paths[0], "record_id": "r9", "batch_id": "batch:r9", "payload_hash": "ph-r9"})
+    ev = evidence(plan, routes=routes, paths=paths)
+    assert len(ev.obligations) == 4
+    assert any(g.kind == GapKind.INVENTORY_MISMATCH and "r9" in g.subject for g in ev.gaps)
+
+
+def test_path_row_for_a_store_without_manifest_inventory_is_a_gap():
+    plan = plan_for()
+    routes = route_rows(plan)
+    paths = path_rows(routes)
+    paths.append({**paths[0], "store_id": "store:ghost", "batch_id": "batch:ghost"})
+    ev = evidence(plan, routes=routes, paths=paths)
+    assert len(ev.obligations) == 4
+    assert any(g.kind == GapKind.INVENTORY_MISMATCH and g.subject == "batch:ghost"
+               and "store:ghost" in g.detail for g in ev.gaps)
+
+
 # --------------------------------------------------------------------------- declaration vs graph
 
 LEGACY = {"name": "legacy", "reads_from": "kv", "entry": "read_legacy",
@@ -328,6 +403,57 @@ def test_real_fixture_declarations_match_the_imported_graph():
         except Exception:
             pass
         db.close()
+
+
+def test_conflicting_batch_row_cannot_be_hidden_for_a_real_plan():
+    """C1 on the real server: a second Batch row for one record must surface as a conflict gap.
+
+    The graph keeps the legitimate cart/v2 batch for ``saved-cart-2002`` and gets a second Batch
+    node claiming the same record with readable cart/v1 bytes; the conflict must be reported and the
+    disposition must never be BOUNDED_PASS.
+    """
+    from rw import graph as G
+
+    name = "rw_test_" + uuid.uuid4().hex[:8]
+    session = Session(snapshot="snap-001", graph_name=name)
+    try:
+        rows, _ = G.releases_for_service(session.g, "cart")
+        release = next(r for r in rows if r["version"] == "1.4")
+        plan, errors = session.plan_from_proposal(
+            GroundingProposal(changes=[FleetEntry(service="cart", release_id=release["release_id"])],
+                              citations=[], rationale="roll back to cart 1.4"),
+            "roll cart back to the previous build", origin="fixture")
+        assert not errors and plan is not None
+
+        v1 = (REPO_ROOT / "fixtures" / "shop" / "payloads" / "saved-cart-1001.bin").read_bytes()
+        injected = "batch:cart-cache:snap-001:saved-cart-2002:" + short(bh(v1))
+        session.g.query(
+            "MATCH (st:StateStore {id: $store_id}), (w:Release {id: $release_id}) "
+            "CREATE (b:Batch {id: $batch_id, scope_id: $scope_id, store_id: $store_id, "
+            "snapshot_id: $snapshot_id, record_id: $record_id, payload_hash: $payload_hash, "
+            "payload_path: $payload_path, format_id: $format_id}) "
+            "CREATE (b)-[:IN_STORE]->(st) CREATE (b)-[:WRITTEN_BY]->(w)",
+            {"store_id": "store:cart-cache", "release_id": release["release_id"], "batch_id": injected,
+             "scope_id": "fixture-shop", "snapshot_id": "snapshot:snap-001",
+             "record_id": "saved-cart-2002", "payload_hash": bh(v1),
+             "payload_path": "fixtures/shop/payloads/saved-cart-1001.bin", "format_id": "cart/v1"})
+
+        report = session.verify(plan, ScopeConfirmation(plan_hash=plan.plan_hash(),
+                                                        confirmed_by="test-operator",
+                                                        confirmed_at="2026-10-16T00:00:00Z"))
+        v = report["verification"]
+        conflict = [g for g in v["gaps"] if g["kind"] == "INVENTORY_MISMATCH"
+                    and "conflicting batches for one record" in g["detail"]]
+        assert conflict, v["gaps"]
+        assert conflict[0]["subject"] == "store:cart-cache|saved-cart-2002"
+        assert injected in conflict[0]["detail"]
+        assert v["disposition"] != "BOUNDED_PASS"
+        assert v["disposition"] in ("NEEDS_EVIDENCE", "BLOCKED")
+    finally:
+        try:
+            session.g.delete()
+        except Exception:
+            pass
 
 
 def test_truncation_and_orphan_writer_are_gaps():

@@ -144,6 +144,8 @@ def _writer_gap(batch: dict, manifest_record: dict | None, releases: dict[tuple[
         return (f"manifest writer {writer['service']} {writer['version']} "
                 "does not resolve to a declared release")
     if manifest_release != graph_writer:
+        if not _established(graph_writer):
+            return "no WRITTEN_BY writer release"
         return f"writer contradiction: graph={graph_writer} manifest={manifest_release}"
     return None
 
@@ -370,8 +372,9 @@ def build_evidence(
 
     # --- retained state per read store, compared with the independent manifest
     manifest_stores = {"store:" + s["name"]: s for s in manifest["stores"]}
-    expected_pairs: set[tuple[str, str]] = set()  # (route_id, record_id) from routes x graph inventory
-    batches_by_store: dict[str, dict[str, dict]] = {}
+    expected_pairs: set[tuple[str, str]] = set()  # (route_id, record_id) from routes x records
+    batches_by_store: dict[str, dict[str, list[dict]]] = {}  # store_id -> record_id -> batch rows
+    manifest_records: dict[str, dict[str, dict]] = {}  # store_id -> record_id -> manifest record
     for store_id in sorted(stores_read):
         mstore = manifest_stores.get(store_id)
         if mstore is None:
@@ -386,42 +389,77 @@ def build_evidence(
             gap(GapKind.COVERAGE_INCOMPLETE, store_id, f"graph coverage={coverage_row.get('status')!r}")
 
         m_records = {r["record_id"]: r for r in mstore.get("records", [])}
-        g_records = {r["record_id"]: r for r in batch_rows}
+        manifest_records[store_id] = m_records
+        # Never collapse two rows that claim the same record_id: keeping one of them silently is how a
+        # conflicting batch could hide a failing obligation.
+        g_records: dict[str, list[dict]] = {}
+        for b in batch_rows:
+            g_records.setdefault(b["record_id"], []).append(b)
+        for rid, rows in sorted(g_records.items()):
+            if len(rows) > 1:
+                gap(GapKind.INVENTORY_MISMATCH, f"{store_id}|{rid}",
+                    "conflicting batches for one record: " + ", ".join(sorted(r["batch_id"] for r in rows)))
         missing = sorted(set(m_records) - set(g_records))
         extra = sorted(set(g_records) - set(m_records))
         if missing or extra:
             gap(GapKind.INVENTORY_MISMATCH, store_id, f"manifest-only={missing} graph-only={extra}")
-        for rid in sorted(set(m_records) & set(g_records)):
-            if m_records[rid]["payload_hash"] != g_records[rid]["payload_hash"]:
-                gap(GapKind.INVENTORY_MISMATCH, rid, "payload hash differs between manifest and graph")
-        for rid, b in sorted(g_records.items()):
-            if not b.get("in_store"):
-                gap(GapKind.INVENTORY_MISMATCH, b["batch_id"], "batch lacks its IN_STORE edge")
-            # writer/format provenance is reconciled against the independent manifest, so a graph
-            # edge or a truthy literal can never stand in for a manifest unknown or contradiction
-            writer_problem = _writer_gap(b, m_records.get(rid), release_by_version)
-            if writer_problem:
-                gap(GapKind.WRITER_UNKNOWN, b["batch_id"], writer_problem)
-            format_problem = _format_gap(b, m_records.get(rid))
-            if format_problem:
-                gap(GapKind.FORMAT_UNKNOWN, b["batch_id"], format_problem)
+        for rid, rows in sorted(g_records.items()):
+            manifest_record = m_records.get(rid)
+            for b in rows:
+                if not b.get("in_store"):
+                    gap(GapKind.INVENTORY_MISMATCH, b["batch_id"], "batch lacks its IN_STORE edge")
+                # the independent manifest owns the bytes: a graph row with another payload hash is a gap
+                if manifest_record is not None and manifest_record.get("payload_hash") != b.get("payload_hash"):
+                    gap(GapKind.INVENTORY_MISMATCH, b["batch_id"],
+                        "payload hash differs between manifest and graph")
+                # writer/format provenance is reconciled against the independent manifest, so a graph
+                # edge or a truthy literal can never stand in for a manifest unknown or contradiction
+                writer_problem = _writer_gap(b, manifest_record, release_by_version)
+                if writer_problem:
+                    gap(GapKind.WRITER_UNKNOWN, b["batch_id"], writer_problem)
+                format_problem = _format_gap(b, manifest_record)
+                if format_problem:
+                    gap(GapKind.FORMAT_UNKNOWN, b["batch_id"], format_problem)
         batches_by_store[store_id] = g_records
         for route_id, route_store_id in declared_route_stores.items():
             if route_store_id == store_id:
                 for rid in set(m_records) | set(g_records):
                     expected_pairs.add((route_id, rid))
 
-    # --- obligations come from the graph's multi-hop paths
+    # --- obligations come from the graph's multi-hop paths, each bound to the manifest record
+    def manifest_matches(store_id: str, record_id: str, batch_id: str, payload_hash: str) -> str | None:
+        """Why a graph path row may not become an obligation, or None when it matches the manifest."""
+        m_records = manifest_records.get(store_id)
+        if m_records is None:
+            return f"path row names store {store_id} with no manifest inventory"
+        m_record = m_records.get(record_id)
+        if m_record is None:
+            return f"path row names record {record_id}, which the snapshot manifest does not carry"
+        if m_record.get("payload_hash") != payload_hash:
+            return (f"path row payload hash {payload_hash} differs from the manifest record "
+                    f"{m_record.get('payload_hash')}")
+        accepted = {b["batch_id"] for b in batches_by_store.get(store_id, {}).get(record_id, [])
+                    if b.get("payload_hash") == m_record.get("payload_hash")}
+        if batch_id not in accepted:
+            return f"path row batch {batch_id} is not the manifest-matching batch for {record_id}"
+        return None
+
     obligations: list[Obligation] = []
-    seen_pairs: set[tuple[str, str]] = set()
+    materialized: set[tuple[str, str]] = set()  # (route_id, batch_id) already turned into an obligation
+    observed_pairs: set[tuple[str, str]] = set()  # every (route_id, record_id) the path query returned
     for p in path_rows:
         route = routes.get(p["route_id"])
         if route is None:
             continue  # path through a route not in this plan's fleet would be a graph inconsistency
-        pair = (p["route_id"], p["record_id"])
-        if pair in seen_pairs:
+        observed_pairs.add((p["route_id"], p["record_id"]))
+        if (p["route_id"], p["batch_id"]) in materialized:
             continue
-        seen_pairs.add(pair)
+        materialized.add((p["route_id"], p["batch_id"]))
+        mismatch = manifest_matches(p["store_id"], p["record_id"], p["batch_id"], p["payload_hash"])
+        if mismatch is not None:
+            # an unbound path row is never an obligation: it is a gap the operator can see
+            gap(GapKind.INVENTORY_MISMATCH, p["batch_id"], mismatch)
+            continue
         t = ObligationTuple(
             scope_id=plan.scope_id,
             plan_hash=plan_hash,
@@ -465,7 +503,7 @@ def build_evidence(
             reader_entry=route["entry"],
         ))
 
-    for route_id, rid in sorted(expected_pairs - seen_pairs):
+    for route_id, rid in sorted(expected_pairs - observed_pairs):
         gap(GapKind.INVENTORY_MISMATCH, f"{route_id}|{rid}",
             "reader/record pair expected from routes x inventory is missing from the graph path query")
 
