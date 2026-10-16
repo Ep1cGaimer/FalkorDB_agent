@@ -474,8 +474,10 @@ def build_evidence(
         materialized.add((p["route_id"], p["batch_id"]))
         mismatch = manifest_matches(p["store_id"], p["record_id"], p["batch_id"], p["payload_hash"])
         if mismatch is not None:
-            # an unbound path row is never an obligation: it is a gap the operator can see
-            gap(GapKind.INVENTORY_MISMATCH, p["batch_id"], mismatch)
+            # an unbound path row is never an obligation: it is a gap the operator can see. The reader
+            # route (and its release) is named, so two readers of one bad record stay distinguishable.
+            gap(GapKind.INVENTORY_MISMATCH, p["batch_id"],
+                f"{mismatch}; reader route {p['route_id']} of {p['release_id']}")
             continue
         t = ObligationTuple(
             scope_id=plan.scope_id,

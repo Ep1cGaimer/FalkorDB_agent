@@ -278,6 +278,29 @@ def test_path_row_whose_batch_is_not_the_manifest_match_is_a_gap():
     assert res.disposition == Disposition.NEEDS_EVIDENCE
 
 
+def test_path_row_mismatch_names_the_reader_route_and_release():
+    """#7b: two readers on one bad record must produce two lines a operator can tell apart.
+
+    The unbound path rows of both reader routes over ``r1`` describe the same mismatch text, so the
+    route (and its reader release) must be named in the gap detail; the subject stays the batch it is
+    about.
+    """
+    plan = plan_for()
+    routes = route_rows(plan)
+    paths = path_rows(routes)
+    for row in paths:
+        if row["record_id"] == "r1":
+            row["payload_hash"] = "ph-tampered"
+    ev = evidence(plan, routes=routes, paths=paths)
+    assert len(ev.obligations) == 2  # only the two r2 pairs still match the manifest
+    lines = [g for g in ev.gaps if g.kind == GapKind.INVENTORY_MISMATCH and g.subject == "batch:r1"]
+    assert len(lines) == 2
+    details = {g.detail for g in lines}
+    assert len(details) == 2  # distinguishable lines, not one line repeated
+    assert any(CART_OLD_ID in d and "release:cart:old" in d for d in details), details
+    assert any("route:release:checkout:b:read" in d and "release:checkout:b" in d for d in details), details
+
+
 def test_path_row_payload_hash_disagreeing_with_the_manifest_is_a_gap():
     """C1(b): the obligation's payload hash must equal the manifest record's, not the graph's."""
     plan = plan_for()
