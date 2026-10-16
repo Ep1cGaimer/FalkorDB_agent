@@ -180,6 +180,15 @@ def test_timeout(tiny):
     assert receipt.duration_ms < 3000
 
 
+def test_run_harness_reports_the_explicit_timed_out_flag(tiny):
+    codec, _ = tiny
+    codec.write_text("def read_cart(data):\n    while True: pass\n")
+    outcome = probes.run_harness(codec, "read_cart", b"x", timeout_s=0.2)
+    assert outcome["timed_out"] is True and outcome["result"] == "UNKNOWN"
+    codec.write_text("def read_cart(data):\n    return {}\n")
+    assert probes.run_harness(codec, "read_cart", b"x")["timed_out"] is False
+
+
 @pytest.mark.parametrize("mutation, message", [
     ("payload", "payload hash mismatch"),
     ("codec", "codec hash mismatch"),

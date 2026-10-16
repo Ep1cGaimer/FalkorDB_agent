@@ -49,14 +49,15 @@ def run_harness(codec_path: Path, entry: str, payload: bytes, timeout_s: float =
     deliberately introspects the live process. Returns::
 
         {"result": "PASS"|"FAIL"|"UNKNOWN", "exit": int|None, "stdout": bytes,
-         "error_type": str|None, "message": str|None, "shape": dict|None}
+         "timed_out": bool, "error_type": str|None, "message": str|None, "shape": dict|None}
 
     ``stdout`` is the raw bytes seen on the result channel (capped at
     ``MAX_STDOUT``). ``stderr`` stays discarded so reader output cannot reach
-    the parent as evidence.
+    the parent as evidence. ``timed_out`` is the explicit timeout flag: callers
+    must branch on it, never on the message string.
     """
     nonce = secrets.token_hex(16)
-    outcome = {"result": "UNKNOWN", "exit": None, "stdout": b"",
+    outcome = {"result": "UNKNOWN", "exit": None, "stdout": b"", "timed_out": False,
                "error_type": None, "message": None, "shape": None}
 
     if timeout_s <= 0:
@@ -116,6 +117,7 @@ def run_harness(codec_path: Path, entry: str, payload: bytes, timeout_s: float =
     outcome["stdout"] = raw
     outcome["exit"] = exit_code
     if timed_out:
+        outcome["timed_out"] = True
         outcome["message"] = "probe timeout"
         return outcome
     if overflow:

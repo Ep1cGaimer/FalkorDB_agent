@@ -206,6 +206,54 @@ def test_verify_reads_the_manifest_from_disk_not_from_the_session_cache(copied_f
             pass
 
 
+# --------------------------------------------------------------------------- I8/minors: verify edge cases
+
+def test_verify_maps_an_unreadable_manifest_to_a_stale_snapshot_gap(copied_fixture):
+    """A manifest that breaks after planning is unresolved evidence, not a raised request."""
+    name = "rw_test_" + uuid.uuid4().hex[:8]
+    session = Session(snapshot="snap-001", graph_name=name, fixture_root=copied_fixture)
+    try:
+        rows, _ = G.releases_for_service(session.g, "cart")
+        release = next(r for r in rows if r["version"] == "1.5")
+        proposal = GroundingProposal(
+            changes=[FleetEntry(service="cart", release_id=release["release_id"], flags={"basket_v2": False})],
+            citations=[], rationale="keep 1.5 with the basket rollout off")
+        plan, errors = session.plan_from_proposal(proposal, "undo the basket rollout", origin="fixture")
+        assert not errors and plan is not None
+        confirmation = ScopeConfirmation(plan_hash=plan.plan_hash(), confirmed_by="oncall:alice",
+                                         confirmed_at="2026-10-16T00:00:00Z")
+        assert session.verify(plan, confirmation)["verification"]["disposition"] == "BOUNDED_PASS"
+
+        (copied_fixture / "snapshots" / "snap-001" / "manifest.json").write_text("{ not json", encoding="utf-8")
+        report = session.verify(plan, confirmation)
+        v = report["verification"]
+        assert v["disposition"] == "NEEDS_EVIDENCE"
+        assert [g["kind"] for g in v["gaps"]] == ["STALE_SNAPSHOT"]
+        assert v["obligations"] == [] and v["receipts"] == []
+    finally:
+        try:
+            session.g.delete()
+        except Exception:
+            pass
+
+
+def test_startup_check_branches_on_the_timed_out_flag(monkeypatch):
+    """startup_check must use run_harness's explicit flag, not the message string."""
+    from rw import probes
+    from rw.pipeline import startup_check
+
+    monkeypatch.setattr(probes, "run_harness", lambda *a, **k: {
+        "timed_out": True, "result": "FAIL", "exit": 10,
+        "message": "harness error or invalid stdout"})
+    assert startup_check("fixtures/shop/releases/cart-1.4/codec.py") == {
+        "codec_path": "fixtures/shop/releases/cart-1.4/codec.py", "result": "UNKNOWN", "exit": None}
+
+    monkeypatch.setattr(probes, "run_harness", lambda *a, **k: {
+        "timed_out": False, "result": "PASS", "exit": 0, "message": None})
+    assert startup_check("fixtures/shop/releases/cart-1.4/codec.py") == {
+        "codec_path": "fixtures/shop/releases/cart-1.4/codec.py", "result": "GREEN", "exit": 0}
+
+
 # --------------------------------------------------------------------------- capped summary
 
 def _report(results: list[str], gaps: int = 0) -> dict:

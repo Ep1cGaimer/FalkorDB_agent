@@ -8,3 +8,9 @@ dependencies = ["falkordb==1.8.0", "redis==8.1.0", "pydantic==2.14.1", "fastapi"
 pythonpath = ["src"]
 testpaths = ["tests"]
 markers = ["live: calls the live LLM provider (needs GEMINI_API_KEY and network)"]
+filterwarnings = [
+    # Starlette 1.8 warns when its TestClient runs on httpx, which is the client this project pins;
+    # it is a third-party deprecation notice with no httpx2 in this stack, so it is narrowly silenced
+    # by message and category to keep the non-live suite warning-free.
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated:starlette.exceptions.StarletteDeprecationWarning",
+]

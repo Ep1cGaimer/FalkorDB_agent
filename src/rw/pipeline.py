@@ -32,6 +32,7 @@ from .verification import (
     load_manifest,
     load_release_declarations,
     materialize_plan,
+    unreadable_manifest_evidence,
     validate_citations,
 )
 
@@ -52,7 +53,7 @@ def startup_check(codec_path: str, timeout_s: int = 5) -> dict[str, Any]:
     """
     from . import probes as P
     outcome = P.run_harness(REPO_ROOT / codec_path, "health", b"", timeout_s=timeout_s)
-    if outcome["message"] == "probe timeout":
+    if outcome["timed_out"]:
         return {"codec_path": codec_path, "result": "UNKNOWN", "exit": None}
     return {"codec_path": codec_path,
             "result": "GREEN" if outcome["result"] == "PASS" else "RED",
@@ -95,8 +96,23 @@ class Session:
             raise ValueError("scope confirmation does not match this plan")
         # Re-read the manifest from disk at verification time: the plan is bound to specific manifest
         # bytes, so a snapshot that changed after the plan was built must show up as STALE_SNAPSHOT
-        # instead of being certified from the copy cached at session construction.
-        manifest, manifest_hash = load_manifest(self.fixture_root, self.snapshot)
+        # instead of being certified from the copy cached at session construction. A manifest that is
+        # now missing or invalid is unresolved evidence (NEEDS_EVIDENCE), never a raised request.
+        try:
+            manifest, manifest_hash = load_manifest(self.fixture_root, self.snapshot)
+        except (OSError, ValueError) as exc:
+            evidence = unreadable_manifest_evidence(plan, f"{type(exc).__name__}: {exc}")
+            result = dispose(evidence, [])
+            return {
+                "startup_checks": {},
+                "plan": plan.model_dump(mode="json"),
+                "plan_id": plan.plan_id(),
+                "plan_hash": plan.plan_hash(),
+                "scope_confirmation": confirmation.model_dump(mode="json"),
+                "verification": result.model_dump(mode="json"),
+                "verification_hash": result.verification_hash(),
+                "queries": [],
+            }
         plan_id = G.write_plan(self.g, plan)
         route_rows, route_log = G.plan_reader_routes(self.g, plan_id)
         stores = sorted({r["store_id"] for r in route_rows if r.get("store_id")})

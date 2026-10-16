@@ -233,6 +233,17 @@ def test_text_only_turn_is_nudged(tmp_path):
     assert isinstance(gr.result, GroundingClarification) and len(t.bodies) == 2
 
 
+def test_system_prompt_has_a_generic_ambiguity_rule_without_fixture_names():
+    """A time/vague reference that could match several artifacts must be clarified, not guessed."""
+    prompt = grounding.SYSTEM_PROMPT
+    assert '"last week"' in prompt and '"the change"' in prompt and '"that release"' in prompt
+    assert "ask_clarification" in prompt
+    lowered = prompt.lower()
+    for fixture_word in ("cart", "checkout", "basket", "saved-cart", "receipt correction",
+                         "1.4", "1.5", "snap-001"):
+        assert fixture_word not in lowered
+
+
 def test_replay_is_labeled_and_offline(tmp_path):
     gr, path, *_ = run([call("release_history", service="cart"), PROPOSE], tmp_path)
     assert json.loads(path.read_text())["provider"] == "gemini"  # old transcripts default to gemini

@@ -321,7 +321,7 @@ the model approve, apply or deploy anything.
 | POST | `/api/investigations/{identifier}/plans/{plan_hash}/confirm-scope` | human scope confirmation for one plan |
 | POST | `/api/investigations/{identifier}/answer` | one clarification round: body `{"answer": str, "replay_path": str \| null}`; the answer is folded into the request text via `pipeline.with_answer` and the session re-grounds against it. Blank answer → 422; a second round is refused; in replay mode `replay_path` is required, in live mode it is rejected (422) |
 | POST | `/api/investigations/{identifier}/alternative` | at most one alternative, only after `BLOCKED` / `NEEDS_EVIDENCE` |
-| POST | `/api/investigations/{identifier}/plans/{plan_hash}/approve` | human approval: only for `BOUNDED_PASS` and only on current bytes (409 with `{"reason", "drift"}` when `revalidate` reports drift) |
+| POST | `/api/investigations/{identifier}/plans/{plan_hash}/approve` | human approval: only for `BOUNDED_PASS` and only on current bytes (409 with `{"detail": {"reason", "drift"}, "reason": "<reason>"}` when `revalidate` reports drift) |
 | POST | `/api/investigations/{identifier}/plans/{plan_hash}/simulate` | local idempotent simulation (409 on drift); never a deployment |
 | GET | `/` | the single-screen console (replay picker, `SYNTHETIC FIXTURE` and `BOUNDED_PASS` labels always visible) |
 

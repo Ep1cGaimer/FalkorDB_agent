@@ -42,11 +42,9 @@ from __future__ import annotations
 
 import hashlib
 import json
-import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from threading import Thread
 from typing import Any, Callable
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -65,7 +63,6 @@ DEFAULT_SNAPSHOT = "snap-001"
 MAX_TURNS = 8                 # same model-turn budget as the product's grounding loop
 TEMPERATURE = 0               # the product's provider bodies send temperature 0; recorded in the transcript
 MAX_INPUT = 65536             # same bounds as probes.run_probe
-MAX_STDOUT = 8192
 PROBE_TIMEOUT_S = 5
 MAX_RESULT_CHARS = 20000
 

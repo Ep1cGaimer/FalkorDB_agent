@@ -32,8 +32,18 @@ or an estimate.
   A live run can therefore fail fast with a non-retryable quota refusal (the chain records the
   abandoned attempt and tries the next entry).
 - **Live grounding eval: 6/10 runs matched the expected kind** (`evals/results/grounding_20261015T205622Z.md`,
-  git-ignored: 5 cases × 2 runs, model `groq:openai/gpt-oss-120b`, chain default, temperature 0). This
-  is a small-N single-machine observation, not a benchmark or a ranking.
+  git-ignored: 5 cases × 2 runs, model `groq:openai/gpt-oss-120b`, chain default, temperature 0). The
+  aggregate hides which case failed, so the case-level result is listed below; a kind match that also
+  carries a validation error still counts as a match but is not clean grounding. This is a small-N
+  single-machine observation, not a benchmark or a ranking.
+
+  | case | expected kind | run 1 | run 2 | note |
+  |---|---|---|---|---|
+  | main | PROPOSAL | CLARIFICATION — miss | CLARIFICATION — miss | asked instead of proposing the requested change |
+  | ambiguous | CLARIFICATION | PROPOSAL — miss | PROPOSAL — miss | proposed `cart=1.4` instead of asking which change |
+  | inseparable | CLARIFICATION | match | match | run 1 cited a code quote absent from the excerpt (`CITATION_QUOTE_NOT_IN_EXCERPT`, dropped by validation) |
+  | named-old-build | PROPOSAL | match | match | proposed `cart=1.4` |
+  | keep-everything | CLARIFICATION | match | match | asked instead of proposing |
 - **Flat LLM control has no live run today** — blocked by the quota above, not by a code defect. No
   control score is claimed.
 - **Live model access from this machine is flaky for Gemini**: `gemini-3.8-flash` and larger fail
@@ -54,5 +64,9 @@ or an estimate.
 - Live grounding eval on a fresh quota; the flat-context LLM control live run; UI visual review at
   1280/1920; holdout wording for the report. No deployment, publishing, submission or third-party
   message has been made.
+- **Live verification is DEFERRED.** The recorded 6/10 table above predates the ambiguity-handling rule
+  added to `SYSTEM_PROMPT`, and no live model call was made to re-measure it — the Groq free tier was
+  exhausted on 2026-10-15. The case-level table and the new rule are code-and-test evidence only; do
+  not read them as a new live score.
 
 Setup and demo commands for a reviewer: [QUICKSTART.md](QUICKSTART.md).

@@ -54,6 +54,19 @@ def snapshot_node_id(manifest: dict) -> str:
     return "snapshot:" + manifest["snapshot"]
 
 
+def unreadable_manifest_evidence(plan: CandidatePlan, detail: str) -> GraphEvidence:
+    """Evidence for a plan whose snapshot manifest cannot be re-read: no obligations, one stale gap.
+
+    A manifest that is missing or invalid at verification time is unresolved evidence, so the
+    checker yields NEEDS_EVIDENCE instead of raising out of the request.
+    """
+    return GraphEvidence(
+        plan_hash=plan.plan_hash(), obligations=[], queries=[],
+        snapshot_id=plan.snapshot_id, snapshot_manifest_hash=plan.snapshot_manifest_hash,
+        gaps=[Gap(kind=GapKind.STALE_SNAPSHOT, subject=plan.snapshot_id,
+                  detail=f"cannot re-read the snapshot manifest: {detail}")])
+
+
 # --------------------------------------------------------------------------- release declarations
 
 def _release_dir_files(release_dir: Path) -> list[list[str]]:
@@ -89,6 +102,10 @@ def load_release_declarations(fixture_root: Path) -> dict[str, dict]:
         service = declaration["service"]
         artifact_hash = h(_release_dir_files(release_dir))
         release_id = f"release:{service}:{short(artifact_hash)}"
+        if release_id in declarations:
+            # Two directories with identical declared bytes would make the release identity
+            # ambiguous; fail closed rather than let one shadow the other.
+            raise ValueError(f"duplicate release_id {release_id} declared by two release directories")
         codec = release_dir / "codec.py"
         declarations[release_id] = {
             "service": service,

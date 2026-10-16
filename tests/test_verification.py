@@ -405,6 +405,15 @@ def test_real_fixture_declarations_match_the_imported_graph():
         db.close()
 
 
+def test_duplicate_release_id_across_two_directories_fails_closed(tmp_path):
+    """Two release dirs with identical declared bytes would make a release identity ambiguous."""
+    fixture = tmp_path / "shop"
+    shutil.copytree(FIXTURE_ROOT, fixture)
+    shutil.copytree(fixture / "releases" / "cart-1.4", fixture / "releases" / "cart-1.4-duplicate")
+    with pytest.raises(ValueError, match="duplicate release_id"):
+        load_release_declarations(fixture)
+
+
 def test_conflicting_batch_row_cannot_be_hidden_for_a_real_plan():
     """C1 on the real server: a second Batch row for one record must surface as a conflict gap.
 
