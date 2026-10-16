@@ -3,6 +3,11 @@
 Spec: `AGENTS.md`, `ROLLBACKWITNESS_IDEA.md`, `docs/CONTRACTS.md` (binding). Review input: `evals/reviews/astra-01.md` (findings F1–F8 referenced below by number).
 Branch: `build/slice-2`. Python: `.venv\Scripts\python.exe` (3.12). FalkorDB 6.0.2 at `127.0.0.1:6379` (container `rw-falkordb`). Never install packages unless a task says so.
 
+> **Status (2026-10-16):** all nine tasks below are complete on `build/slice-2`. This file is the
+> historical plan, kept as written (only Task 4's title/scope wording was corrected on 2026-10-16;
+> see the note there). The current verified state and the commands that produced it live in
+> `docs/STATUS.md`.
+
 ## Global Constraints
 
 - Trusted code owns identity, query templates, limits, completeness, probes, receipt applicability, disposition, approval and idempotency. The LLM only proposes existing-artifact fleets or clarifications.
@@ -54,7 +59,13 @@ Files: `src/rw/verification.py`, `tests/test_verification.py`.
 Implement `revalidate(verification: VerificationResult, fixture_root: Path, environment_hash_fn, probe_spec_fn) -> list[str]` (both hashes already include the harness hash) returning human-readable drift errors (empty list = current). Checks: (1) fresh `bh(manifest.json)` for `verification.snapshot_id` equals `verification.snapshot_manifest_hash`; (2) for every obligation: payload file bytes (resolve via the fresh manifest record `payload` path for `tuple.record_id` in store `tuple.store_id`) hash equals `tuple.payload_hash`; `bh(reader codec file)` equals `tuple.codec_hash`; `environment_hash_fn()` equals `tuple.environment_hash`; `probe_spec_fn(obligation.reader_entry)` equals `tuple.probe_spec_hash`; (3) `fixture_root/releases` declarations still contain `tuple.release_id` with the same route contract hash for `tuple.route_id`. Missing files are drift errors, not exceptions. Tests with a tmp copy of the fixture: unchanged → `[]`; payload byte change → error naming the record; codec change → error; manifest change → error; environment function returning a different value → error.
 Acceptance: full non-live suite passes.
 
-## Task 4: Harness result channel that reader code cannot impersonate (F2)
+## Task 4: Harness result channel that ordinary reader output cannot impersonate (F2)
+
+> **Scope note (2026-10-16):** the shipped contract is narrower than an impersonation guarantee. The
+> nonce/diversion channel is failure containment for the allowlisted, reviewed fixture readers: it
+> keeps ordinary reader stdout and early exits out of the result channel, and it does **not** stop a
+> reader that deliberately introspects the live process (frame walking, `/proc/self/environ`). See
+> `docs/CONTRACTS.md` "Probe protocol".
 
 Files: `fixtures/shop/harness/run_reader.py`, `src/rw/probes.py`, `tests/test_probes.py`, `tests/test_fixture_readers.py`.
 

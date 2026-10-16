@@ -38,7 +38,7 @@ Consequence of the null behavior: unknowns can never be recorded as graph nulls.
 | SourceExcerpt | `excerpt:<artifact_hash[7:23]>:<relpath>:<start>-<end>` (1-based inclusive line span); `content_hash = bh(text.encode())` |
 | ReaderRoute | `route:<release_id>:<route_name>`; `route_contract_hash = h(route declaration dict)` |
 | StateStore | `store:<name>` |
-| Batch | `batch:<store>:<snapshot_id>:<record_id>:<payload_hash[7:23]>` |
+| Batch | `batch:<store_name>:<snapshot_name>:<record_id>:<payload_hash[7:23]>` (the hash segment is the literal `UNKNOWN` when the record carries no `payload_hash`) |
 | Snapshot | `snapshot:<name>`; `manifest_hash = bh(manifest.json bytes)` |
 | Plan | `plan:<plan_hash[7:23]>` |
 
@@ -185,7 +185,7 @@ the facts that raise them:
 | `RECEIPT_MISSING` | no probe receipt for an obligation |
 | `RECEIPT_UNKNOWN` | a probe ran but the harness could not establish a result |
 | `RECEIPT_INAPPLICABLE` | a receipt exists but its bound tuple differs from the obligation tuple |
-| `STALE_SNAPSHOT` | the plan was built against different manifest bytes than the manifest read at verification time |
+| `STALE_SNAPSHOT` | the plan was built against different manifest bytes than the manifest read at verification time; or the snapshot manifest cannot be re-read at verification time |
 | `ROUTE_DECLARATION_MISMATCH` | graph route set ≠ shipped `release.json`: a declared route is missing from the graph, or a graph route is not declared; a graph route field (`entry`, `read_domain`, `store_id`, `route_name`, `route_contract_hash`) differs from the declaration; the graph `codec_hash` differs from the declaration |
 
 ## Scope confirmation vs action approval
@@ -194,7 +194,7 @@ Scope confirmation (human confirms the grounded fleet) permits checking. Action 
 
 ## Module API (frozen signatures; one owner per file)
 
-Every graph query function returns `(rows, log)` where `rows` is a list of plain dicts with exactly the keys listed and `log = {"name": str, "params": dict, "rows": int, "truncated": bool}`. Unknown values are `None` in rows (never invented). Queries use `LIMIT $cap + 1` with `cap = QUERY_CAP`; if `cap+1` rows return, set `truncated=True` and return only `cap` rows. All reads use `ro_query`. No string-concatenated user/model input in Cypher; parameters only.
+Every graph query function returns `(rows, log)` — except `store_inventory`, which returns the `(coverage_row, batch_rows, log)` triple below — where `rows` is a list of plain dicts with exactly the keys listed and `log = {"name": str, "params": dict, "rows": int, "truncated": bool}`. Unknown values are `None` in rows (never invented). Queries use `LIMIT $cap + 1` with `cap = QUERY_CAP`; if `cap+1` rows return, set `truncated=True` and return only `cap` rows. All reads use `ro_query`. No string-concatenated user/model input in Cypher; parameters only.
 
 ### `src/rw/graph.py` (owner: DeepSeek graph worker)
 
@@ -270,8 +270,10 @@ obligation the payload bytes resolved through the fresh manifest record, `bh(rea
 `environment_hash_fn()` and `probe_spec_fn(obligation.reader_entry)`; that `fixture_root/releases`
 still declares `tuple.release_id` with the same `h(route_dict)` for `tuple.route_id`; that every
 `verification.dependencies` release id is still declared (content-addressed, so presence ⇔ unchanged
-bytes — this is what catches a writer-only artifact); and that each read store's manifest record
-still resolves its writer to the same release. A missing or
+bytes — this is what catches a writer-only artifact); and that each read store's manifest record still
+resolves its writer to a release the verification already depended on. Only stores a fleet route reads
+are in scope (the obligation store ids plus the read stores named by the still-declared
+dependencies), so a manifest store no fleet route reads cannot invent drift. A missing or
 unreadable file is a drift line, not an exception. Both hash functions already include the harness
 hash, which is why they bind the harness too. Callers: `api.py` `/approve` and `/simulate`, which
 answer HTTP 409 `{"detail": {"reason", "drift"}, "reason": "<reason>"}` — no action may be taken on
@@ -289,13 +291,13 @@ run_probe(obligation: Obligation, payload_path: Path, timeout_s=5) -> ProbeRecei
 
 `run_harness` owns the nonce, the minimal child environment, bounded I/O, the timeout and the strict
 one-line/nonce/schema parsing; it returns
-`{"result": "PASS"|"FAIL"|"UNKNOWN", "exit": int|None, "stdout": bytes, "error_type": str|None, "message": str|None, "shape": dict|None}`.
+`{"result": "PASS"|"FAIL"|"UNKNOWN", "exit": int|None, "stdout": bytes, "timed_out": bool, "error_type": str|None, "message": str|None, "shape": dict|None}` (callers branch on the explicit `timed_out` flag, never on the message string).
 See "Probe protocol" above for the exit-code table. `run_probe` returns an UNKNOWN receipt on any
 identity mismatch and never FAILs from its own checks.
 
 ### `src/rw/grounding.py` (owner: Sonnet)
 
-A provider-neutral bounded tool loop (≤ 8 model turns) over the read-only tools `current_fleet`, `release_history`, `store_readers`, `get_excerpts` and the terminal tools `propose_fleet(changes, citations, rationale)` / `ask_clarification(question, unresolved, citations)`. Returns `GroundingResult`. Read tools, argument validation, citation hashing, the audit trail and terminal validation are written once and shared; only conversation rendering and response parsing differ per provider.
+A provider-neutral bounded tool loop (≤ 8 model turns) over the read-only tools `current_fleet`, `release_history`, `store_readers`, `get_excerpts` and the terminal tools `propose_fleet(changes, citations, rationale)` / `ask_clarification(question, unresolved, citations)`. Returns `GroundingResult`. Read tools, argument validation, citation hashing, the audit trail and terminal validation are written once and shared; only conversation rendering and response parsing differ per provider. A terminal call whose only failures are citation-check errors (`CITATION_*`) earns one correction round: the loop stays open and that model gets the exact failures plus the quoting rule so it can resend verbatim quotes. A second invalid terminal call ends the loop as before, and the round is recorded as a `citation_correction` event in the transcript/audit.
 
 Providers are chosen by `RW_GROUNDING_MODEL` (comma-separated `provider:model`; a bare entry means `gemini:`); the default chain is `groq:openai/gpt-oss-120b,groq:qwen/qwen3.8-27b`.
 
