@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from copy import deepcopy
 from datetime import datetime, timezone
+import inspect
 import json
 import logging
 from pathlib import Path
@@ -71,6 +72,7 @@ class InvestigationRequest(RequestBody):
     request_text: str = Field(min_length=1, max_length=20000)
     mode: Literal["live", "replay"] = "live"
     replay_path: str | None = None
+    snapshot: Literal["snap-001", "snap-002-partial", "snap-003-orphan"] = "snap-001"
 
 
 class ScopeRequest(RequestBody):
@@ -329,11 +331,15 @@ def create_app(*, session_factory: Callable | None = None,
             replay_file(body.replay_path)
         with registry_lock:
             if session_factory:
-                session = session_factory()
+                # Factories that take no snapshot argument keep serving the default snapshot only.
+                takes_snapshot = "snapshot" in inspect.signature(session_factory).parameters
+                if body.snapshot != "snap-001" and not takes_snapshot:
+                    raise HTTPException(422, "this server's session factory serves one snapshot")
+                session = session_factory(snapshot=body.snapshot) if takes_snapshot else session_factory()
             else:
                 from .pipeline import Session
                 # Initialize the shared fixture graph once, preserving other investigations.
-                session = Session(snapshot="snap-001", reimport=not initialized)
+                session = Session(snapshot=body.snapshot, reimport=not initialized)
                 initialized = True
         inv = Investigation(uuid4().hex, body, session, original_request_text=body.request_text)
         ground_attempt(inv)

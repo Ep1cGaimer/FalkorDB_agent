@@ -663,3 +663,63 @@ def test_provider_failure_is_sanitized(tmp_path, raw, code):
         assert "org_" not in response.text and "197112" not in response.text and "on_demand" not in response.text
     finally:
         session.g.delete()
+
+
+def snapshot_app(tmp_path, name):
+    """App whose session factory honours the requested snapshot; grounding always proposes cart 1.5, basket_v2 off."""
+    from rw import graph
+    from rw.pipeline import Session
+
+    seed = Session(snapshot="snap-001", graph_name=name)
+
+    def ground(request, tools, alternative_context=None):
+        rows, _ = graph.releases_for_service(seed.g, "cart")
+        release = next(row for row in rows if row["version"] == "1.5")
+        history, _ = tools.release_history("cart")
+        excerpt = next(ex for row in history if row["release_id"] == release["release_id"]
+                       for ex in row["excerpts"] if ex["kind"] == "changelog")
+        proposal = GroundingProposal(changes=[FleetEntry(service="cart", release_id=release["release_id"],
+            flags={"basket_v2": False})], citations=[Citation(excerpt_id=excerpt["excerpt_id"],
+            content_hash=excerpt["content_hash"], quote=excerpt["text"])], rationale="Fixed snapshot test proposal")
+        return GroundingResult(request_text=request, result=proposal, model="fake-grounder", live=True), None
+
+    app = create_app(session_factory=lambda snapshot="snap-001": Session(snapshot=snapshot,
+                         graph_name=name, reimport=False),
+                     ground_function=ground, db_path=tmp_path / "sim.sqlite")
+    return app, seed
+
+
+def test_snapshot_allowlist_is_enforced(api):
+    client, _, _ = api
+    for bad in ("snap-004", "../snap-001", "snapshot:snap-001", "", None, 1):
+        response = client.post("/api/investigations", json={"request_text": REQUEST, "snapshot": bad})
+        assert response.status_code == 422, bad
+    # a factory that cannot serve another snapshot refuses rather than silently using snap-001
+    response = client.post("/api/investigations", json={"request_text": REQUEST, "snapshot": "snap-002-partial"})
+    assert response.status_code == 422
+    ok = client.post("/api/investigations", json={"request_text": REQUEST, "snapshot": "snap-001"})
+    assert ok.status_code == 200 and ok.json()["snapshot_id"] == "snapshot:snap-001"
+
+
+@pytest.mark.parametrize("snapshot,kinds", [
+    ("snap-002-partial", {"COVERAGE_INCOMPLETE"}),
+    ("snap-003-orphan", {"WRITER_UNKNOWN", "FORMAT_UNKNOWN"}),
+])
+def test_incomplete_snapshots_need_evidence_and_cannot_be_approved(tmp_path, snapshot, kinds):
+    name = "rw_test_api_" + uuid4().hex
+    app, seed = snapshot_app(tmp_path, name)
+    try:
+        with TestClient(app) as client:
+            response = client.post("/api/investigations", json={
+                "request_text": REQUEST, "mode": "live", "snapshot": snapshot})
+            assert response.status_code == 200, response.text
+            state = response.json()
+            assert state["snapshot_id"] == "snapshot:" + snapshot
+            report = confirm(client, state)
+            verification = report["verification"]
+            assert verification["disposition"] == "NEEDS_EVIDENCE"
+            assert kinds <= {gap["kind"] for gap in verification["gaps"]}
+            assert client.post(plan_url(state) + "/approve", json={"approved_by": "oncall:alice"}).status_code == 409
+            assert client.post(plan_url(state) + "/simulate").status_code == 409
+    finally:
+        seed.g.delete()

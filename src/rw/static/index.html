@@ -22,7 +22,8 @@ a{color:var(--accent)}
 
 /* status bar: facts that must always be visible */
 .bar{position:sticky;top:0;z-index:5;background:var(--ink);color:#eef1f3;font-size:.86rem}
-.bar .in{max-width:1100px;margin:0 auto;padding:7px 28px;display:flex;gap:6px 22px;flex-wrap:wrap;align-items:baseline}
+.bar .in{max-width:1100px;margin:0 auto;padding:7px 28px;display:flex;gap:4px 22px;flex-wrap:wrap;align-items:baseline}
+@media (min-width:1500px){.bar .in{max-width:1500px;flex-wrap:nowrap;white-space:nowrap}}
 .bar b{font-weight:700}
 .bar .model{font-family:var(--mono);font-size:.8rem}
 .bar .replay{color:#ffd37a;font-weight:700}
@@ -103,12 +104,13 @@ td{padding:9px 12px 9px 0;vertical-align:top;border-bottom:1px solid var(--rule)
 .sub>h3 small{font-weight:400;color:var(--mute);margin-left:8px;font-size:.9rem}
 
 /* witness chain */
-.chain{display:flex;flex-wrap:wrap;align-items:flex-start;row-gap:14px}
-.node{border-top:3px solid var(--ink);padding:5px 0 0;min-width:96px;max-width:190px}
+.chain{display:flex;flex-direction:column;gap:18px}
+.chain .crow{display:flex;flex-wrap:nowrap;align-items:flex-start}
+.node{border-top:3px solid var(--ink);padding:5px 0 0;min-width:84px;max-width:170px;flex:0 1 auto}
 .node .lbl{font-size:.82rem;color:var(--mute);line-height:1.2}
-.node .id{font-weight:700;font-size:.95rem;line-height:1.25;word-break:break-word}
+.node .id{font-weight:700;font-size:.95rem;line-height:1.25;overflow-wrap:anywhere}
 .node.hit{border-top-color:var(--red)}
-.edge{align-self:flex-start;padding:2px 8px 0;text-align:center;font-family:var(--mono);font-size:.74rem;color:var(--accent);white-space:nowrap;line-height:1.15}
+.edge{align-self:flex-start;padding:2px 8px 0;text-align:center;font-family:var(--mono);font-size:.74rem;color:var(--accent);white-space:nowrap;line-height:1.15;flex:0 0 auto}
 .edge::after{content:"";display:block;border-top:1px solid var(--accent);margin-top:5px}
 
 /* matrix */
@@ -142,6 +144,9 @@ pre.out{white-space:pre-wrap;margin:8px 0 0;padding:10px 12px;background:var(--w
 .only{display:inline-block;margin:0 0 10px;font-weight:700;border:2px solid var(--ink);padding:2px 10px}
 .simdone{margin:18px 0 0;padding:12px 16px;background:var(--wash);border-left:5px solid var(--ink)}
 .picker option.q{color:var(--mute)}
+select.picker{text-overflow:ellipsis}
+.row>.wide{flex:2 1 460px}
+.snap{flex:0 1 340px}
 footer{max-width:1100px;margin:0 auto;padding:18px 28px 48px;border-top:1px solid var(--rule);color:var(--mute);font-size:.92rem}
 footer p{margin:2px 0}
 @media (min-width:1700px){html{font-size:18px}}
@@ -168,7 +173,7 @@ const GUIDED = {
   operator: "dana.oncall", approver: "marcus.lead",
 };
 const S = { inv:null, view:0, busy:null, error:null, sel:null, transcripts:[], guided:false, replayUsed:null,
-  form:{req:DEFAULT_REQUEST, mode:"live", replay:"", answerReplay:"", altReplay:"", answer:"", scope:"", approver:""} };
+  form:{req:DEFAULT_REQUEST, snapshot:"snap-001", mode:"live", replay:"", answerReplay:"", altReplay:"", answer:"", scope:"", approver:""} };
 
 function el(tag, attrs, ...kids){
   const n = document.createElement(tag);
@@ -231,7 +236,7 @@ const transcriptModel = file => { const t=S.transcripts.find(x=>x.replay_path===
 function start(){
   const f=S.form;
   run(f.mode==="live"?"The agent is reading the changelogs and querying the graph…":"Replaying the saved agent run…", async()=>{
-    const body={request_text:f.req, mode:f.mode}; if(f.mode==="replay") body.replay_path=f.replay;
+    const body={request_text:f.req, mode:f.mode, snapshot:f.snapshot}; if(f.mode==="replay") body.replay_path=f.replay;
     S.inv=null; S.sel=null;
     S.inv = await api("POST","/api/investigations",body); S.view=attempts().length-1; S.replayUsed=f.mode==="replay"?[f.replay]:[];
   });
@@ -293,15 +298,16 @@ function fillPicker(wrap, id, key, label, items){
       el("p",{class:"hint",style:"margin:0"}, "No saved run in artifacts/grounding matches. Replay can only reuse a transcript recorded for this exact text."));
     S.form[key]=""; return;
   }
-  const sel=el("select",{id,class:"picker"}, items.map(t=>el("option",{value:t.replay_path},
-    `${t.outcome==="question"?"asks a question":t.outcome==="proposal"?"proposes a fleet":"saved run"} · ${t.model} · ${t.replay_path.replace(".json","").slice(0,8)}`)));
+  const sel=el("select",{id,class:"picker"}, items.map(t=>{
+    const text=`${t.outcome==="question"?"asks a question":t.outcome==="proposal"?"proposes a fleet":"saved run"} · ${t.model} · ${t.replay_path.replace(".json","").slice(0,8)}`;
+    return el("option",{value:t.replay_path,title:text},text);}));
   if(!items.some(t=>t.replay_path===S.form[key])) S.form[key]=items[0].replay_path;
   sel.value=S.form[key];
   sel.addEventListener("change",()=>{ S.form[key]=sel.value; if(key==="replay"){ const t=S.transcripts.find(x=>x.replay_path===sel.value); if(t){S.form.req=t.request_text;} render(); }});
   wrap.replaceChildren(el("label",{for:id},label), sel);
 }
 function replayPicker(id, key, label, items){
-  const wrap=el("div",{class:"grow"});
+  const wrap=el("div",{class:"grow wide"});
   fillPicker(wrap, id, key, label, items);
   return wrap;
 }
@@ -325,15 +331,17 @@ function cites(list, only){
 function bar(){
   const b=document.getElementById("bar"); b.replaceChildren();
   const a=cur();
-  const live = a ? a.grounding.live : S.form.mode==="live" && !S.error;
+  const live = a ? a.grounding.live : S.form.mode==="live";
   b.append(el("span",{}, el("b",{},"Synthetic fixture"), " — not production data"));
-  if(S.inv) b.append(el("span",{},"snapshot ", el("span",{class:"mono"},S.inv.snapshot_id.replace(/^snapshot:/,""))));
+  b.append(el("span",{},"snapshot ", el("span",{class:"mono"},(S.inv?S.inv.snapshot_id:"snapshot:"+S.form.snapshot).replace(/^snapshot:/,""))));
   b.append(el("span",{},FALKOR));
   if(a){
     const g=a.grounding, orig=g.live?g.model:transcriptModel((g.model||"").replace(/^replay:/,""));
     b.append(el("span",{}, "model: ", el("span",{class:"model"}, orig||g.model), g.live?"":" (recorded)"));
   }
-  if(!a && S.form.mode==="live" && S.error) b.append(el("span",{class:"replay"},"Live model unavailable"));
+  const down = S.error && [0,502,503].includes(S.error.status);
+  if(!a && S.form.mode==="live" && down) b.append(el("span",{class:"replay"},"Live model unavailable"));
+  else if(!a && S.form.mode==="live") b.append(el("span",{class:"live"},"LIVE — not yet run"));
   else b.append(live? el("span",{class:"live"},"LIVE ●") : el("span",{class:"replay"},"REPLAY — not live"));
 }
 
@@ -351,10 +359,15 @@ function requestView(){
     if(!first.some(t=>t.replay_path===f.replay) && first.length){ f.replay=first[0].replay_path; f.req=first[0].request_text; ta.value=f.req; }
     pick=replayPicker("replaypick","replay","Saved run", first);
   }
+  const SNAPS=[["snap-001","snap-001 — complete inventory"],["snap-002-partial","snap-002-partial — coverage PARTIAL"],
+    ["snap-003-orphan","snap-003-orphan — record with unknown writer/format"]];
+  const snapSel=el("select",{id:"snapshot",title:"Which retained-state inventory the check runs against"}, SNAPS.map(([v,t])=>el("option",{value:v},t)));
+  snapSel.value=f.snapshot; snapSel.addEventListener("change",()=>{f.snapshot=snapSel.value; render();});
+  const snap=el("div",{class:"snap"}, el("label",{for:"snapshot"},"Snapshot"), snapSel);
   const go=el("button",{type:"button",onclick:start,disabled:!!S.busy||!f.req.trim()||(replay&&!f.replay)}, S.inv?"Investigate again":"Investigate");
   return el("section",{class:"sec first"}, el("h2",{},"Request"), el("div",{class:"body"},
     el("label",{for:"req"},"What should the rollback do?"), ta,
-    el("div",{class:"row"}, seg, pick, guided, go),
+    el("div",{class:"row"}, seg, pick, snap, guided, go),
     replay? el("p",{class:"hint"},"Replay re-uses a saved agent run, so the request text comes with it. Nothing is sent to a model."):null));
 }
 
@@ -482,7 +495,7 @@ function resultView(a){
         el("div",{class:"mono"},sc.result==="GREEN"?"build loads · exit "+sc.exit:"exit "+sc.exit)),
       el("div",{class:"vs"},"but"),
       el("div",{class:"pane "+r}, el("div",{class:"what"},`${lab(sc.release_id)} reading retained records`), el("div",{class:"word"},r),
-        el("div",{class:"mono"}, badR? `${bad.tuple.record_id} unreadable — ${badR.error_type||"error"}`: r==="PASS"?`${obs.length} record${obs.length>1?"s":""} read`: `${obs.length} check${obs.length>1?"s":""} unresolved`))));
+        el("div",{class:"mono"}, badR? `${bad.tuple.record_id} unreadable — ${badR.error_type||"error"}`: r==="PASS"?`${obs.length} record${obs.length>1?"s":""} read`+(v.gaps.length?" · evidence gaps below":""): `${obs.length} check${obs.length>1?"s":""} unresolved`))));
   }
 
   if(quiet.length) body.append(el("p",{class:"hint",style:"margin-top:12px"}, "Also checked — "+quiet.join("; ")+"."));
@@ -515,13 +528,19 @@ function hashText(h){ return String(h).replace(/^sha256:/,"").slice(0,8); }
 function pairScore(svc,v,rm){ return v.obligations.some(o=>o.tuple.service===svc&&rm[o.obligation_hash]&&rm[o.obligation_hash].result==="FAIL")?1:0; }
 
 function chainView(ob){
+  // Two-row schematic once the path is long: row 1 ends with the relationship that continues below.
+  const path=ob.witness_path, split=path.length>4?Math.ceil(path.length/2):path.length;
   const chain=el("div",{class:"chain"});
-  const path=ob.witness_path;
+  let row=el("div",{class:"crow"}); chain.append(row);
   path.forEach((h,i)=>{
     const rid = typeof h.id==="string" && h.id.startsWith("release:") ? lab(h.id) : null;
-    chain.append(el("div",{class:"node"}, el("div",{class:"lbl"},h.label),
+    row.append(el("div",{class:"node"+(i===path.length-1?" hit":"")}, el("div",{class:"lbl"},h.label),
       el("div",{class:"id",title:h.id},rid||h.display||h.id)));
-    if(h.rel_to_next) chain.append(el("div",{class:"edge"},h.rel_to_next));
+    if(!h.rel_to_next) return;
+    if(i+1===split && split<path.length){
+      row.append(el("div",{class:"edge",title:"the path continues on the next row"},h.rel_to_next+" ↴"));
+      row=el("div",{class:"crow"}); chain.append(row);
+    } else row.append(el("div",{class:"edge"},h.rel_to_next));
   });
   return chain;
 }
