@@ -8,6 +8,7 @@ import pytest
 
 from rw.contracts import Obligation, ObligationTuple, ProbeResult, bh, h
 from rw import probes
+from rw.verification import receipt_applicable
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -65,7 +66,7 @@ def test_tiny_readers(tiny, source, expected):
     assert receipt.result == expected
     assert receipt.tuple is bound.tuple
     assert receipt.obligation_hash == bound.obligation_hash
-    assert probes.receipt_applicable(receipt, bound)
+    assert receipt_applicable(receipt, bound)
     assert receipt.duration_ms >= 0
     assert receipt.executed_at.endswith("+00:00")
     assert len(receipt.stdout_excerpt.encode()) <= 8192
@@ -222,11 +223,11 @@ def test_receipt_applicability_requires_fields_and_recomputed_hash(tiny):
     bound = obligation(codec, payload)
     receipt = probes.run_probe(bound, payload)
     changed = bound.tuple.model_copy(update={"record_id": "different-record"})
-    assert not probes.receipt_applicable(receipt.model_copy(update={"tuple": changed}), bound)
-    assert not probes.receipt_applicable(receipt, bound.model_copy(update={"tuple": changed}))
-    assert not probes.receipt_applicable(receipt.model_copy(update={"obligation_hash": "wrong"}), bound)
+    assert not receipt_applicable(receipt.model_copy(update={"tuple": changed}), bound)
+    assert not receipt_applicable(receipt, bound.model_copy(update={"tuple": changed}))
+    assert not receipt_applicable(receipt.model_copy(update={"obligation_hash": "wrong"}), bound)
     wrong = bound.model_copy(update={"obligation_hash": "wrong"})
-    assert not probes.receipt_applicable(receipt.model_copy(update={"obligation_hash": "wrong"}), wrong)
+    assert not receipt_applicable(receipt.model_copy(update={"obligation_hash": "wrong"}), wrong)
 
 
 @pytest.mark.parametrize("record, expected", [
@@ -237,7 +238,7 @@ def test_real_cart_14(record, expected):
     bound = obligation(codec, payload)
     receipt = probes.run_probe(bound, payload)
     assert receipt.result == expected
-    assert probes.receipt_applicable(receipt, bound)
+    assert receipt_applicable(receipt, bound)
 
 
 @pytest.mark.parametrize("exit_code, output", [

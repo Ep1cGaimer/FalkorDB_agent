@@ -5,9 +5,10 @@ from threading import Barrier
 
 import pytest
 
-from rw.contracts import (Approval, CandidatePlan, Disposition, FleetEntry,
+from rw.contracts import (Approval, CandidatePlan, Disposition, FleetEntry, REPO_ROOT,
                           VerificationResult, canonical_json, h)
-from rw.simulation import SimulationRefused, record_approval, simulate
+from rw.simulation import (DEFAULT_DB_PATH, DEFAULT_FORBIDDEN_IDENTITIES, SimulationRefused,
+                           record_approval, simulate)
 
 
 @pytest.fixture
@@ -45,6 +46,33 @@ def test_forbidden_approver(case, identity):
     case["approval"] = case["approval"].model_copy(update={"approved_by": identity})
     with pytest.raises(SimulationRefused, match="human identity"):
         approve(case, forbidden_identities={"agent", "model", "gemini-3.8-flash", "custom-model"})
+
+
+def test_default_db_path_is_anchored_to_the_repo_root():
+    """The ledger default must not depend on the process working directory."""
+    assert DEFAULT_DB_PATH.is_absolute()
+    assert DEFAULT_DB_PATH == REPO_ROOT / "artifacts" / "sim.sqlite"
+    assert DEFAULT_DB_PATH.parent.name == "artifacts"
+
+
+def test_default_forbidden_identities_cover_the_configured_models():
+    """Every configured model spelling is refused, so no model can approve its own proposal."""
+    from rw import grounding
+
+    assert {"agent", "model"} <= DEFAULT_FORBIDDEN_IDENTITIES
+    assert grounding.MODEL in DEFAULT_FORBIDDEN_IDENTITIES
+    for spec in grounding.configured_models():
+        assert spec in DEFAULT_FORBIDDEN_IDENTITIES
+        assert grounding.split_model(spec)[1] in DEFAULT_FORBIDDEN_IDENTITIES
+
+
+def test_a_configured_model_identity_is_refused_by_default(case):
+    """The default forbidden set (not a caller-supplied one) is what refuses the model."""
+    from rw import grounding
+
+    case["approval"] = case["approval"].model_copy(update={"approved_by": grounding.MODEL})
+    with pytest.raises(SimulationRefused, match="human identity"):
+        approve(case)
 
 
 @pytest.mark.parametrize("field", ["plan_hash", "verification_hash", "snapshot_manifest_hash"])

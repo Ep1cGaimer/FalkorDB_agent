@@ -1,4 +1,4 @@
-"""FalkorDB importer and read queries for RollbackWitness (owner: graph worker).
+"""FalkorDB importer and read queries for RollbackWitness.
 
 Frozen API: see docs/CONTRACTS.md section `src/rw/graph.py`. Everything this module
 writes is derived from fixture bytes plus identifiers from trusted code; no user or
@@ -54,13 +54,13 @@ from rw.contracts import (
     SCOPE_ID,
     CandidatePlan,
     ProbeReceipt,
+    artifact_hash as release_artifact_hash,
     bh,
     canonical_json,
     h,
+    repo_rel,
     short,
 )
-
-ROOT = Path(__file__).resolve().parents[2]
 
 CHANGELOG_KIND = "changelog"
 CODE_KIND = "code"
@@ -187,14 +187,6 @@ def _span(row: dict[str, Any]) -> str | None:
     return f"{start}-{end}"
 
 
-def _repo_rel(path: Path) -> str:
-    resolved = path.resolve()
-    try:
-        return resolved.relative_to(ROOT).as_posix()
-    except ValueError:
-        return resolved.as_posix()
-
-
 def _write_props(row: dict[str, Any]) -> dict[str, Any]:
     """Drop unknown (None) values: FalkorDB cannot store a null property."""
     return {k: v for k, v in row.items() if v is not None}
@@ -318,14 +310,6 @@ def _excerpt_rows(release_id: str, artifact_hash: str, release_dir: Path) -> lis
 # --------------------------------------------------------------------------- importer
 
 
-def _release_dir_files(release_dir: Path) -> list[list[str]]:
-    return [
-        [path.relative_to(release_dir).as_posix(), bh(path.read_bytes())]
-        for path in sorted(release_dir.rglob("*"))
-        if path.is_file() and "__pycache__" not in path.parts
-    ]
-
-
 def _collect_releases(fixture_root: Path) -> tuple[
     list[dict[str, Any]],  # release rows
     list[dict[str, Any]],  # excerpt rows
@@ -348,7 +332,7 @@ def _collect_releases(fixture_root: Path) -> tuple[
             continue
         declaration = json.loads((release_dir / "release.json").read_text(encoding="utf-8"))
         service = declaration["service"]
-        artifact_hash = h(_release_dir_files(release_dir))
+        artifact_hash = release_artifact_hash(release_dir)
         release_id = f"release:{service}:{short(artifact_hash)}"
         declarations.append(
             {
@@ -368,7 +352,7 @@ def _collect_releases(fixture_root: Path) -> tuple[
                     "version": declaration["version"],
                     "artifact_hash": artifact_hash,
                     "codec_hash": bh((release_dir / CODEC_FILE).read_bytes()),
-                    "codec_path": _repo_rel(release_dir / CODEC_FILE),
+                    "codec_path": repo_rel(release_dir / CODEC_FILE),
                     "built_at": declaration.get("built_at"),
                     "bundle_id": declaration.get("bundle_id"),
                     "declared_flags_json": canonical_json(declaration.get("flags", [])).decode("utf-8"),
@@ -414,7 +398,7 @@ def _collect_snapshot(fixture_root: Path, snapshot_name: str, known_releases: di
             "manifest_hash": manifest_hash,
             "captured_at": manifest.get("captured_at"),
             "environment": manifest.get("environment"),
-            "captured_from": _repo_rel(manifest_path),
+            "captured_from": repo_rel(manifest_path),
         }
     )
 
@@ -500,7 +484,7 @@ def _collect_snapshot(fixture_root: Path, snapshot_name: str, known_releases: di
                         "snapshot_id": snapshot_id,
                         "record_id": record_id,
                         "payload_hash": payload_hash,
-                        "payload_path": _repo_rel(fixture_root / payload_path) if payload_path else None,
+                        "payload_path": repo_rel(fixture_root / payload_path) if payload_path else None,
                         "format_id": record.get("format"),
                     }
                 )

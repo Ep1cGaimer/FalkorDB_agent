@@ -23,8 +23,10 @@ from rw.contracts import (
     ProbeResult,
     ScopeConfirmation,
     VerificationResult,
+    artifact_hash,
     bh,
     h,
+    release_dir_files,
     short,
 )
 from rw.pipeline import FIXTURE_ROOT, Session
@@ -402,6 +404,59 @@ def test_release_without_declaration_is_invalid_fleet():
                and g.detail == "no independently loaded declaration for this release" for g in ev.gaps)
     res = dispose(ev, [receipt(o, ProbeResult.PASS) for o in ev.obligations])
     assert res.disposition == Disposition.NEEDS_EVIDENCE and len(res.obligations) == 2
+
+
+# The four release ids and artifact hashes as they were computed before the shared helper moved
+# into rw.contracts; a change here is a real identity change, never a refactor side effect.
+PINNED_RELEASES = {
+    ("cart", "1.4"): "sha256:9703e568235e03f3a66e55d15142208ea18f56b5962b572016f29c21ed72931b",
+    ("cart", "1.5"): "sha256:9d521fc02aa4498e47ebf6ad6042438ce3ade9585228735c1d37ad08d456dd0d",
+    ("checkout", "2.0"): "sha256:fdc1261d7c96078ef5866f4197862a43472ebc032b8745a6d0e0842ca9c87e86",
+    ("checkout", "2.1"): "sha256:df9a7917d594517630ca6aeb0b8e97b663e387769371b3658348ad483b142e02",
+}
+PINNED_RELEASE_IDS = {
+    "release:cart:9703e568235e03f3",
+    "release:cart:9d521fc02aa4498e",
+    "release:checkout:fdc1261d7c96078e",
+    "release:checkout:df9a7917d5945176",
+}
+
+
+def test_release_dir_files_skips_bytecode_and_sorts_by_posix_relpath(tmp_path):
+    """A stray __pycache__/``*.pyc`` never enters an identity, and order is by posix relative path."""
+    release = tmp_path / "releases" / "cart-9.9"
+    (release / "sub").mkdir(parents=True)
+    (release / "__pycache__").mkdir()
+    (release / "release.json").write_text("{}", encoding="utf-8")
+    (release / "sub" / "helper.py").write_text("value = 1\n", encoding="utf-8")
+    (release / "__pycache__" / "helper.cpython-311.pyc").write_bytes(b"\x00bytecode")
+    (release / "legacy.pyc").write_bytes(b"\x00bytecode")
+
+    files = release_dir_files(release)
+    assert [relpath for relpath, _ in files] == ["release.json", "sub/helper.py"]
+    assert all(digest.startswith("sha256:") for _, digest in files)
+    assert artifact_hash(release) == h(files)
+
+    before = artifact_hash(release)
+    (release / "__pycache__" / "another.pyc").write_bytes(b"more bytecode")
+    (release / "sub" / "extra.pyc").write_bytes(b"more bytecode")
+    assert artifact_hash(release) == before
+
+    (release / "sub" / "helper.py").write_text("value = 2\n", encoding="utf-8")
+    assert artifact_hash(release) != before
+
+
+def test_shared_artifact_hash_keeps_the_pinned_release_identities():
+    """The shared helper must reproduce the release ids and artifact hashes it replaced exactly."""
+    releases = REPO_ROOT / "fixtures" / "shop" / "releases"
+    for (service, version), expected_hash in PINNED_RELEASES.items():
+        release_dir = releases / f"{service}-{version}"
+        assert artifact_hash(release_dir) == expected_hash
+        assert h(release_dir_files(release_dir)) == expected_hash
+        assert f"release:{service}:{short(expected_hash)}" in PINNED_RELEASE_IDS
+    declarations = load_release_declarations(REPO_ROOT / "fixtures" / "shop")
+    assert set(declarations) == PINNED_RELEASE_IDS
+    assert {d["artifact_hash"] for d in declarations.values()} == set(PINNED_RELEASES.values())
 
 
 def test_real_fixture_declarations_match_the_imported_graph():
