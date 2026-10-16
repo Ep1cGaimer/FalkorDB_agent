@@ -1,11 +1,13 @@
 """No-key synthetic end-to-end check: python scripts/smoke.py.
 
-Requires the installed project dependencies and FalkorDB at 127.0.0.1:6379.
+Requires the installed project dependencies and FalkorDB (default 127.0.0.1:6379, overridable with
+RW_FALKORDB_HOST / RW_FALKORDB_PORT for a non-default container).
 Uses real graph queries, probes, approval and simulation; only grounding is fixed.
 The temporary graph and SQLite ledger are removed, including on failure.
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -37,6 +39,11 @@ CASES = (
 def require(condition, message):
     if not condition:
         raise RuntimeError(message)
+
+
+def target() -> tuple[str, int]:
+    """The FalkorDB endpoint this run uses, so a non-default container needs no code edit."""
+    return os.environ.get("RW_FALKORDB_HOST", "127.0.0.1"), int(os.environ.get("RW_FALKORDB_PORT", "6379"))
 
 
 def plan_url(state):
@@ -106,12 +113,13 @@ def main() -> int:
     g = None
     status = 0
     try:
-        db = graph.connect("127.0.0.1", 6379)
+        host, port = target()
+        db = graph.connect(host, port)
         g = db.select_graph(name)
-        Session(graph_name=name)  # imports once; later Sessions preserve the evidence graph
+        Session(graph_name=name, host=host, port=port)  # imports once; later Sessions preserve the evidence graph
 
         def session_factory(snapshot="snap-001"):
-            return Session(snapshot=snapshot, graph_name=name, reimport=False)
+            return Session(snapshot=snapshot, graph_name=name, reimport=False, host=host, port=port)
 
         def fixed_ground(request, tools, alternative_context=None):
             version = "1.4" if request == ROLLBACK and alternative_context is None else "1.5"
