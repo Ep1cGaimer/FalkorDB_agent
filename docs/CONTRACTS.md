@@ -123,18 +123,23 @@ read so an oversized file is detected); stdout capped at 8192 bytes; stderr disc
 `sys.stdout = sys.stderr` **before** loading `codec.py`. Everything the reader prints — including a
 raw `os.write(1, ...)` — therefore goes to the parent's discarded stderr. The harness loads the codec
 by path, calls `entry(data: bytes)`, and writes exactly one JSON line (sorted keys) to the saved fd,
-carrying `"nonce": <nonce>`, then exits with `os._exit(code)`. A reader cannot reach the result
-channel, and a reader that aborts the process (`SystemExit` / `KeyboardInterrupt` / `GeneratorExit`)
-is a harness error, never a `FAIL`.
+carrying `"nonce": <nonce>`, then exits with `os._exit(code)`. That diversion and the nonce keep
+ordinary reader output and early exits out of the result channel. They are failure containment for
+allowlisted, reviewed fixture readers, not a sandbox: a reader that deliberately introspects the live
+process (frame walking, `/proc/self/environ`) can still reach the nonce. A reader that exits or raises
+a non-`Exception` `BaseException` (`SystemExit` / `KeyboardInterrupt` / `GeneratorExit` /
+`BaseExceptionGroup`) before returning is a harness error, never a `FAIL`; only an `Exception` raised
+by the entry call is a reader verdict.
 
-The parent requires stdout to decode to exactly one non-empty line whose parsed `nonce` equals the
-nonce it generated; anything else → `UNKNOWN` with message `harness error or invalid stdout`.
+The parent requires stdout to be exactly one line: the bytes must end with a single `\n` and contain
+no other `\n`, so padded or blank lines are rejected. The parsed `nonce` must equal the nonce it
+generated; anything else → `UNKNOWN` with message `harness error or invalid stdout`.
 
 | Harness exit | stdout | Receipt result |
 |---|---|---|
 | 0 | one line `{"status":"PASS","nonce":<nonce>,"shape":{...}}` | PASS (only when `shape` is a dict) |
 | 10 | one line `{"status":"FAIL","nonce":<nonce>,"error_type":str,"message":str}` | FAIL |
-| 20 or any other exit, timeout, stdout > 8192 bytes, missing/mismatched nonce, bad JSON, extra lines | — | UNKNOWN (harness error, never FAIL) |
+| 20 or any other exit, timeout, stdout > 8192 bytes, missing/mismatched nonce, bad JSON, extra/blank lines | — | UNKNOWN (harness error, never FAIL) |
 
 `run_probe(obligation, payload_path, timeout_s=5) -> ProbeReceipt` performs the identity checks
 before running anything: payload ≤ 65536 bytes and `bh(payload) == tuple.payload_hash`;

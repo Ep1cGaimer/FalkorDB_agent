@@ -41,9 +41,12 @@ def run_harness(codec_path: Path, entry: str, payload: bytes, timeout_s: float =
     """Run the trusted harness once on ``payload`` and return its verdict.
 
     This is the only sanctioned caller of the fixture harness. It owns the
-    per-run secret nonce (the reader cannot see or guess it), a minimal child
-    environment, bounded I/O, the timeout, and the strict one-line/nonce/schema
-    parsing of the result channel. Returns::
+    per-run secret nonce, a minimal child environment, bounded I/O, the
+    timeout, and the strict one-line/nonce/schema parsing of the result
+    channel. The nonce and the stdout diversion keep ordinary reader output and
+    early exits out of the result channel; they are failure containment for
+    allowlisted, reviewed fixture readers, not a sandbox against a reader that
+    deliberately introspects the live process. Returns::
 
         {"result": "PASS"|"FAIL"|"UNKNOWN", "exit": int|None, "stdout": bytes,
          "error_type": str|None, "message": str|None, "shape": dict|None}
@@ -120,17 +123,15 @@ def run_harness(codec_path: Path, entry: str, payload: bytes, timeout_s: float =
         return outcome
 
     try:
-        # The harness writes exactly one JSON line; strip the single trailing
-        # newline and reject anything that is not exactly one non-empty line.
-        text = raw.decode("utf-8")
-        if text.endswith("\r\n"):
-            text = text[:-2]
-        elif text.endswith("\n"):
-            text = text[:-1]
-        lines = [line for line in text.split("\n") if line.strip()]
-        if len(lines) != 1:
+        # The harness writes exactly one JSON line. Accept nothing else: the run
+        # must end in a single newline and contain no other newline, so padded or
+        # blank lines are a harness error rather than a verdict.
+        if not (raw.endswith(b"\n") and raw.count(b"\n") == 1):
+            raise ValueError("stdout must be exactly one line")
+        text = raw[:-1].decode("utf-8")
+        if not text.strip():
             raise ValueError("stdout must be exactly one non-empty line")
-        data = json.loads(lines[0])
+        data = json.loads(text)
         if not isinstance(data, dict) or data.get("nonce") != nonce:
             raise ValueError("stdout must carry the run nonce")
         if exit_code == 0 and data.get("status") == "PASS" and isinstance(data.get("shape"), dict):

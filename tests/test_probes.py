@@ -113,6 +113,41 @@ def test_reader_fd1_write_never_reaches_the_result_channel(tiny, monkeypatch):
     assert data["shape"] == {"bytes": "int"}
 
 
+@pytest.mark.parametrize("template", ["{line}\n\n", "\n{line}\n", "{line}\n\n\n"])
+def test_stdout_that_is_not_exactly_one_line_is_a_harness_error(tiny, monkeypatch, template):
+    """A well-formed nonce line padded with blank lines is not accepted as a verdict.
+
+    The reader never sees the nonce here (the harness is a stand-in), so the only
+    thing that can reject these is the strict one-line channel parse.
+    """
+    codec, payload = tiny
+    nonce = "0123456789abcdef0123456789abcdef"
+    monkeypatch.setattr(probes.secrets, "token_hex", lambda _n: nonce)
+    line = json.dumps({"status": "PASS", "nonce": nonce, "shape": {"bytes": "int"}})
+    output = template.format(line=line)
+    harness = codec.parent / "padded_harness.py"
+    harness.write_text(
+        "import sys\n"
+        f"sys.stdout.buffer.write({output.encode()!r})\n"
+        "sys.exit(0)\n")
+    monkeypatch.setattr(probes, "harness_path", lambda: harness)
+    receipt = probes.run_probe(obligation(codec, payload), payload)
+    assert receipt.result == ProbeResult.UNKNOWN
+    assert receipt.harness_exit == 0
+    assert receipt.evidence_hash == bh(output.encode())
+
+
+def test_reader_that_raises_a_base_exception_group_is_a_harness_error(tiny):
+    """Only ``Exception`` is a reader verdict; any other BaseException aborts the run."""
+    codec, payload = tiny
+    codec.write_text(
+        "def read_cart(data):\n"
+        "    raise BaseExceptionGroup('aborted', [SystemExit(1)])\n")
+    receipt = probes.run_probe(obligation(codec, payload), payload)
+    assert receipt.result == ProbeResult.UNKNOWN
+    assert receipt.harness_exit == 20
+
+
 def test_reader_exception_is_fail_not_harness_error(tiny):
     codec, payload = tiny
     codec.write_text("def read_cart(data):\n    raise ValueError('bad cart')\n")

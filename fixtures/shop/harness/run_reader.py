@@ -5,15 +5,20 @@ usage: python -I run_reader.py <codec_path> <entry>   (payload bytes on stdin)
 
 The parent supplies a per-run secret in RW_PROBE_NONCE. Everything the reader
 writes to stdout (prints and raw ``os.write(1, ...)``) is redirected to stderr
-before the codec is loaded, so the reader cannot reach the result channel.
-Exactly one JSON line carrying the nonce is written to the real stdout fd by
-this harness, and only after it observed the reader return.
+before the codec is loaded, so ordinary reader output cannot reach the result
+channel, and a reader that exits early cannot answer for this harness. This is
+failure containment for allowlisted, reviewed fixture readers — not a sandbox:
+it does not stop a reader that deliberately introspects the live process
+(frame walking, /proc/self/environ). Exactly one JSON line carrying the nonce
+is written to the real stdout fd by this harness, and only after it observed
+the reader return.
 
 exit 0  PASS    reader returned a dict
-exit 10 FAIL    reader raised, or returned a non-dict
+exit 10 FAIL    reader raised an Exception, or returned a non-dict
 exit 20 HARNESS_ERROR   harness could not load/call the reader, the reader
-                        aborted the process before returning, or the parent did
-                        not provide the per-run nonce
+                        exited or raised with a non-Exception BaseException
+                        before returning, or the parent did not provide the
+                        per-run nonce
 """
 
 import importlib.util
@@ -74,11 +79,13 @@ def main(argv):
 
     try:
         result = entry(data)
-    except (SystemExit, KeyboardInterrupt, GeneratorExit) as exc:
-        _harness_error(saved, nonce, f"reader aborted with {type(exc).__name__}")
-    except BaseException as exc:
+    except Exception as exc:
         _emit(saved, {"status": "FAIL", "nonce": nonce, "error_type": type(exc).__name__,
                       "message": str(exc)[:500]}, 10)
+    except BaseException as exc:
+        # SystemExit, KeyboardInterrupt, BaseExceptionGroup, ... — the reader did not
+        # simply raise, it tried to tear the run down. That is a harness error, not a verdict.
+        _harness_error(saved, nonce, f"reader aborted with {type(exc).__name__}")
 
     if not isinstance(result, dict):
         _emit(saved, {"status": "FAIL", "nonce": nonce, "error_type": "NonDictResult",
