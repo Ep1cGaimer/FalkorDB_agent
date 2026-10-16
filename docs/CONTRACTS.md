@@ -332,3 +332,28 @@ the model approve, apply or deploy anything.
 ### ID-form clarification (binding)
 
 `snapshot_id` everywhere (params, Batch/Coverage/Plan properties, `CandidatePlan.snapshot_id`, `ObligationTuple.snapshot_id`) is the node form `snapshot:<name>`; `store_id` is `store:<name>`. Batch id = `batch:<store_name>:<snapshot_name>:<record_id>:<short(payload_hash)>`. Release `codec_path` and Batch `payload_path` are posix paths relative to the repo root.
+
+
+## Local MCP and HTTP presentation contracts
+
+`api_contracts.py` defines explicit success/error presentation schemas for the nine product HTTP
+operations. Enrichment fields, nulls and latest-attempt aliases are preserved; report plans do not
+gain a citations field. These models are separate from the frozen canonical domain contracts and
+never participate in hashing or approval identity. Existing status codes and HTTP lookup semantics
+are unchanged. Opt-in list pagination returns arrays plus `X-Next-Cursor`; unpaginated calls keep
+their existing ordering. Paginated transcript parsing skips files over 1 MiB. Newly live-grounded
+questions are limited to 3,000 characters; answered requests to 28,000 before state mutation.
+Replay questions remain selectable regardless of historical length.
+
+`mcp_contracts.py`, `mcp_client.py` and `mcp_server.py` expose only six allowlisted operations over
+one existing local HTTP API. Strict raw input validation precedes SDK coercion. Upstream evidence
+is validated for canonical hashes/bindings and deterministic disposition consistency before safe
+projection and outgoing schema validation. The server does not run another Session, initialize a
+graph, or expose verification, confirmation, approval or simulation tools. Full operational,
+projection, pagination, error, concurrency and restart contracts are in [MCP.md](MCP.md).
+
+Scope confirmation and action approval remain distinct human workflow gates, with byte revalidation
+on approval/simulation. Reading stored evidence does not reverify it. After drift, start a new
+investigation and confirm/approve its new exact plan; repeated confirmation returns cached evidence.
+The local identity denylist is not authentication. This release has no tenant isolation or remote
+MCP transport. `/simulate` continues to ignore supplied bodies for HTTP compatibility.

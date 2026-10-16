@@ -12,6 +12,8 @@
 #
 # Next step: docs/QUICKSTART.md (start FalkorDB, then run the non-live suite).
 
+param([switch]$Mcp)
+
 $ErrorActionPreference = "Stop"
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
@@ -33,7 +35,11 @@ function Invoke-Step([string]$What, [scriptblock]$Command) {
 Write-Host "RollbackWitness setup in $RepoRoot (Python $PythonVersion)"
 
 Invoke-Step "uv venv (python $PythonVersion)" { uv venv --python $PythonVersion --allow-existing .venv }
-Invoke-Step "install project dependencies" { uv pip install --python $PythonExe -r pyproject.toml }
+if ($Mcp) {
+    Invoke-Step "install project and MCP dependencies" { uv pip install --python $PythonExe -r pyproject.toml --extra mcp }
+} else {
+    Invoke-Step "install project dependencies" { uv pip install --python $PythonExe -r pyproject.toml }
+}
 # pyproject.toml declares runtime dependencies only. The test runner is pinned here so the non-live
 # suite in docs/QUICKSTART.md runs in a fresh clone with no extra manual install.
 Invoke-Step "install pytest" { uv pip install --python $PythonExe "pytest==9.1.1" }

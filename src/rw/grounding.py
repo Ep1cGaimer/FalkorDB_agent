@@ -307,6 +307,7 @@ class GroqProvider(Provider):
 
 
 PROVIDERS: dict[str, Provider] = {"gemini": GeminiProvider(), "groq": GroqProvider()}
+LIVE_PROVIDER_PREFIXES = tuple(f"{provider}:" for provider in PROVIDERS)
 
 
 def _adapter_for(transport: Any) -> Provider:

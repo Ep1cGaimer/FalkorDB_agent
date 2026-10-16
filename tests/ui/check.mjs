@@ -24,7 +24,7 @@ const child = spawn(binary, ["--headless=new", "--disable-gpu", "--no-first-run"
   "--disable-background-networking", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "about:blank"],
   { stdio: "ignore", windowsHide: true });
 let ws, sequence = 0, snapshotOverride = null;
-const pending = new Map(), exceptions = [], networkFailures = [];
+const pending = new Map(), exceptions = [], networkFailures = [], requests = [];
 const pause = ms => new Promise(r => setTimeout(r, ms));
 async function until(fn, label, timeout = 20000) {
   const deadline = Date.now() + timeout;
@@ -98,6 +98,7 @@ try {
       const call = pending.get(message.id); pending.delete(message.id);
       if (message.error) call.reject(new Error(message.error.message)); else call.resolve(message.result);
     } else if (message.method === "Runtime.exceptionThrown") exceptions.push(message.params.exceptionDetails);
+    else if (message.method === "Network.requestWillBeSent") requests.push(message.params.request);
     else if (message.method === "Network.loadingFailed" && !message.params.canceled) networkFailures.push(message.params);
     else if (message.method === "Fetch.requestPaused") {
       const requestId = message.params.requestId;
@@ -345,6 +346,41 @@ try {
   await until(() => evaluate("!document.querySelector('dialog')"), "generic setup closes");
   snapshotOverride = null; await send("Fetch.disable");
   console.log("PASS arbitrary services, stores, formats and snapshots drive titles, labels and the expandable inventory");
+
+  // MCP links must open the server-held investigation without creating or checking another one.
+  const original = "Clarify the MCP handoff scope before changing Cart.";
+  const created = await (await fetch(`${base}/api/investigations`, { method: "POST",
+    headers: { "Content-Type": "application/json" }, body: JSON.stringify({ request_text: original }) })).json();
+  const answered = await (await fetch(`${base}/api/investigations/${created.id}/answer`, { method: "POST",
+    headers: { "Content-Type": "application/json" }, body: JSON.stringify({ answer: "Keep Checkout 2.1." }) })).json();
+  const handoffStart = requests.length;
+  await send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
+  await send("Page.navigate", { url: `${base}/?investigation=${created.id}` });
+  await until(() => evaluate("!!document.querySelector('#confirm-button')"), "MCP handoff selects latest proposal");
+  assert.equal(await evaluate("location.hash"), `#investigation/${created.id}`);
+  assert((await body()).includes(original));
+  assert((await body()).includes(answered.plan_hash), "full hash is visible before confirmation");
+  await evaluate("[...document.querySelectorAll('.request-summary summary')].find(n=>n.textContent.includes('Investigation details')).click()");
+  assert((await evaluate("document.querySelector('.request-summary').textContent")).includes(answered.request_text));
+  await clickText("Attempt 1"); await waitText("Clarified scope");
+  await clickText("View proposal"); await until(() => evaluate("!!document.querySelector('#confirm-button')"), "earlier clarification returns to latest plan");
+  await click("#refresh-investigation"); await idle();
+  const handoffRequests = requests.slice(handoffStart).filter(r => r.url.includes("/api/"));
+  assert(handoffRequests.every(r => r.method === "GET"), "handoff and refresh are read only");
+  assert.equal(handoffRequests.filter(r => r.url.endsWith(`/api/investigations/${created.id}`)).length, 2);
+  await confirm();
+  assert(requests.some(r => r.method === "POST" && r.url.endsWith(`/plans/${answered.plan_hash}/confirm-scope`)));
+  console.log("PASS MCP handoff, read-only refresh, earlier clarification and exact-hash confirmation on the modular UI");
+
+  for (const [selector, guidance] of [["invalid", "Invalid investigation link"], ["0".repeat(32), "lost when the API restarted"]]) {
+    const before = requests.length;
+    await send("Page.navigate", { url: `${base}/?investigation=${selector}` });
+    await waitText(guidance);
+    const calls = requests.slice(before).filter(r => r.url.includes("/api/"));
+    assert(calls.every(r => r.method === "GET"));
+    if (selector === "invalid") assert(!calls.some(r => r.url.includes("/api/investigations/")));
+  }
+  console.log("PASS invalid and expired MCP handoffs show recovery guidance without mutations");
   assert.equal(exceptions.length, 0, JSON.stringify(exceptions, null, 2));
   assert.equal(networkFailures.length, 0, JSON.stringify(networkFailures, null, 2));
   console.log(`PASS no browser exceptions or failed resource requests · ${version.Browser}`);

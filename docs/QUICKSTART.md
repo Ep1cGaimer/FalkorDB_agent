@@ -19,15 +19,8 @@ Expected durations are for the reference machine (Windows 11, Docker Desktop, uv
 ## 1. Clone the branch
 
 ```sh
-git clone --branch build/slice-2 https://github.com/Ep1cGaimer/FalkorDB_agent.git rollbackwitness
+git clone https://github.com/Ep1cGaimer/FalkorDB_agent.git rollbackwitness
 cd rollbackwitness
-```
-
-Until that branch is pushed, clone from a local checkout instead (this is exactly what the
-reproducibility check in this task did):
-
-```sh
-git clone --branch build/slice-2 C:\path\to\FalkorDB_agent %TEMP%\rw-clone
 ```
 
 The clone has no `.env` (git-ignored). That only matters for the optional live steps in §6; the whole
@@ -68,8 +61,13 @@ the test runner is pinned in the setup script so this quickstart needs no extra 
 uv cache lives inside the checkout (`.uv-cache/`, git-ignored). `setup.sh` also picks the interpreter
 uv created for the host OS — `.venv/Scripts/python.exe` on Windows (including Git Bash / MSYS),
 `.venv/bin/python` elsewhere — so the same script works from Git Bash. `falkordb==1.8.0`,
-`redis==8.1.0` and `pydantic==2.14.1` are pinned in `pyproject.toml`; `fastapi`, `uvicorn` and `httpx`
-are not pinned there and resolve to current releases.
+`redis==8.1.0`, `pydantic==2.14.1`, `fastapi==0.143.2`, `starlette==1.8.0`,
+`uvicorn==0.54.0` and `httpx==0.28.1` are pinned in `pyproject.toml`.
+
+For the optional local MCP bridge, add `--mcp` to the POSIX setup command or `-Mcp` to PowerShell.
+This installs official `mcp==2.3.0` alongside the unchanged runtime pins. The host launches
+`scripts/serve_mcp.py` as a separate stdio process while the HTTP API runs with one worker.
+See [MCP.md](MCP.md) for absolute-path host configuration and the human handoff workflow.
 
 ## 4. Run the tests
 
@@ -77,11 +75,8 @@ are not pinned there and resolve to current releases.
 .venv\Scripts\python.exe -m pytest -q -m "not live"
 ```
 
-Expected (needs the container from §2):
-
-```text
-229 passed, 3 deselected, 1 warning in 20.31s
-```
+The suite needs the container from §2. See [STATUS.md](STATUS.md) for current observed base and
+MCP-enabled counts; SDK-dependent tests explicitly skip when the optional extra is absent.
 
 The 3 deselected tests call the live model provider and need `GROQ_API_KEY` (§6).
 

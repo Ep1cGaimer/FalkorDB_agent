@@ -1,12 +1,72 @@
 # Build status
 
-Updated 2026-10-16 (issue-fix wave #1/#5–#8 merged and reviewed; non-live suite, smoke and live demo
-re-run at HEAD `5829810`; partial live grounding eval). Each row names the task that ran it.
-Product: **RollbackWitness**, build mode, branch `build/slice-2`. Synthetic fixture only — no
-production data, no deployment, nothing published or submitted.
+Updated 2026-10-17 (PR #16 reviewer fixes; earlier dated evidence is preserved below).
+Product: **RollbackWitness**, build mode. Current implementation branch: `feat/mcp-http-bridge`,
+rebased onto `main` at `1f51cfc` after PR #15 merged. The unrelated `d311456` documentation commit
+from PR #14 is excluded. Synthetic fixture only — no production data or product deployment.
 
 Every row below is a command that was actually run, with its observed output. Nothing here is a plan
 or an estimate.
+
+## MCP exposure — 2026-10-17
+
+Implemented six optional stdio tools through the existing single-worker HTTP API, strict transport
+contracts, bounded lists/client/result sizes, human review links, setup opt-in and base/MCP CI.
+Canonical domain models, hashes, checker, probes, provider routing, fixture bytes, oracle cases and
+SQLite schema are unchanged. See [MCP.md](MCP.md) for installation and operational limits.
+
+Initial implementation evidence, before PR #15 and the reviewer fixes, observed locally on
+**macOS 27.0.1 arm64, Python 3.12.13**:
+
+| Check | Observed result |
+|---|---|
+| Pre-change baseline | `.venv/bin/python -m pytest -q -m 'not live' --tb=short`: **295 passed, 3 deselected**. |
+| Fresh dependency environment | `/tmp/rw-mcp-compat`: resolved/installed **mcp 2.3.0**, mcp-types 2.3.0, httpx2 2.13.1 alongside unchanged Pydantic 2.14.1, FastAPI 0.143.2, Starlette 1.8.0, httpx 0.28.1, Uvicorn 0.54.0, FalkorDB 1.8.0, Redis 8.1.0 and pytest 9.1.1. |
+| Base-only non-live suite | `.venv/bin/python -m pytest -q -m 'not live' --tb=short`: **409 passed, 3 skipped, 3 deselected**. Three SDK-dependent modules explicitly skip without the optional extra; no unconditional MCP import was added to existing application/CLI modules. |
+| MCP-enabled non-live suite | `/tmp/rw-mcp-compat/bin/python -m pytest -q -m 'not live' --tb=short --junitxml=/tmp/rw-mcp-results.xml`: **448 passed, 3 deselected**, zero skips. Includes HTTP contracts, JS handoff/matcher, bridge transport/errors/budgets/concurrency, exact composed-text boundaries, canonical integrity tampering, multiple distinct receipts with FAIL dominance, zero-obligation bindings, replay, clarification, partial/orphan evidence and full human action flow. |
+| Deterministic smoke | `/tmp/rw-mcp-compat/bin/python scripts/smoke.py`: **8/8 checks PASS**, exit 0; BLOCKED approval refusal, BOUNDED_PASS alternative, simulation true/false idempotency, partial/orphan evidence, isolated `rw_smoke_5143a584` graph cleanup. No model calls. |
+| Actual stdio subprocess | Official SDK ClientSession with **2026-07-28 discovery** and **2025-11-25 initialization**, launched from a temporary cwd: exactly six tools, outputSchema/local refs, text/structuredContent parity, strict arguments, tool/protocol errors, no backend access on discovery, missing backend, clean EOF, JSON-only stdout and stderr-only setup diagnostics. A near-limit result test measures SDK text duplication and escaping (under 512 KiB total serialization for the exercised escaped payload). |
+| Setup from arbitrary cwd | Default `setup.sh` followed by `setup.sh --mcp`, invoked from `/tmp` against a temporary checkout containing the setup files and pyproject: both exit 0, exact pins verified. The project's existing base `.venv` was preserved. |
+| Browser handoff | Real Helium browser on an isolated API at port 8123: MCP-created ID loads original/current request, labels and fleet; page load/refresh log only GETs after initial creation. Human confirmation yields exact-plan BLOCKED evidence/witness; alternative selects a fresh unverified candidate. Temporary ledger and unique `rw_test_browser_7a0b96510fa143e18cb438d862d281c0` graph; API stopped and graph deleted. Focused Node tests also cover malformed/unknown links, refresh, latest selection, earlier attempts and exact displayed/submitted plan hash. |
+| Static checks | `git diff --check`, Python compileall, `sh -n scripts/setup.sh`, workflow YAML parse: pass. |
+
+Tests initially failed under sandbox-denied localhost access; the results above used permitted local
+network access to the existing FalkorDB. No live provider evaluation was rerun. Windows setup/stdin
+lifecycle and Linux CI execution have **not been observed locally**; the workflow now includes both
+Linux install modes and a Windows PowerShell/stdio job. PR #16 at `f5afcbb` passed both Linux
+install modes, Windows MCP checks and GitGuardian.
+These are the pre-rebase results; the reviewer-fix revision needs a fresh CI run after pushing.
+
+### Reviewer-fix validation — 2026-10-17
+
+- MCP-enabled suite: `/tmp/rw-mcp-compat/bin/python -m pytest -q -m 'not live' --tb=short` →
+  **460 passed, 3 deselected**, zero skips.
+- Base suite: `.venv/bin/python -m pytest -q -m 'not live' --tb=short` →
+  **421 passed, 3 skipped, 3 deselected**; skips are the three optional SDK modules.
+- Deterministic smoke: `/tmp/rw-mcp-compat/bin/python scripts/smoke.py` → **8/8 PASS**, graph
+  `rw_smoke_587dfea2` cleaned up. No live provider calls.
+- Added compatibility checks compare `Investigation.public()` against the strict response schema
+  and HTTP output through clarification, verification, alternatives, approval and repeat simulation.
+- Browser acceptance: `UI_BROWSER_BINARY=/Applications/Helium.app/Contents/MacOS/Helium node
+  tests/ui/check.mjs` passed the existing flow and new handoff/refresh, earlier clarification,
+  exact-hash confirmation and invalid/expired-link cases. Zero browser exceptions or failed
+  resource requests. One existing replay-clarification case skipped because no matching saved
+  answer was available; deterministic clarification and its handoff were exercised.
+- Static checks: `git diff --check`, Python compileall, shell syntax, Node module syntax and
+  Ruby YAML parsing of the workflow all passed.
+
+### PR review status
+
+[PR #16](https://github.com/Ep1cGaimer/FalkorDB_agent/pull/16) is open. The reviewer requested
+removing PR #14's unrelated commit, response-schema compatibility coverage, shared bridge constants,
+explicit HTTP behavior-change documentation, porting handoff to PR #15's modules and this status update.
+PR #15 merged at `1f51cfc`; PRs #14 and #13 remain open as of this review. The unrelated PR #14
+commit was dropped rather than waiting for its merge. No merge or review approval has been submitted.
+
+The pre-fix head `f5afcbb` passed GitHub CI: `test (false)`, `test (true)`, `mcp-windows` and
+GitGuardian. Required-check policy has not been verified. Next action: publish the reviewer fixes,
+inspect the new CI results and obtain reviewer approval before merging.
+Local workflow identity remains unauthenticated and single-operator.
 
 ## Verified (commands actually run)
 

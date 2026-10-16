@@ -17,6 +17,9 @@ concurrency:
 
 jobs:
   test:
+    strategy:
+      matrix:
+        mcp: [false, true]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -40,10 +43,17 @@ jobs:
           node-version: "24"
 
       - name: Set up environment (Python 3.12 via uv)
-        run: sh scripts/setup.sh
+        run: sh scripts/setup.sh ${{ matrix.mcp && '--mcp' || '' }}
 
       - name: Offline test suite (live-model tests excluded)
         run: .venv/bin/python -m pytest -q -m "not live"
+
+      - name: Assert optional SDK tests execute
+        if: matrix.mcp
+        run: |
+          .venv/bin/python -c "import mcp; from importlib.metadata import version; assert version('mcp') == '2.3.0'"
+          .venv/bin/python -m pytest tests/test_mcp.py tests/test_mcp_integration.py tests/test_mcp_stdio.py -q --junitxml=mcp-results.xml
+          .venv/bin/python -c "import xml.etree.ElementTree as E; s=E.parse('mcp-results.xml').find('testsuite'); assert int(s.get('tests')) > 0 and int(s.get('skipped')) == 0"
 
       - name: Deterministic end-to-end smoke (no model key)
         run: .venv/bin/python scripts/smoke.py
@@ -65,7 +75,21 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: browser-diagnostics
+          name: browser-diagnostics-${{ matrix.mcp }}
           path: |
             artifacts/ui-server.log
             artifacts/screens/decision-review/
+
+  mcp-windows:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install optional SDK through PowerShell setup
+        run: powershell -ExecutionPolicy Bypass -File scripts/setup.ps1 -Mcp
+      - name: Portable bridge, SDK, stdio and UI contracts (no FalkorDB or model)
+        run: .venv/Scripts/python.exe -m pytest tests/test_mcp_client.py tests/test_mcp.py tests/test_mcp_stdio.py tests/test_ui_matcher.py -q

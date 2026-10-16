@@ -36,6 +36,8 @@ export function topbar(s, a) {
       "aria-label": "Back to previous view" }) : null,
     el("strong", { class: "topbar-title" }, "Rollback review")),
     el("div", { class: "topbar-actions" }, el("span", { class: "context-tag" }, sourceLabel(contextFor(s))),
+      s.inv ? button("Refresh investigation", a.refreshInvestigation,
+        { id: "refresh-investigation", variant: "ghost", disabled: !!s.busy }) : null,
       el("span", { class: `mode-label ${live ? "live" : "replay"}` }, el("span", { class: `dot ${live ? "live" : "replay"}` }), runLabel(s), explainButton(a, "mode")),
       !s.inv ? button(icon("sliders"), () => a.openOverlay("settings"),
         { id: "settings-trigger", variant: "icon-only", "aria-label": "Demo setup", title: "Demo setup", disabled: !!s.busy }) : null)];
@@ -112,6 +114,7 @@ function fleetPanel(s, a, attempt) {
   const rationale = !attempt.report && attempt.grounding.result.rationale
     ? el("p", { class: "fleet-rationale" }, attempt.grounding.result.rationale) : null;
   return panel("Proposed changes", "Installed version → proposed version. Feature settings can change without installing an older version.", [table, rationale,
+    el("p", { class: "small subtle", style: "overflow-wrap:anywhere" }, "Exact plan hash: ", attempt.plan_hash),
     el("div", { class: "panel-footer" }, button("Cited sources", () => a.openOverlay("sources"), { variant: "link", symbol: "file" }),
       !attempt.report ? button("Confirm & run checks", () => a.confirm(attempt),
         { id: "confirm-button", "data-action": "confirm", disabled: !!s.busy, symbol: "shield" }) : null)], explainButton(a, "versions"));
@@ -210,7 +213,12 @@ function activeReview(s, a) {
   const request = el("div", { class: "request-summary" }, icon("rollback"),
     el("div", {}, s.inv.original_request_text || s.inv.request_text.split("\n\nAgent asked:")[0],
       s.inv.answered ? details("Clarified scope", el("p", { class: "small subtle" },
-        s.inv.request_text.split("\nOperator answered: ").slice(1).join("\nOperator answered: "))) : null));
+        s.inv.request_text.split("\nOperator answered: ").slice(1).join("\nOperator answered: "))) : null,
+      details("Investigation details", el("p", { class: "small subtle" }, s.inv.id),
+        el("p", { class: "small subtle" }, "Current request: ", s.inv.request_text)),
+      s.inv.attempts.length > 1 ? el("div", { class: "row", "aria-label": "Investigation attempts" },
+        s.inv.attempts.map((attempt, index) => button(attempt.plan?.label || `Attempt ${index + 1}`, () => a.selectAttempt(index),
+          { variant: "ghost", "aria-pressed": String(s.attemptIndex === index), disabled: !!s.busy }))) : null));
   if (attempt.clarification) main.append(clarificationPanel(s, a, attempt));
   else if (attempt.validation_errors.length || !attempt.plan) main.append(panel("Proposal could not be accepted", "Nothing was checked.",
     el("div", { class: "panel-body" }, attempt.validation_errors.map(error => el("p", { class: "small subtle" }, error)))));

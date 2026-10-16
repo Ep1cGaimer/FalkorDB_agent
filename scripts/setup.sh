@@ -35,7 +35,11 @@ else
     exit 1
 fi
 
-uv pip install --python "$venv_python" -r pyproject.toml
+case "${1:-}" in
+    "") uv pip install --python "$venv_python" -r pyproject.toml ;;
+    --mcp) uv pip install --python "$venv_python" -r pyproject.toml --extra mcp ;;
+    *) echo "Usage: sh scripts/setup.sh [--mcp]" >&2; exit 2 ;;
+esac
 # pyproject.toml declares runtime dependencies only. The test runner is pinned here so the non-live
 # suite in docs/QUICKSTART.md runs in a fresh clone with no extra manual install.
 uv pip install --python "$venv_python" "pytest==9.1.1"
