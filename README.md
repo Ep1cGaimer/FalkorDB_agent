@@ -44,7 +44,7 @@ For the free-tier operating choice and the browser check of the sanitized quota 
 Full instructions: [docs/QUICKSTART.md](docs/QUICKSTART.md). Short version (Windows shown; `sh scripts/setup.sh` on Linux/macOS/Git Bash):
 
 ```powershell
-docker compose up -d                                              # FalkorDB 6.0.2 on 127.0.0.1:6379
+docker compose up -d --wait                                       # FalkorDB 6.0.2 on 127.0.0.1:6379, waits until healthy
 powershell -ExecutionPolicy Bypass -File scripts\setup.ps1         # .venv with Python 3.12 via uv
 .venv\Scripts\python.exe -m pytest -q -m "not live"               # offline test suite
 .venv\Scripts\python.exe scripts\smoke.py                          # end-to-end check, no model key needed

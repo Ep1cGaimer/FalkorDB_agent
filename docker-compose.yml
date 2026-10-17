@@ -4,7 +4,7 @@
 # (FalkorDB 6.0.2, graph module ver 60002, Redis 8.10.2 — see docs/CONTRACTS.md "Verified runtime").
 # Ports are bound to 127.0.0.1 only; nothing is exposed to the network.
 #
-#   docker compose up -d        # start
+#   docker compose up -d --wait # start and wait until the server answers PING (healthcheck below)
 #   docker compose ps           # expect: rw-falkordb ... 127.0.0.1:6379->6379, 127.0.0.1:3000->3000
 #   docker compose down         # stop
 services:
@@ -14,3 +14,8 @@ services:
     ports:
       - "127.0.0.1:6379:6379"
       - "127.0.0.1:3000:3000"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 30

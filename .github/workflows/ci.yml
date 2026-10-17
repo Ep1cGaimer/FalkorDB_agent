@@ -80,17 +80,21 @@ jobs:
             artifacts/ui-server.log
             artifacts/screens/decision-review/
 
+  # The single required check. It covers the full Linux suite (base and MCP legs, real FalkorDB,
+  # smoke, browser acceptance) and the Windows job (PowerShell setup plus the portable MCP/UI
+  # contracts; Windows runners cannot host the Linux FalkorDB container).
   test-required:
     name: test
-    needs: test
+    needs: [test, mcp-windows]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 1
     steps:
-      - name: Require both matrix legs to pass
+      - name: Require the Linux matrix and the Windows job to pass
         env:
           MATRIX_RESULT: ${{ needs.test.result }}
-        run: test "$MATRIX_RESULT" = success
+          WINDOWS_RESULT: ${{ needs.mcp-windows.result }}
+        run: test "$MATRIX_RESULT" = success && test "$WINDOWS_RESULT" = success
 
   mcp-windows:
     runs-on: windows-latest

@@ -33,11 +33,15 @@ deterministic acceptance proof run without any credential.
 ## 2. Start FalkorDB
 
 ```sh
-docker compose up -d
+docker compose up -d --wait
 docker compose ps
 ```
 
-Expected: one container `rw-falkordb`, image
+`--wait` returns once the container's healthcheck (`redis-cli ping`) passes, so the next steps never
+race a starting server. Docker Desktop (or another Docker engine) must already be running. If
+FalkorDB is not reachable, the test suite prints one warning at the start instead of failing quietly.
+
+Expected: one container `rw-falkordb` (status `healthy`), image
 `falkordb/falkordb:6.0.2@sha256:107455e862a824e45e8e9f5a7fbfdf5e00a08b14e13eae2577c72fd9e3f59ba6`,
 ports `127.0.0.1:6379->6379` and `127.0.0.1:3000->3000`.
 
@@ -83,6 +87,13 @@ The suite needs the container from §2. See [STATUS.md](STATUS.md) for current o
 MCP-enabled counts; SDK-dependent tests explicitly skip when the optional extra is absent.
 
 Live-marked tests call a model provider and need the selected provider's credential (§6).
+
+CI runs the same checks on every pull request. The single required check, `test`, passes only when:
+- the Linux jobs pass: the full suite with and without the MCP extra against the pinned FalkorDB
+  service, plus smoke and browser acceptance;
+- the Windows job passes: PowerShell setup with `-Mcp` and the portable MCP/UI contract tests.
+  Hosted Windows runners can't run the Linux FalkorDB container, so graph-backed tests run on Linux
+  only.
 
 Two more checks that need **no model at all**:
 
