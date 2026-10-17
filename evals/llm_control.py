@@ -68,7 +68,7 @@ MAX_RESULT_CHARS = 20000
 
 DISPOSITIONS = ("BLOCKED", "NEEDS_EVIDENCE", "BOUNDED_PASS")
 PROBE_TOOL = "run_reader_probe"
-TERMINAL_TOOL = "final_answer"
+TERMINAL_TOOL = "submit_assessment"
 TOOLS = (PROBE_TOOL, TERMINAL_TOOL)
 
 SYSTEM_PROMPT = """You are the grounding step of RollbackWitness, a release-rollback safety tool.
@@ -87,7 +87,7 @@ Tools:
   reader raised while reading these bytes; error_type and message say why) or UNKNOWN (the harness
   could not load or call the reader; this is not an observed incompatibility). This is the only way
   to learn whether a reader can actually read retained bytes.
-- final_answer(fleet, disposition, evidence, alternative): TERMINAL. `fleet` lists every service in
+- submit_assessment(fleet, disposition, evidence, alternative): TERMINAL. `fleet` lists every service in
   the snapshot with the version you propose and any flags; `disposition` is BLOCKED, NEEDS_EVIDENCE
   or BOUNDED_PASS; `evidence` is a list of short strings naming what you observed and where it came
   from (a probe: reader identity and status; source text: the file and the line or function you
@@ -116,8 +116,10 @@ Rules:
 - `alternative`: at most ONE alternative fleet of existing artifacts, when the primary fleet is
   blocked or lacks evidence; omit it if you have no alternative.
 - If the request cannot be fully bound to one artifact, say so in the evidence, but you must still
-  call final_answer.
-You have at most 8 turns. Call tools; do not answer in prose."""
+  call submit_assessment.
+- Reuse probe results already returned in this conversation; do not repeat identical probes.
+You have at most 8 turns. Finish by calling the submit_assessment function through the tools API.
+A plain text message containing JSON is not a tool call. Do not answer in prose."""
 
 
 class ControlError(RuntimeError):
@@ -304,7 +306,7 @@ class FlatControlTools:
 
 _DISPATCH: dict[str, Callable[[FlatControlTools, dict], Any]] = {
     PROBE_TOOL: lambda t, a: t.run_reader_probe(a.get("service"), a.get("version"), a.get("record_id")),
-    # final_answer is terminal and handled by the loop, never dispatched as a plain tool call.
+    # submit_assessment is terminal and handled by the loop, never dispatched as a plain tool call.
 }
 
 
@@ -469,15 +471,16 @@ def _run_loop(request_text: str, tools: FlatControlTools, adapter: grounding.Pro
     turns = 0
 
     for turn in range(MAX_TURNS):
-        resp = transport(adapter.body(messages))
         turns += 1
+        resp = grounding.model_response(transport, adapter, messages, events, turn)
+        if resp is None:
+            continue
         events.append({"type": "model", "turn": turn, "response": _jsonable(resp)})
         text, calls, native = adapter.parse(resp)
         if not calls:
             messages.append({"role": "user", "text": "Respond only by calling a tool."})
             continue
-        # The assistant turn is kept verbatim: OpenAI-compatible providers require it (with its
-        # tool_calls) immediately before the matching tool replies; Gemini keeps its raw parts.
+        # Preserve tool-call IDs/arguments before replies; the provider adapter selects wire fields.
         messages.append({"role": "assistant", "native": native, "text": text})
         for call in calls:
             name, args = call.name, dict(call.args or {})
@@ -511,7 +514,7 @@ def _run_loop(request_text: str, tools: FlatControlTools, adapter: grounding.Pro
                 events.append({"type": "tool", "name": str(name)[:60], "args": _jsonable(args),
                                "error": "unknown tool"})
             messages.append(adapter.tool_message(call, payload))
-    return None, [f"CONTROL_ABORTED: no final_answer within {MAX_TURNS} model turns"], audit, events, turns
+    return None, [f"CONTROL_ABORTED: no {TERMINAL_TOOL} within {MAX_TURNS} model turns"], audit, events, turns
 
 
 def is_aborted(transcript: dict) -> bool:
@@ -566,13 +569,16 @@ def run_control(request_text: str = REQUEST, *, transport: Callable[[dict], dict
             answer, errors, audit, events, turns = _run_loop(request_text, tools, adapter, tr,
                                                              fixture_root, snapshot)
         except grounding.GroundingError as exc:
-            abandoned.append({"model": model, "error": str(exc)})
+            abandoned.append({"model": model, "error": grounding.provider_error_details(exc),
+                              "events": getattr(exc, "events", []),
+                              "transport_settings": getattr(tr, "settings", {}),
+                              "transport_trace": getattr(tr, "trace", [])})
             continue
         model_used = getattr(tr, "model_used", None) or model
         files = context_files(fixture_root, snapshot)
         transcript = {
             "control": "flat_context_no_graph",
-            "control_version": 2,
+            "control_version": 4,
             "request_text": request_text,
             "snapshot": snapshot.removeprefix("snapshot:"),
             "model": model_used,
@@ -584,6 +590,8 @@ def run_control(request_text: str = REQUEST, *, transport: Callable[[dict], dict
             "context_files": [{"path": p.relative_to(REPO_ROOT).as_posix(), "sha256": _sha256_bytes(p.read_bytes())}
                               for p in files],
             "events": events,
+            "transport_settings": getattr(tr, "settings", {}),
+            "transport_trace": getattr(tr, "trace", []),
             "tool_calls": audit,
             "model_turns": turns,
             "tool_call_count": len(audit),
@@ -599,13 +607,30 @@ def run_control(request_text: str = REQUEST, *, transport: Callable[[dict], dict
         }
         path = save_transcript(transcript, artifact_dir or CONTROL_DIR) if save else None
         return transcript, path
-    raise grounding.GroundingError("all models failed: "
-                                   + " | ".join(f"{a['model']}: {a['error']}" for a in abandoned))
+    message = "all models failed: " + " | ".join(f"{a['model']}: {a['error']}" for a in abandoned)
+    if save:
+        # Provider failures must not disappear from the dataset. Partial probe/event history is
+        # unavailable when a transport raises; say so instead of fabricating zero observed work.
+        path = save_transcript({"control": "flat_context_no_graph", "control_version": 4,
+                                "request_text": request_text, "snapshot": snapshot.removeprefix("snapshot:"),
+                                "model": abandoned[-1]["model"] if abandoned else "unknown", "live": True,
+                                "temperature": TEMPERATURE, "max_turns": MAX_TURNS, "system_prompt": SYSTEM_PROMPT,
+                                "result": None, "aborted": True, "partial_evidence_unavailable": True,
+                                "validation_errors": [message], "abandoned": abandoned,
+                                "events": abandoned[-1].get("events", []) if abandoned else [],
+                                "tool_calls": [], "probe_calls": [], "model_turns": None},
+                               artifact_dir or CONTROL_DIR)
+        message += f"; failure transcript: {path}"
+    last_error = abandoned[-1]["error"] if abandoned else {}
+    raise grounding.GroundingError(message, status=last_error.get("status"),
+                                  code=last_error.get("code", "provider_error"))
 
 
 def main(argv: list[str] | None = None) -> int:
     import argparse
+    from rw.config import load_env
 
+    load_env()
     ap = argparse.ArgumentParser(description="Flat-context LLM control (no graph). One live run.")
     ap.add_argument("--request", default=REQUEST)
     ap.add_argument("--snapshot", default=DEFAULT_SNAPSHOT)

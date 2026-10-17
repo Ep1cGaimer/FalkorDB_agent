@@ -301,7 +301,7 @@ def _turns_from_grounding_transcript(path: str | None) -> int | None:
     except (OSError, ValueError):
         return None
     events = data.get("events") or []
-    return sum(1 for e in events if e.get("type") == "model") or None
+    return sum(1 for e in events if e.get("type") in {"model", "model_error"}) or None
 
 
 def runs_from_report(report: dict, fixtures: dict, manifest: dict) -> list[dict]:
