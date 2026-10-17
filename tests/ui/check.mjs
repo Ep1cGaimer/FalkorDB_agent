@@ -27,9 +27,15 @@ let ws, sequence = 0, snapshotOverride = null;
 const pending = new Map(), exceptions = [], networkFailures = [], requests = [];
 const pause = ms => new Promise(r => setTimeout(r, ms));
 async function until(fn, label, timeout = 20000) {
+  // Page-side errors while the document is still loading (e.g. document.body is null right after
+  // navigation) are retried like a falsy result; the last one is reported if the wait times out.
   const deadline = Date.now() + timeout;
-  while (Date.now() < deadline) { const value = await fn(); if (value) return value; await pause(100); }
-  throw new Error(`Timed out: ${label}`);
+  let lastError;
+  while (Date.now() < deadline) {
+    try { const value = await fn(); if (value) return value; } catch (error) { lastError = error; }
+    await pause(100);
+  }
+  throw new Error(`Timed out: ${label}${lastError ? ` (last error: ${lastError.message})` : ""}`);
 }
 function send(method, params = {}) {
   return new Promise((resolveCall, reject) => {
