@@ -64,12 +64,35 @@ def call(_name, **args):
     return {"candidates": [{"content": {"role": "model", "parts": [{"functionCall": {"name": _name, "args": args}}]}}]}
 
 
+def scripted_intent(body, provider="gemini"):
+    """Resolve intent synthetically so existing tests isolate artifact-loop behavior.
+
+    These scripted decisions are not evidence of semantic judgment; dedicated gate and live tests
+    exercise the intent phase itself.
+    """
+    if provider == "groq":
+        names = [t["function"]["name"] for t in body.get("tools", [])]
+        request = body["messages"][1]["content"]
+        render = groq_call
+    else:
+        names = [t["name"] for t in body.get("tools", [{}])[0].get("functionDeclarations", [])]
+        request = body["contents"][0]["parts"][0]["text"]
+        render = call
+    if names == ["assess_intent"]:
+        return render("assess_intent", status="READY", identifiers=[request], unresolved=[], question="")
+
+
 class ScriptedTransport:
     def __init__(self, responses):
         self.responses = list(responses)
         self.bodies = []
+        self.intent_bodies = []
 
     def __call__(self, body):
+        response = scripted_intent(body)
+        if response:
+            self.intent_bodies.append(body)
+            return response
         self.bodies.append(json.loads(json.dumps(body)))
         return self.responses.pop(0) if self.responses else call("current_fleet")
 
@@ -114,9 +137,14 @@ class FakeGroqTransport:
     def __init__(self, responses, model=GROQ_MODEL):
         self.responses = list(responses)
         self.bodies: list[dict] = []
+        self.intent_bodies = []
         self.model_used = model
 
     def __call__(self, body):
+        response = scripted_intent(body, "groq")
+        if response:
+            self.intent_bodies.append(body)
+            return response
         self.bodies.append(json.loads(json.dumps(body)))
         if not self.responses:
             raise AssertionError("fake Groq script exhausted")
@@ -216,7 +244,7 @@ def test_two_invalid_terminal_calls_keep_validation_errors(tmp_path):
 
 def test_turn_cap_aborts_without_proposal(tmp_path):
     gr, _, _, t = run([call("current_fleet")] * 20, tmp_path)
-    assert len(t.bodies) == grounding.MAX_TURNS
+    assert len(t.bodies) + len(t.intent_bodies) == grounding.MAX_TURNS
     assert grounding.is_aborted(gr)
     assert not isinstance(gr.result, GroundingProposal)
 
@@ -276,16 +304,12 @@ def test_text_only_turn_is_nudged(tmp_path):
 
 def test_system_prompt_has_a_generic_ambiguity_rule_without_fixture_names():
     """Missing intent evidence requires clarification; resolved references can still be proposed."""
-    prompt = grounding.SYSTEM_PROMPT
+    prompt = grounding.SYSTEM_PROMPT + grounding.intent.SYSTEM_PROMPT
     assert "ask_clarification" in prompt
-    assert "only one plausible candidate" in prompt and "missing evidence is enough" in prompt
-    assert "Never discard an unsupported time qualifier" in prompt
-    assert "including flag-only mitigations" in prompt
-    assert "Build timestamps, recency, history order, or an assumed calendar anchor" in prompt
-    assert "actual unresolved request" in prompt
-    assert "explicit artifact or an evidence-supported behavioral relationship" in prompt
-    assert "retrieved history cannot supply an identity the operator omitted" in prompt
-    assert "without an unnecessary time question" in prompt and "operator answer" in prompt
+    assert "Do not invent" in prompt and "only one candidate" in prompt
+    assert "no" in prompt and "calendar anchor" in prompt
+    assert "VERBATIM" in prompt and "operator answer" in prompt
+    assert "relationship to a named behavior" in prompt and "unnecessary time question" in prompt
     assert "across the relevant services" in prompt and "Retaining downstream support" in prompt
     lowered = prompt.lower()
     for fixture_word in ("cart", "checkout", "basket", "saved-cart", "receipt correction",
@@ -458,7 +482,8 @@ def test_groq_tool_call_round_trip_to_proposal(tmp_path):
     assert "untrusted" in json.loads(second[-1]["content"])["note"]
     saved = json.loads(path.read_text())
     assert saved["provider"] == "groq" and saved["model"] == GROQ_MODEL
-    assert [e["type"] for e in saved["events"]] == ["model", "tool", "model", "terminal"]
+    assert [e["type"] for e in saved["events"] if e.get("phase") != "intent"] == [
+        "model", "tool", "model", "terminal"]
 
 
 def test_groq_unknown_tool_and_extra_args_never_reach_tools(tmp_path):
@@ -509,6 +534,9 @@ def test_groq_chain_fallback_restarts_whole_conversation(tmp_path):
         n = []
 
         def tr(body):
+            response = scripted_intent(body, "groq")
+            if response:
+                return response
             bodies.setdefault(spec, []).append(body)
             n.append(1)
             if spec == "groq:m1":
@@ -538,6 +566,9 @@ def test_groq_transport_pins_tls_and_never_leaks_the_key(tmp_path, monkeypatch):
     seen: dict = {}
 
     def fake_post(url, **kw):
+        response = scripted_intent(kw["json"], "groq")
+        if response:
+            return httpx.Response(200, json=response)
         seen["url"] = url
         seen.update(kw)
         return httpx.Response(200, json=groq_call("ask_clarification", call_id="c1", question="q",
@@ -592,9 +623,10 @@ def test_groq_replay_replays_in_openai_format(tmp_path, monkeypatch):
     replayed: list[dict] = []
 
     class SpyGroq(grounding.GroqProvider):
-        def body(self, messages):
-            body = super().body(messages)
-            replayed.append(body)
+        def body(self, messages, **kwargs):
+            body = super().body(messages, **kwargs)
+            if not kwargs:
+                replayed.append(body)
             return body
 
     monkeypatch.setitem(grounding.PROVIDERS, "groq", SpyGroq())
@@ -774,6 +806,9 @@ def test_restart_whole_conversation_with_next_model(tmp_path):
         n = []
 
         def tr(body):
+            response = scripted_intent(body)
+            if response:
+                return response
             bodies.setdefault(model, []).append(len(body["contents"]))
             n.append(1)
             if model == "m1":

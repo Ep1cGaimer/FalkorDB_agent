@@ -299,6 +299,21 @@ identity mismatch and never FAILs from its own checks.
 
 A provider-neutral bounded tool loop (≤ 8 model turns) over the read-only tools `current_fleet`, `release_history`, `store_readers`, `get_excerpts` and the terminal tools `propose_fleet(changes, citations, rationale)` / `ask_clarification(question, unresolved, citations)`. Returns `GroundingResult`. Read tools, argument validation, citation hashing, the audit trail and terminal validation are written once and shared; only conversation rendering and response parsing differ per provider. A terminal call whose only failures are citation-check errors (`CITATION_*`) earns one correction round: the loop stays open and that model gets the exact failures plus the quoting rule so it can resend verbatim quotes. A second invalid terminal call ends the loop as before, and the round is recorded as a `citation_correction` event in the transcript/audit.
 
+Before artifact selection, `src/rw/intent.py` defines a request-only assessment. That conversation
+exposes only `assess_intent(status, identifiers, unresolved, question)`, without release history,
+tool results, or a previous candidate's checker context. Trusted validation requires exact request
+spans and consistent `READY`/`CLARIFY` fields. `CLARIFY` returns a question without any artifact
+reads or proposal; malformed decisions, premature tools, or parallel calls cannot open artifact
+selection. One correction is allowed, within the same eight-call budget. Two invalid assessments
+abort with `GROUNDING_ABORTED`; transport failure restarts both phases on the next provider.
+`READY` permits artifact search, not compatibility, approval, or deployment. Intent classification
+remains model judgment; structural validation is not a proof of semantic correctness.
+
+New transcripts carry `intent_version: 1`, the intent prompt hash, and intent-phase model/decision
+events. Replay revalidates those decisions before replaying artifact calls. Legacy transcripts
+without that marker preserve their historical behavior, including old guessed proposals, and
+remain explicitly labeled `live=False`; they do not measure the current intent assessment.
+
 Providers are chosen by `RW_GROUNDING_MODEL` (comma-separated `provider:model`; a bare entry means `gemini:`); the default chain is `groq:openai/gpt-oss-120b,groq:qwen/qwen3.8-27b`.
 
 - `groq` — OpenAI-compatible Chat Completions (`GROQ_API_KEY`, Bearer header only), `tool_choice: "auto"`, temperature 0. The assistant message with its `tool_calls` is replayed verbatim before the matching tool replies.
