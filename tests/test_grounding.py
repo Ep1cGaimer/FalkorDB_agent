@@ -312,6 +312,7 @@ def test_system_prompt_has_a_generic_ambiguity_rule_without_fixture_names():
     assert "build BEFORE a NAMED_BEHAVIOR" in prompt and "unnecessary time question" in prompt
     assert "across the relevant services" in prompt and "Retaining downstream support" in prompt
     assert "A flag on the current build is not an earlier" in prompt
+    assert "feature/change TITLE" in prompt and "enough to SEARCH" in prompt
     lowered = prompt.lower()
     for fixture_word in ("cart", "checkout", "basket", "saved-cart", "receipt correction",
                          "1.4", "1.5", "snap-001"):

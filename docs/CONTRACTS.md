@@ -303,7 +303,8 @@ Before artifact selection, `src/rw/intent.py` defines a request-only assessment.
 exposes only `assess_intent(references, question)`, without release history,
 tool results, or a previous candidate's checker context. Trusted validation requires exact request
 spans, reference types (named behavior, explicit artifact, unresolved), and relationships (at,
-before, after). Trusted code derives `READY`/`CLARIFY`: any unresolved reference requires a
+before, after). Named feature/rollout/fix titles are sufficient to search; their implementing
+artifacts need not be identified in advance. Trusted code derives `READY`/`CLARIFY`: any unresolved reference requires a
 question, while fully named references require artifact search rather than a question about which
 build implements them. `CLARIFY` returns a question without any artifact
 reads or proposal; malformed decisions, premature tools, or parallel calls cannot open artifact

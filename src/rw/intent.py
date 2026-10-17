@@ -18,7 +18,10 @@ behavior to keep; one named keep-behavior does not resolve a different vague und
 
 Call assess_intent with references and question. For each reference, copy its phrase VERBATIM from
 what the OPERATOR said and assign:
-- NAMED_BEHAVIOR: an actual behavior named by the operator. It need not be familiar to you.
+- NAMED_BEHAVIOR: a feature, rollout, fix, or behavior the operator names. A feature/change TITLE
+  is enough to SEARCH, even when unfamiliar or not described in implementation detail. For example,
+  'undo the prefix-matching rollout' names a behavior; do not demand its version or date first.
+  Whether the named feature exists and which artifact implements it are later artifact questions.
 - EXPLICIT_ARTIFACT: an operator-specified release, version, build identifier, or anchored build time.
 - UNRESOLVED: only a generic change/update or vague time reference identifies the intended change.
   A service name does not identify its change. Never guess an omitted behavior from world knowledge.
