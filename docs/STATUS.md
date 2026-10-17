@@ -1,7 +1,7 @@
 # Build status
 
-Updated 2026-10-17 for PR #13, rebased on `main` including the completed issue #2 report,
-UI changes and MCP bridge. Earlier dated evidence is preserved below. Product: **RollbackWitness**,
+Updated 2026-10-17. Describes `main` after PRs #13–#16 and #18 (issue #2 live evaluation, UI
+rewrite, MCP bridge, Groq limit handling). Earlier dated evidence is preserved below. Product: **RollbackWitness**,
 synthetic fixture only — no production data or product deployment.
 
 For issue #3 and #4 work, see [the implementation report](ISSUE_3_FIX_REPORT.md) and

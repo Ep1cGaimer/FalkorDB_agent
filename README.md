@@ -87,7 +87,7 @@ tests/             unit, integration (live FalkorDB) and acceptance tests
 fixtures/shop/     synthetic releases (code + changelogs), snapshots, retained payloads, probe harness
 evals/             independent expected outcomes, SQL and LLM controls, grounding eval runner, reviews
 scripts/           setup, smoke, investigate (CLI), serve (UI), fixture builder
-docs/              QUICKSTART, CONTRACTS, ARCHITECTURE, STATUS
+docs/              QUICKSTART, CONTRACTS, ARCHITECTURE, STATUS, UI, MCP, PROJECT_GUIDE, issue #3/#4 reports
 ```
 
 Design questions and known gaps are tracked as repository issues (see GitHub Issues). HiveMind is a separate project; this repository does not build it.
