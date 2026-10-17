@@ -1,13 +1,84 @@
 # Build status
 
-Updated 2026-10-17 (PR #16 reviewer fixes and sync with current main; earlier dated evidence is preserved below).
-Product: **RollbackWitness**, build mode. Current implementation branch: `feat/mcp-http-bridge`,
-synced with `main` at `d4ad437`, including PRs #14, #15 and #18. The issue #2 evaluation from
-main is preserved below. Synthetic fixture only — no production data or product deployment.
+Updated 2026-10-17 (issue #17 intent validation; earlier dated evidence is preserved below).
+Product: **RollbackWitness**, build mode. Current implementation branch: `plan/issue-17-ambiguity`,
+synced with `main` at `bdeaaf6`, including PR #16. The issue #2 evaluation and historical MCP
+review status are preserved below. Synthetic fixture only — no production data or product deployment.
 
 
 Every row below is a command that was actually run, with its observed output. Nothing here is a plan
 or an estimate.
+
+## Issue #17: request intent before artifact selection — 2026-10-17
+
+The prompt-only implementation repeatedly guessed the rollback referent or over-clarified explicit
+controls in live tests. The operator therefore authorized extending the original implementation
+plan with structured intent validation. A separate request-only phase now extracts literal request
+references as named behaviors, explicit artifacts or unresolved references, preserving AT/BEFORE/AFTER
+relationships. It sees neither release candidates nor prior checker feedback. Trusted code validates
+the structure and literal spans and derives readiness; any unresolved reference returns a question
+before artifact tools become available. Two invalid assessments abort without artifact access.
+
+The same configured provider/model handles both phases; fallback starts a fresh assessment. Both
+phases share the existing eight-call budget. Explicit named-before-build requests can proceed to
+artifact search. Classification remains a model judgment, not a deterministic proof of intent.
+Public proposal/API schemas, fixtures, expectations, checker, approval and simulation are unchanged.
+
+Live provider investigation also exposed repeated code text and redundant metadata exceeding the
+existing fallback's request budget. History now includes changelog text plus code metadata; code
+text is retrieved explicitly with `get_excerpts`. Only fetched text can be quoted. Hashes and bound
+query parameters stay in the server audit and citation validation rather than repeated model context.
+Legacy replay remains supported, including the original three incorrectly guessed proposals.
+
+### Offline checks on application revision `7894075`
+
+Environment: isolated worktree, Python 3.12.13, MCP extra installed, dedicated local FalkorDB 6.0.2
+(pinned compose image), Redis 8.10.2. Commands used the worktree-local `.venv`.
+
+| Command | Observed result |
+|---|---|
+| `.venv/bin/python -m pytest -q -m 'not live'` | **508 passed, 9 deselected**, zero skips. |
+| `.venv/bin/python scripts/smoke.py` | **8/8 PASS**, graph `rw_smoke_1b586fa4` deleted; no model calls. |
+| `git diff --check` | Pass. |
+
+The 48 additional offline tests cover both adapters: unresolved intent stops before reads, malformed
+or invented references, readiness overrides, mixed named-keep/unresolved-undo, premature/parallel
+proposals, two-assessment bound, shared total budget, fresh fallback, named BEFORE relationships,
+v0/v1/v2 replay, code-on-demand citation correction, trusted hashes and metadata-named flags. The
+existing pipeline test caught a legacy string-log projection regression; it was fixed and the full
+suite rerun. Scripted responses test enforcement, not the model's semantic judgment.
+
+### Earlier attempts (separate from the final measurement)
+
+These local experiments were used to diagnose failures, not combined into a successful batch:
+
+- Initial prompt-only three-case regression: **2 passed, 1 failed**; ambiguous still proposed a
+  flag mitigation. Later prompt-only iterations also guessed or over-clarified explicit requests.
+- The last prompt-only six-case invocation was interrupted after **3 failed, 1 passed**; main
+  passed, ambiguous guessed, named-old-build over-clarified, and yesterday's unresolved span was
+  paraphrased rather than copied literally.
+- The initial readiness-judgment gate's six-case invocation had **3 passed, 3 failed**, including
+  provider failures and named-old-build over-clarification. It was replaced with typed references.
+- A request-only eight-case probe of the typed-reference design classified all eight as expected;
+  this was assessment-only and did not establish that complete proposals worked.
+- The first required 15-run invocation on `2547a39` was interrupted (exit 130) after repeated primary
+  daily-quota refusals and fallback HTTP 413 errors; **it was not a complete batch**. A later live
+  regression invocation was also interrupted while its first case waited on provider errors.
+- The complete nine-test live invocation on `7894075` had **7 passed, 2 failed**: named-old-build
+  proposed a flag-only mitigation instead of the earlier artifact; the separate flat-context
+  control was refused by both providers' daily quotas. Generic artifact-identity precedence was
+  added in `8baa3f3`; the semantic failure is not counted as a pass merely because its citations
+  validated. Raw log: `artifacts/grounding-eval/issue-17-live-final-regression.log` (local only).
+- The unchanged configured chain is `groq:openai/gpt-oss-120b,groq:qwen/qwen3.8-27b`. No credentials,
+  model selection or provider retry settings were changed. A full main-request budget probe on
+  `d042e5b` subsequently succeeded through Qwen with exact citations and no validation errors.
+
+Ignored local evidence is under `artifacts/grounding-eval/`: `issue-17-live-regression*.log`,
+`issue-17-live-intent-regression.log`, `issue-17-intent-probe.json`,
+`issue-17-live-batch-quota-interrupted.log`, `issue-17-metadata-quota-interrupted.json`,
+`issue-17-live-reference-regression.log` and `issue-17-budget-probe*.json`. These paths are local
+author-reported evidence, not downloadable repository artifacts. The original issue #2 table and
+three tracked ambiguous transcripts below are unchanged.
 
 ## MCP exposure — 2026-10-17
 
