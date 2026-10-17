@@ -246,5 +246,7 @@
     "scoring-inputs/fixtures/shop/snapshots/snap-002-partial/manifest.json": "734cae65082cdc78ada9251609e6a4e25c2fe5090c42996a11c6ff1640a3668c",
     "scoring-inputs/fixtures/shop/snapshots/snap-003-orphan/manifest.json": "7e2947e49f9131854fdf59cfdc0930aac72d38a6092720606a051920a3c1d1ac"
   },
-  "superseded_reason": "canonical store ID annotations omitted; full contract regression failed; corrected protocol collected separately"
+  "superseded_reason": "canonical store ID annotations omitted; full contract regression failed; corrected protocol collected separately",
+  "rescoring_git_sha": "dd8560c83b3ed315946861f045bd968500fc9584",
+  "validation_git_sha": "dd8560c83b3ed315946861f045bd968500fc9584"
 }

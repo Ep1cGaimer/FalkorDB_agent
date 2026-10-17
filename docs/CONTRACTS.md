@@ -311,7 +311,24 @@ The Groq transport records safe usage/rate metadata and settings in `transport_t
 
 Repeated excerpt text is replaced by `text_already_returned: true` only for an `(excerpt_id, content_hash)` whose actual text survived the model-result cap. All unique source text and the full trusted citation-validation store remain available. A capped-away excerpt or changed hash is not suppressed. On provider failure, a separate grounding failure artifact preserves the successful prefix and transport metadata; it is not listed as a normal replay transcript.
 
-The standalone flat-context CLI now loads `.env`. Its version-5 protocol uses `submit_assessment` as the terminal function and retains aborted provider failures, explicitly marking partial history unavailable. Its `run_reader_probe` tool requires the full `(service, version, route_id, store_id, record_id)` identity, taken from the canonical route/store mappings in its context (a route with no declared store is listed with `store_id: null`); v1–v4 transcripts are scored by unique legacy inference only (see `evals/README.md`). The live control test runs one conversation per execution and selects its credential gate from the configured provider. `evals/run_comparison.py` pins one model, preserves test evidence and product reports, and invokes the scorer. Its inventory covers all fixture/evidence file types, including changelogs and retained payload bytes. A pair requires both matching models and operational product completion; provider errors stop collection and return exit 1 even after a successful prefix. BLOCKED/NEEDS_EVIDENCE outcomes remain valid completed checks. See [ISSUE_3_FIX_REPORT.md](ISSUE_3_FIX_REPORT.md).
+The standalone flat-context CLI loads `.env`. Its version-6 protocol has `submit_assessment` and
+`ask_clarification` terminals; clarification validates a nonblank question, string unresolved phrases
+and any exact citations against delivered files. Turn exhaustion and provider failure remain separate
+from a chosen clarification. The probe requires full `(service, version, route_id, store_id, record_id)`
+identities from the supplied canonical mappings; a route with no store stays visible with a null store.
+Flag values must be real booleans, and unknown nested fleet fields are rejected. Historical v1–v4
+probe calls receive credit only through unambiguous legacy identity inference. See [evals/README.md](../evals/README.md).
+
+Issue #22's `flat_grounding_checker` receives all raw files plus importer-derived release, route,
+store and excerpt addresses, then uses the same agent-origin plan materialization and checker as
+`graph_grounding_checker`. It has no graph reads or probes during grounding. `flat_assessment` is
+kept as a separate broader workflow. The comparison runner pins one model, rotates three arms,
+checkpoints each observation and preserves unrun slots after operational failures. Adverse semantic
+results and genuine clarification are completed observations. Its source inventory detects edits,
+additions and removals, separates expectations, and excludes generated output/evidence. The portable
+bundle verifies hashes and rescores without a provider or database; canonical receipt validation and
+FAIL > UNKNOWN > PASS precedence are unchanged. The targeted `IN_STORE` ablation preserves nodes
+and raw records while removing connected obligation paths, and the unchanged checker fails closed.
 
 ### `src/rw/simulation.py`
 

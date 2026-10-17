@@ -1,0 +1,24 @@
+{
+  "built_at": "2026-09-02T10:00:00Z",
+  "bundle_id": null,
+  "flags": [],
+  "no_state_read": false,
+  "previous_version": null,
+  "routes": [
+    {
+      "contract": "saved-cart",
+      "entry": "read_cart",
+      "name": "load_saved_cart",
+      "read_domain": "ALL_KEYS",
+      "reads_from": "cart-cache"
+    }
+  ],
+  "service": "cart",
+  "version": "1.4",
+  "writes": [
+    {
+      "entry": "write_cart",
+      "store": "cart-cache"
+    }
+  ]
+}

@@ -1,0 +1,174 @@
+{
+  "cases": [
+    {
+      "id": "I",
+      "snapshot": "snap-001",
+      "fleet": {
+        "cart": {
+          "version": "1.4",
+          "flags": {}
+        },
+        "checkout": {
+          "version": "2.1",
+          "flags": {}
+        }
+      },
+      "obligations": [
+        {
+          "service": "cart",
+          "version": "1.4",
+          "route_id": "route:release:cart:fa7b26506599d241:load_saved_cart",
+          "store_id": "store:cart-cache",
+          "record_id": "saved-cart-1001",
+          "expected_probe": "PASS",
+          "reason": "Reader accepts the retained saved-cart shape."
+        },
+        {
+          "service": "cart",
+          "version": "1.4",
+          "route_id": "route:release:cart:fa7b26506599d241:load_saved_cart",
+          "store_id": "store:cart-cache",
+          "record_id": "saved-cart-2002",
+          "expected_probe": "FAIL",
+          "reason": "Legacy read_cart rejects cart/v2."
+        },
+        {
+          "service": "cart",
+          "version": "1.4",
+          "route_id": "route:release:cart:fa7b26506599d241:inspect_saved_cart",
+          "store_id": "store:cart-cache",
+          "record_id": "saved-cart-1001",
+          "expected_probe": "PASS",
+          "reason": "Reader accepts the retained saved-cart shape."
+        },
+        {
+          "service": "cart",
+          "version": "1.4",
+          "route_id": "route:release:cart:fa7b26506599d241:inspect_saved_cart",
+          "store_id": "store:cart-cache",
+          "record_id": "saved-cart-2002",
+          "expected_probe": "PASS",
+          "reason": "Reader accepts the retained saved-cart shape."
+        },
+        {
+          "service": "cart",
+          "version": "1.4",
+          "route_id": "route:release:cart:fa7b26506599d241:load_archived_cart",
+          "store_id": "store:cart-archive",
+          "record_id": "saved-cart-2002",
+          "expected_probe": "PASS",
+          "reason": "Archive reader accepts archived=true and cart-archive/v1."
+        },
+        {
+          "service": "checkout",
+          "version": "2.1",
+          "route_id": "route:release:checkout:df9a7917d5945176:price_saved_cart",
+          "store_id": "store:cart-cache",
+          "record_id": "saved-cart-1001",
+          "expected_probe": "PASS",
+          "reason": "Pricing reader accepts both saved-cart shapes."
+        },
+        {
+          "service": "checkout",
+          "version": "2.1",
+          "route_id": "route:release:checkout:df9a7917d5945176:price_saved_cart",
+          "store_id": "store:cart-cache",
+          "record_id": "saved-cart-2002",
+          "expected_probe": "PASS",
+          "reason": "Pricing reader accepts both saved-cart shapes."
+        }
+      ],
+      "gaps": [],
+      "disposition": "BLOCKED",
+      "request_fit": {
+        "receipt_correction_kept": true
+      }
+    },
+    {
+      "id": "J",
+      "snapshot": "snap-001",
+      "fleet": {
+        "cart": {
+          "version": "1.5",
+          "flags": {
+            "basket_v2": false
+          }
+        },
+        "checkout": {
+          "version": "2.1",
+          "flags": {}
+        }
+      },
+      "obligations": [
+        {
+          "service": "cart",
+          "version": "1.5",
+          "route_id": "route:release:cart:a66fbf2097de584d:load_saved_cart",
+          "store_id": "store:cart-cache",
+          "record_id": "saved-cart-1001",
+          "expected_probe": "PASS",
+          "reason": "Reader accepts the retained saved-cart shape."
+        },
+        {
+          "service": "cart",
+          "version": "1.5",
+          "route_id": "route:release:cart:a66fbf2097de584d:load_saved_cart",
+          "store_id": "store:cart-cache",
+          "record_id": "saved-cart-2002",
+          "expected_probe": "PASS",
+          "reason": "Reader accepts the retained saved-cart shape."
+        },
+        {
+          "service": "cart",
+          "version": "1.5",
+          "route_id": "route:release:cart:a66fbf2097de584d:inspect_saved_cart",
+          "store_id": "store:cart-cache",
+          "record_id": "saved-cart-1001",
+          "expected_probe": "PASS",
+          "reason": "Reader accepts the retained saved-cart shape."
+        },
+        {
+          "service": "cart",
+          "version": "1.5",
+          "route_id": "route:release:cart:a66fbf2097de584d:inspect_saved_cart",
+          "store_id": "store:cart-cache",
+          "record_id": "saved-cart-2002",
+          "expected_probe": "PASS",
+          "reason": "Reader accepts the retained saved-cart shape."
+        },
+        {
+          "service": "cart",
+          "version": "1.5",
+          "route_id": "route:release:cart:a66fbf2097de584d:load_archived_cart",
+          "store_id": "store:cart-archive",
+          "record_id": "saved-cart-2002",
+          "expected_probe": "PASS",
+          "reason": "Archive reader accepts archived=true and cart-archive/v1."
+        },
+        {
+          "service": "checkout",
+          "version": "2.1",
+          "route_id": "route:release:checkout:df9a7917d5945176:price_saved_cart",
+          "store_id": "store:cart-cache",
+          "record_id": "saved-cart-1001",
+          "expected_probe": "PASS",
+          "reason": "Pricing reader accepts both saved-cart shapes."
+        },
+        {
+          "service": "checkout",
+          "version": "2.1",
+          "route_id": "route:release:checkout:df9a7917d5945176:price_saved_cart",
+          "store_id": "store:cart-cache",
+          "record_id": "saved-cart-2002",
+          "expected_probe": "PASS",
+          "reason": "Pricing reader accepts both saved-cart shapes."
+        }
+      ],
+      "gaps": [],
+      "disposition": "BOUNDED_PASS",
+      "request_fit": {
+        "receipt_correction_kept": true
+      }
+    }
+  ]
+}

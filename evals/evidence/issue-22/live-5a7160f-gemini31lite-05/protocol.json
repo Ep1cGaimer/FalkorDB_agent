@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "arms": [
+    "graph_grounding_checker",
+    "flat_grounding_checker",
+    "flat_assessment"
+  ],
+  "request": "Undo the basket rollout, but keep the receipt correction.",
+  "snapshot": "snap-001",
+  "temperature": 0,
+  "max_turns": 8,
+  "completion_cap": 1000,
+  "allow_alternative": false,
+  "clarification_answer": null,
+  "tool_result_character_cap": 20000,
+  "context_cap": null,
+  "prompts_tools": "observations/*: calls[].request (hashed); exact delivered history per call",
+  "retry_backoff_min_s": 2.0,
+  "retry_backoff_max_s": 30.0,
+  "model_alias_policy": "exact returned identity required",
+  "db_port": 6382,
+  "interpretation": "grounding/retrieval interface with shared checker; legacy workflow separate"
+}

@@ -18,7 +18,7 @@ Collect only after the offline suite passes. Use a dedicated FalkorDB on port 63
 
 ```sh
 RW_GROUNDING_MAX_COMPLETION_TOKENS=1000 \
-  .venv/bin/python evals/run_comparison.py --runs 3 --model gemini:gemini-3.8-flash \
+  .venv/bin/python evals/run_comparison.py --runs 3 --model gemini:gemini-3.1-flash-lite \
   --db-port 6382 --out artifacts/issue-22/BATCH
 .venv/bin/python evals/relationship_ablation.py --db-port 6382 --out artifacts/issue-22/BATCH/ablation
 .venv/bin/python evals/comparison_evidence.py export --input artifacts/issue-22/BATCH \
@@ -66,3 +66,5 @@ Run these checks against a ready FalkorDB instance (no live provider calls):
 The SQL CLI defaults to the baseline; its reusable `compare(fixture_root, oracle_path)` is also
 exercised against the overlay. The scorer accepts `--fixture-root` and `--oracle` for saved runs
 against another fixture root. See [the oracle method](expected/README.md) for prediction provenance.
+
+Current issue #22 result: **3/3 tie** between matched arms; see the [verified primary bundle](evidence/issue-22/live-5a7160f-gemini31lite-05/comparison.md). Earlier refusals and the superseded protocol remain alongside it, excluded from the headline.

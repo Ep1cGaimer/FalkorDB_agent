@@ -1,7 +1,7 @@
 # Build status
 
-Updated 2026-10-17. Describes `main` after PRs #13–#16 and #18 (issue #2 live evaluation, UI
-rewrite, MCP bridge, Groq limit handling). Earlier dated evidence is preserved below. Product: **RollbackWitness**,
+Updated 2026-10-18. Includes issue #22 evidence on `5a7160f`, based on main through PR #30.
+Earlier dated evidence is preserved below. Product: **RollbackWitness**,
 synthetic fixture only — no production data or product deployment.
 
 For issue #3 and #4 work, see [the implementation report](ISSUE_3_FIX_REPORT.md) and
@@ -10,6 +10,127 @@ their raw artifacts are not committed. They are separate from the issue #2 evalu
 
 Every row below is a command that was actually run, with its observed output. Nothing here is a plan
 or an estimate.
+
+## Fair comparison and relationship ablation — issue #22, 2026-10-18
+
+**Primary result: tie, 3/3 evidence-consistent observations in each shared-checker arm.**
+Both propose oracle fleet B (cart 1.5 with `basket_v2=false`, checkout 2.1), with `4/4`
+exactly bound reader/record receipts and `BOUNDED_PASS`. This is a readability result:
+the oracle labels the requested basket rollback **partial**, while the receipt correction is kept.
+It does not establish full request fulfillment or cross-service basket behavior.
+
+The committed [portable bundle](../evals/evidence/issue-22/live-5a7160f-gemini31lite-05/README.md)
+contains all nine observations, complete delivered prompts/tool histories, validation events,
+receipt tuples, source/expectation hashes, telemetry, scoring inputs, and intact/ablated/restored
+reports. Collection revision: `5a7160f676ddab30438e141fe68594506c9ccaff`, with runtime sources unchanged.
+The recorded dirty inventory contains only README/STATUS drafts, which are not model inputs; generated
+evidence is excluded from source hashes. No model-facing code, fixture, oracle or budget changed within the batch.
+
+Protocol: one pinned `gemini:gemini-3.1-flash-lite`, temperature zero, eight model turns,
+1,000 maximum output tokens per call, six bounded HTTP attempts, 90-second request timeout,
+2–30 second exponential backoff (or provider Retry-After), no alternative conversation and no
+operator clarification answer. Scope confirmation permits checking only. No action approval,
+simulation or deployment was performed. The three blocks rotate the arm order.
+
+UTC collection window: `2026-10-17T19:38:32.911447+00:00` to
+`2026-10-17T19:39:52.036425+00:00` (2026-10-18 locally). The nine arm times sum to **78.537 seconds**.
+There were **21 model calls, 21 HTTP attempts**, and **113,580 reported tokens**
+(110,763 prompt; 2,817 candidate). No transport retries occurred in this primary batch.
+All successful responses supplied usage; no missing usage is reported as zero. Failed-request usage
+in the preserved earlier attempts remains unknown. Checker, grounding, whole-arm and request times
+are preserved separately; these timings do not establish a general latency ranking.
+
+Primary matched comparison: **tie**; aligned blocks=3.
+
+Evidence consistency of grounding/retrieval with shared checker; request fit reported separately. Clarification semantics are ungraded. Byte/shape readability does not establish cross-service behavior.
+
+### Matched grounding with shared checker
+
+| Block | Arm | Status | Outcome | Recall | Evidence consistent | Request fit | Tokens (reported total) | Seconds |
+|---|---|---|---|---|---|---|---|---|
+| 1 | graph_grounding_checker | completed | BOUNDED_PASS | 4/4 | True | basket=partial, receipt=True | 14412 | 10.921 |
+| 1 | flat_grounding_checker | completed | BOUNDED_PASS | 4/4 | True | basket=partial, receipt=True | 7632 | 8.584 |
+| 2 | flat_grounding_checker | completed | BOUNDED_PASS | 4/4 | True | basket=partial, receipt=True | 7632 | 11.147 |
+| 2 | graph_grounding_checker | completed | BOUNDED_PASS | 4/4 | True | basket=partial, receipt=True | 14412 | 13.115 |
+| 3 | graph_grounding_checker | completed | BOUNDED_PASS | 4/4 | True | basket=partial, receipt=True | 14412 | 9.087 |
+| 3 | flat_grounding_checker | completed | BOUNDED_PASS | 4/4 | True | basket=partial, receipt=True | 7632 | 4.037 |
+
+### Legacy workflow
+
+| Block | Arm | Status | Outcome | Recall | Evidence consistent | Request fit | Tokens (reported total) | Seconds |
+|---|---|---|---|---|---|---|---|---|
+| 1 | flat_assessment | completed | CLARIFICATION | — | False | basket=ungraded, receipt=ungraded | 15816 | 8.85 |
+| 2 | flat_assessment | completed | CLARIFICATION | — | False | basket=ungraded, receipt=ungraded | 15816 | 7.884 |
+| 3 | flat_assessment | completed | CLARIFICATION | — | False | basket=ungraded, receipt=ungraded | 15816 | 4.912 |
+
+The legacy clarification rows are completed model decisions with no plan or checker result and
+no readability denominator; their semantic appropriateness is ungraded. In each legacy conversation,
+the model made two rejected probe calls using `cart-cache` instead of the supplied canonical
+`store:cart-cache`, then asked about the route/store mapping. The record preserves these
+errors and the question; it is not a finding that the engineer's original request needed clarification.
+The legacy table measures a broader workflow and is not pooled with the matched result.
+
+Deterministic ablation on the same fixture bytes and dedicated FalkorDB 6.0.2 / Redis 8.10.2:
+exactly two `Batch -IN_STORE-> StateStore` edges were removed. Every node ID, label/property,
+remaining edge, source/payload digest and both inventoried records survived. Four connected
+reader–record paths became zero, and both candidates became `NEEDS_EVIDENCE` with missing-path/
+inventory gaps and zero connected obligations. Restoring those two edges restored the same
+obligation tuples, witnesses and receipt results: A `BLOCKED → NEEDS_EVIDENCE → BLOCKED`;
+B `BOUNDED_PASS → NEEDS_EVIDENCE → BOUNDED_PASS`. Only receipt nonce/time were excluded from
+result comparison. Owned graphs were independently verified absent after cleanup. The lost capability
+is **connected reader–record obligation enumeration and witness paths**; SQL or an independent join
+can reconstruct the pairs, and raw records remain discoverable.
+
+Earlier attempts remain separate and are not pooled into the nine-row batch:
+
+- [Groq attempt 1](../evals/evidence/issue-22/live-e811d19-01/manifest.json): graph completed, flat request refused with HTTP 413; seven slots unrun.
+- [Groq attempt 2](../evals/evidence/issue-22/live-c2b777e-02/manifest.json): compact addresses, same refusal and preserved unrun slots.
+- [Gemini 3.8 attempt](../evals/evidence/issue-22/live-0821faa-gemini-03/manifest.json): first tool response succeeded, subsequent call exhausted six attempts with HTTP 429. A separate sanitized capacity diagnostic identified the exhausted 20-request daily quota.
+- [Superseded Flash-Lite protocol](../evals/evidence/issue-22/live-0821faa-gemini31lite-04/README.md): all nine conversations completed, but the final full regression found omitted canonical store annotations in the compact context. It is retained with acceptance disabled and excluded from the headline. The final batch restores those addresses and follows both full suites passing; no model answers were repaired.
+- Standalone [Groq](../evals/evidence/issue-22/groq-capacity-preflight.json) and [Gemini capacity diagnostics](../evals/evidence/issue-22/gemini-alternatives-capacity.json) are feasibility probes, not primary experiments. Gemini 3.7 timed out, 2.5 was unavailable, and 3.6/3.1 Lite answered tiny requests. The user's Gemini preference led to the separately pinned Flash-Lite batch.
+
+Commands actually run (repository's existing Python 3.12.13 base interpreter was used from the worktree):
+
+```sh
+RW_GROUNDING_MAX_COMPLETION_TOKENS=1000 python evals/run_comparison.py --runs 3 \
+  --model gemini:gemini-3.1-flash-lite --db-port 6382 \
+  --out artifacts/issue-22/live-5a7160f-gemini31lite-05
+python evals/relationship_ablation.py --db-port 6382 \
+  --out artifacts/issue-22/live-5a7160f-gemini31lite-05/ablation
+python evals/comparison_evidence.py export --input artifacts/issue-22/live-5a7160f-gemini31lite-05 \
+  --out evals/evidence/issue-22/live-5a7160f-gemini31lite-05
+python evals/comparison_evidence.py verify evals/evidence/issue-22/live-5a7160f-gemini31lite-05
+python evals/score_controls.py --bundle evals/evidence/issue-22/live-5a7160f-gemini31lite-05 \
+  --json /tmp/issue22-rescored.json
+```
+
+Post-collection validation/rescoring revision: `dd8560c83b3ed315946861f045bd968500fc9584`.
+Only the portable validator changed after collection: normal filesystem aliases outside the bundle
+(such as macOS `/var`) are accepted, while internal artifact symlinks remain rejected. Model-facing
+inputs, prompts, budgets, raw observations and scores did not change. Both revisions are recorded
+in the bundle manifest; documentation was completed after collection.
+
+Main/PR compatibility: PRs #21 and #29 were merged before implementation; the strict scorer and
+full route/store obligation identity are retained. PR #30 merged during work and was merged cleanly
+before the final batch. Draft PR #31 at `f1942d3` has no file conflicts; it explicitly reports its own
+intent-check wiring as unfinished. The flat adapter inherits product prompt/tool schemas, calls the
+shared terminal validator, and supplies the original request in validation state with file-backed
+service identities. A change to #31's unfinished loop-level validation will need its own final
+integration check and a fresh protocol/recollection if it changes model inputs; no observations
+from that draft are mixed into this batch.
+
+Validation on macOS arm64, Python 3.12.13, pinned FalkorDB 6.0.2:
+
+| Check | Observed result |
+|---|---|
+| Full base installation, non-live | **702 passed, 3 optional MCP skips, 3 live tests deselected**. |
+| Full MCP-enabled installation, non-live | **741 passed, 3 live tests deselected**, no skips. |
+| Deterministic smoke | All checks PASS, including blocked approval refusal, drift/evidence gaps, and idempotent simulation. |
+| JavaScript unit tests | **16 passed**. |
+| SQL / graph / independent oracle | Equal obligation sets in **8/8** baseline cases; inherited seven-obligation overlay regressions pass. |
+| Portable evidence | Moved bundle verified/rescored with credentials removed and sockets denied; all prior bundles also verify. |
+| Portability regressions | **12 passed**, including a normal filesystem alias outside the bundle and rejection of an internal artifact symlink. |
+| Whitespace | `git diff --check` passes. |
 
 ## Obligation identity combined with the evidence rules — issue #24, 2026-10-18
 

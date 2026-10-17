@@ -1,0 +1,612 @@
+{
+  "protocol_version": 1,
+  "rows": [
+    {
+      "block": 1,
+      "arm": "graph_grounding_checker",
+      "status": "completed",
+      "outcome": "BOUNDED_PASS",
+      "run": "product report#1",
+      "origin": "graph_grounding_checker",
+      "model": "gemini:gemini-3.1-flash-lite",
+      "live": true,
+      "fleet": "cart 1.5 [-basket_v2], checkout 2.1",
+      "case": "B",
+      "receipt_kept": true,
+      "recall": "4/4",
+      "required": 4,
+      "probed_required": 4,
+      "cards": "yes",
+      "critical_probed": true,
+      "observed_fails": 0,
+      "false_pass": false,
+      "disp_match": true,
+      "established_passes": 4,
+      "unknown_probes": 0,
+      "evidence_supports_claim": true,
+      "unsupported_pass": false,
+      "disposition": "BOUNDED_PASS",
+      "expected_disposition": "BOUNDED_PASS",
+      "expected_source": "oracle case B",
+      "turns": 4,
+      "tool_calls": 3,
+      "notes": [],
+      "other_fails": 0,
+      "critical_required": 1,
+      "critical_probed_count": 1,
+      "request_fit": {
+        "basket_rollout_undone": "partial",
+        "receipt_correction_kept": true,
+        "citations": [
+          {
+            "path": "fixtures/shop/releases/cart-1.5/CHANGELOG.md",
+            "start_line": 6,
+            "end_line": 7,
+            "quote": "Turning basket_v2 off restores the classic single-list cart and new saves are written as cart/v1.\n- The 1.5 reader accepts both cart/v1 and cart/v2 saved carts."
+          },
+          {
+            "path": "fixtures/shop/releases/checkout-2.1/CHANGELOG.md",
+            "start_line": 5,
+            "end_line": 5,
+            "quote": "Receipt correction: receipt totals are now computed from unrounded line amounts and rounded once, fixing 1-cent receipt mismatches (INC-4471)."
+          },
+          {
+            "path": "fixtures/shop/releases/checkout-2.1/CHANGELOG.md",
+            "start_line": 6,
+            "end_line": 6,
+            "quote": "Basket rollout support: the order summary shows basket headings when a saved cart has baskets; pricing reads cart/v1 and cart/v2."
+          }
+        ]
+      },
+      "consistent": true,
+      "telemetry": {
+        "model_calls": 4,
+        "http_attempts": 4,
+        "reported_usage_totals": {
+          "promptTokenCount": 14073,
+          "candidatesTokenCount": 339,
+          "totalTokenCount": 14412
+        },
+        "usage_unknown_calls": 0,
+        "model_elapsed_s": 10.692673457961064,
+        "pacing_wait_s": 0,
+        "reported_retry_wait_s": 0,
+        "retry_wait_accounting": "included in model elapsed; individual backoff durations unavailable"
+      },
+      "elapsed_s": 10.920820125029422
+    },
+    {
+      "block": 1,
+      "arm": "flat_grounding_checker",
+      "status": "completed",
+      "outcome": "BOUNDED_PASS",
+      "run": "product report#1",
+      "origin": "flat_grounding_checker",
+      "model": "gemini:gemini-3.1-flash-lite",
+      "live": true,
+      "fleet": "cart 1.5 [-basket_v2], checkout 2.1",
+      "case": "B",
+      "receipt_kept": true,
+      "recall": "4/4",
+      "required": 4,
+      "probed_required": 4,
+      "cards": "yes",
+      "critical_probed": true,
+      "observed_fails": 0,
+      "false_pass": false,
+      "disp_match": true,
+      "established_passes": 4,
+      "unknown_probes": 0,
+      "evidence_supports_claim": true,
+      "unsupported_pass": false,
+      "disposition": "BOUNDED_PASS",
+      "expected_disposition": "BOUNDED_PASS",
+      "expected_source": "oracle case B",
+      "turns": 1,
+      "tool_calls": 0,
+      "notes": [],
+      "other_fails": 0,
+      "critical_required": 1,
+      "critical_probed_count": 1,
+      "request_fit": {
+        "basket_rollout_undone": "partial",
+        "receipt_correction_kept": true,
+        "citations": [
+          {
+            "path": "fixtures/shop/releases/cart-1.5/CHANGELOG.md",
+            "start_line": 6,
+            "end_line": 7,
+            "quote": "Turning basket_v2 off restores the classic single-list cart and new saves are written as cart/v1.\n- The 1.5 reader accepts both cart/v1 and cart/v2 saved carts."
+          },
+          {
+            "path": "fixtures/shop/releases/checkout-2.1/CHANGELOG.md",
+            "start_line": 5,
+            "end_line": 5,
+            "quote": "Receipt correction: receipt totals are now computed from unrounded line amounts and rounded once, fixing 1-cent receipt mismatches (INC-4471)."
+          },
+          {
+            "path": "fixtures/shop/releases/checkout-2.1/CHANGELOG.md",
+            "start_line": 6,
+            "end_line": 6,
+            "quote": "Basket rollout support: the order summary shows basket headings when a saved cart has baskets; pricing reads cart/v1 and cart/v2."
+          }
+        ]
+      },
+      "consistent": true,
+      "telemetry": {
+        "model_calls": 1,
+        "http_attempts": 1,
+        "reported_usage_totals": {
+          "promptTokenCount": 7277,
+          "candidatesTokenCount": 355,
+          "totalTokenCount": 7632
+        },
+        "usage_unknown_calls": 0,
+        "model_elapsed_s": 8.346475415979512,
+        "pacing_wait_s": 0,
+        "reported_retry_wait_s": 0,
+        "retry_wait_accounting": "included in model elapsed; individual backoff durations unavailable"
+      },
+      "elapsed_s": 8.584373458987102
+    },
+    {
+      "block": 1,
+      "arm": "flat_assessment",
+      "status": "completed",
+      "outcome": "CLARIFICATION",
+      "run": "flat_control gemini:gemini-3.1-flash-lite",
+      "origin": "flat_assessment",
+      "model": "gemini:gemini-3.1-flash-lite",
+      "live": true,
+      "fleet": "—",
+      "case": "—",
+      "receipt_kept": null,
+      "recall": "—",
+      "required": 0,
+      "probed_required": 0,
+      "cards": "",
+      "critical_probed": null,
+      "observed_fails": 0,
+      "false_pass": null,
+      "disp_match": null,
+      "established_passes": 0,
+      "unknown_probes": 0,
+      "evidence_supports_claim": null,
+      "unsupported_pass": null,
+      "disposition": "CLARIFICATION",
+      "expected_disposition": null,
+      "expected_source": "—",
+      "turns": 2,
+      "tool_calls": 2,
+      "notes": [
+        "fleet is not a mapping"
+      ],
+      "request_fit": null,
+      "consistent": false,
+      "telemetry": {
+        "model_calls": 2,
+        "http_attempts": 2,
+        "reported_usage_totals": {
+          "promptTokenCount": 15571,
+          "candidatesTokenCount": 245,
+          "totalTokenCount": 15816
+        },
+        "usage_unknown_calls": 0,
+        "model_elapsed_s": 8.835072666988708,
+        "pacing_wait_s": 0,
+        "reported_retry_wait_s": 0,
+        "retry_wait_accounting": "included in model elapsed; individual backoff durations unavailable"
+      },
+      "elapsed_s": 8.849656332982704
+    },
+    {
+      "block": 2,
+      "arm": "flat_grounding_checker",
+      "status": "completed",
+      "outcome": "BOUNDED_PASS",
+      "run": "product report#1",
+      "origin": "flat_grounding_checker",
+      "model": "gemini:gemini-3.1-flash-lite",
+      "live": true,
+      "fleet": "cart 1.5 [-basket_v2], checkout 2.1",
+      "case": "B",
+      "receipt_kept": true,
+      "recall": "4/4",
+      "required": 4,
+      "probed_required": 4,
+      "cards": "yes",
+      "critical_probed": true,
+      "observed_fails": 0,
+      "false_pass": false,
+      "disp_match": true,
+      "established_passes": 4,
+      "unknown_probes": 0,
+      "evidence_supports_claim": true,
+      "unsupported_pass": false,
+      "disposition": "BOUNDED_PASS",
+      "expected_disposition": "BOUNDED_PASS",
+      "expected_source": "oracle case B",
+      "turns": 1,
+      "tool_calls": 0,
+      "notes": [],
+      "other_fails": 0,
+      "critical_required": 1,
+      "critical_probed_count": 1,
+      "request_fit": {
+        "basket_rollout_undone": "partial",
+        "receipt_correction_kept": true,
+        "citations": [
+          {
+            "path": "fixtures/shop/releases/cart-1.5/CHANGELOG.md",
+            "start_line": 6,
+            "end_line": 7,
+            "quote": "Turning basket_v2 off restores the classic single-list cart and new saves are written as cart/v1.\n- The 1.5 reader accepts both cart/v1 and cart/v2 saved carts."
+          },
+          {
+            "path": "fixtures/shop/releases/checkout-2.1/CHANGELOG.md",
+            "start_line": 5,
+            "end_line": 5,
+            "quote": "Receipt correction: receipt totals are now computed from unrounded line amounts and rounded once, fixing 1-cent receipt mismatches (INC-4471)."
+          },
+          {
+            "path": "fixtures/shop/releases/checkout-2.1/CHANGELOG.md",
+            "start_line": 6,
+            "end_line": 6,
+            "quote": "Basket rollout support: the order summary shows basket headings when a saved cart has baskets; pricing reads cart/v1 and cart/v2."
+          }
+        ]
+      },
+      "consistent": true,
+      "telemetry": {
+        "model_calls": 1,
+        "http_attempts": 1,
+        "reported_usage_totals": {
+          "promptTokenCount": 7277,
+          "candidatesTokenCount": 355,
+          "totalTokenCount": 7632
+        },
+        "usage_unknown_calls": 0,
+        "model_elapsed_s": 10.930224292038474,
+        "pacing_wait_s": 0,
+        "reported_retry_wait_s": 0,
+        "retry_wait_accounting": "included in model elapsed; individual backoff durations unavailable"
+      },
+      "elapsed_s": 11.146954750001896
+    },
+    {
+      "block": 2,
+      "arm": "flat_assessment",
+      "status": "completed",
+      "outcome": "CLARIFICATION",
+      "run": "flat_control gemini:gemini-3.1-flash-lite",
+      "origin": "flat_assessment",
+      "model": "gemini:gemini-3.1-flash-lite",
+      "live": true,
+      "fleet": "—",
+      "case": "—",
+      "receipt_kept": null,
+      "recall": "—",
+      "required": 0,
+      "probed_required": 0,
+      "cards": "",
+      "critical_probed": null,
+      "observed_fails": 0,
+      "false_pass": null,
+      "disp_match": null,
+      "established_passes": 0,
+      "unknown_probes": 0,
+      "evidence_supports_claim": null,
+      "unsupported_pass": null,
+      "disposition": "CLARIFICATION",
+      "expected_disposition": null,
+      "expected_source": "—",
+      "turns": 2,
+      "tool_calls": 2,
+      "notes": [
+        "fleet is not a mapping"
+      ],
+      "request_fit": null,
+      "consistent": false,
+      "telemetry": {
+        "model_calls": 2,
+        "http_attempts": 2,
+        "reported_usage_totals": {
+          "promptTokenCount": 15571,
+          "candidatesTokenCount": 245,
+          "totalTokenCount": 15816
+        },
+        "usage_unknown_calls": 0,
+        "model_elapsed_s": 7.869656374969054,
+        "pacing_wait_s": 0,
+        "reported_retry_wait_s": 0,
+        "retry_wait_accounting": "included in model elapsed; individual backoff durations unavailable"
+      },
+      "elapsed_s": 7.883906917006243
+    },
+    {
+      "block": 2,
+      "arm": "graph_grounding_checker",
+      "status": "completed",
+      "outcome": "BOUNDED_PASS",
+      "run": "product report#1",
+      "origin": "graph_grounding_checker",
+      "model": "gemini:gemini-3.1-flash-lite",
+      "live": true,
+      "fleet": "cart 1.5 [-basket_v2], checkout 2.1",
+      "case": "B",
+      "receipt_kept": true,
+      "recall": "4/4",
+      "required": 4,
+      "probed_required": 4,
+      "cards": "yes",
+      "critical_probed": true,
+      "observed_fails": 0,
+      "false_pass": false,
+      "disp_match": true,
+      "established_passes": 4,
+      "unknown_probes": 0,
+      "evidence_supports_claim": true,
+      "unsupported_pass": false,
+      "disposition": "BOUNDED_PASS",
+      "expected_disposition": "BOUNDED_PASS",
+      "expected_source": "oracle case B",
+      "turns": 4,
+      "tool_calls": 3,
+      "notes": [],
+      "other_fails": 0,
+      "critical_required": 1,
+      "critical_probed_count": 1,
+      "request_fit": {
+        "basket_rollout_undone": "partial",
+        "receipt_correction_kept": true,
+        "citations": [
+          {
+            "path": "fixtures/shop/releases/cart-1.5/CHANGELOG.md",
+            "start_line": 6,
+            "end_line": 7,
+            "quote": "Turning basket_v2 off restores the classic single-list cart and new saves are written as cart/v1.\n- The 1.5 reader accepts both cart/v1 and cart/v2 saved carts."
+          },
+          {
+            "path": "fixtures/shop/releases/checkout-2.1/CHANGELOG.md",
+            "start_line": 5,
+            "end_line": 5,
+            "quote": "Receipt correction: receipt totals are now computed from unrounded line amounts and rounded once, fixing 1-cent receipt mismatches (INC-4471)."
+          },
+          {
+            "path": "fixtures/shop/releases/checkout-2.1/CHANGELOG.md",
+            "start_line": 6,
+            "end_line": 6,
+            "quote": "Basket rollout support: the order summary shows basket headings when a saved cart has baskets; pricing reads cart/v1 and cart/v2."
+          }
+        ]
+      },
+      "consistent": true,
+      "telemetry": {
+        "model_calls": 4,
+        "http_attempts": 4,
+        "reported_usage_totals": {
+          "promptTokenCount": 14073,
+          "candidatesTokenCount": 339,
+          "totalTokenCount": 14412
+        },
+        "usage_unknown_calls": 0,
+        "model_elapsed_s": 12.790604624024127,
+        "pacing_wait_s": 0,
+        "reported_retry_wait_s": 0,
+        "retry_wait_accounting": "included in model elapsed; individual backoff durations unavailable"
+      },
+      "elapsed_s": 13.115379082970321
+    },
+    {
+      "block": 3,
+      "arm": "flat_assessment",
+      "status": "completed",
+      "outcome": "CLARIFICATION",
+      "run": "flat_control gemini:gemini-3.1-flash-lite",
+      "origin": "flat_assessment",
+      "model": "gemini:gemini-3.1-flash-lite",
+      "live": true,
+      "fleet": "—",
+      "case": "—",
+      "receipt_kept": null,
+      "recall": "—",
+      "required": 0,
+      "probed_required": 0,
+      "cards": "",
+      "critical_probed": null,
+      "observed_fails": 0,
+      "false_pass": null,
+      "disp_match": null,
+      "established_passes": 0,
+      "unknown_probes": 0,
+      "evidence_supports_claim": null,
+      "unsupported_pass": null,
+      "disposition": "CLARIFICATION",
+      "expected_disposition": null,
+      "expected_source": "—",
+      "turns": 2,
+      "tool_calls": 2,
+      "notes": [
+        "fleet is not a mapping"
+      ],
+      "request_fit": null,
+      "consistent": false,
+      "telemetry": {
+        "model_calls": 2,
+        "http_attempts": 2,
+        "reported_usage_totals": {
+          "promptTokenCount": 15571,
+          "candidatesTokenCount": 245,
+          "totalTokenCount": 15816
+        },
+        "usage_unknown_calls": 0,
+        "model_elapsed_s": 4.894445707905106,
+        "pacing_wait_s": 0,
+        "reported_retry_wait_s": 0,
+        "retry_wait_accounting": "included in model elapsed; individual backoff durations unavailable"
+      },
+      "elapsed_s": 4.912111834040843
+    },
+    {
+      "block": 3,
+      "arm": "graph_grounding_checker",
+      "status": "completed",
+      "outcome": "BOUNDED_PASS",
+      "run": "product report#1",
+      "origin": "graph_grounding_checker",
+      "model": "gemini:gemini-3.1-flash-lite",
+      "live": true,
+      "fleet": "cart 1.5 [-basket_v2], checkout 2.1",
+      "case": "B",
+      "receipt_kept": true,
+      "recall": "4/4",
+      "required": 4,
+      "probed_required": 4,
+      "cards": "yes",
+      "critical_probed": true,
+      "observed_fails": 0,
+      "false_pass": false,
+      "disp_match": true,
+      "established_passes": 4,
+      "unknown_probes": 0,
+      "evidence_supports_claim": true,
+      "unsupported_pass": false,
+      "disposition": "BOUNDED_PASS",
+      "expected_disposition": "BOUNDED_PASS",
+      "expected_source": "oracle case B",
+      "turns": 4,
+      "tool_calls": 3,
+      "notes": [],
+      "other_fails": 0,
+      "critical_required": 1,
+      "critical_probed_count": 1,
+      "request_fit": {
+        "basket_rollout_undone": "partial",
+        "receipt_correction_kept": true,
+        "citations": [
+          {
+            "path": "fixtures/shop/releases/cart-1.5/CHANGELOG.md",
+            "start_line": 6,
+            "end_line": 7,
+            "quote": "Turning basket_v2 off restores the classic single-list cart and new saves are written as cart/v1.\n- The 1.5 reader accepts both cart/v1 and cart/v2 saved carts."
+          },
+          {
+            "path": "fixtures/shop/releases/checkout-2.1/CHANGELOG.md",
+            "start_line": 5,
+            "end_line": 5,
+            "quote": "Receipt correction: receipt totals are now computed from unrounded line amounts and rounded once, fixing 1-cent receipt mismatches (INC-4471)."
+          },
+          {
+            "path": "fixtures/shop/releases/checkout-2.1/CHANGELOG.md",
+            "start_line": 6,
+            "end_line": 6,
+            "quote": "Basket rollout support: the order summary shows basket headings when a saved cart has baskets; pricing reads cart/v1 and cart/v2."
+          }
+        ]
+      },
+      "consistent": true,
+      "telemetry": {
+        "model_calls": 4,
+        "http_attempts": 4,
+        "reported_usage_totals": {
+          "promptTokenCount": 14073,
+          "candidatesTokenCount": 339,
+          "totalTokenCount": 14412
+        },
+        "usage_unknown_calls": 0,
+        "model_elapsed_s": 8.879971792048309,
+        "pacing_wait_s": 0,
+        "reported_retry_wait_s": 0,
+        "retry_wait_accounting": "included in model elapsed; individual backoff durations unavailable"
+      },
+      "elapsed_s": 9.08663679199526
+    },
+    {
+      "block": 3,
+      "arm": "flat_grounding_checker",
+      "status": "completed",
+      "outcome": "BOUNDED_PASS",
+      "run": "product report#1",
+      "origin": "flat_grounding_checker",
+      "model": "gemini:gemini-3.1-flash-lite",
+      "live": true,
+      "fleet": "cart 1.5 [-basket_v2], checkout 2.1",
+      "case": "B",
+      "receipt_kept": true,
+      "recall": "4/4",
+      "required": 4,
+      "probed_required": 4,
+      "cards": "yes",
+      "critical_probed": true,
+      "observed_fails": 0,
+      "false_pass": false,
+      "disp_match": true,
+      "established_passes": 4,
+      "unknown_probes": 0,
+      "evidence_supports_claim": true,
+      "unsupported_pass": false,
+      "disposition": "BOUNDED_PASS",
+      "expected_disposition": "BOUNDED_PASS",
+      "expected_source": "oracle case B",
+      "turns": 1,
+      "tool_calls": 0,
+      "notes": [],
+      "other_fails": 0,
+      "critical_required": 1,
+      "critical_probed_count": 1,
+      "request_fit": {
+        "basket_rollout_undone": "partial",
+        "receipt_correction_kept": true,
+        "citations": [
+          {
+            "path": "fixtures/shop/releases/cart-1.5/CHANGELOG.md",
+            "start_line": 6,
+            "end_line": 7,
+            "quote": "Turning basket_v2 off restores the classic single-list cart and new saves are written as cart/v1.\n- The 1.5 reader accepts both cart/v1 and cart/v2 saved carts."
+          },
+          {
+            "path": "fixtures/shop/releases/checkout-2.1/CHANGELOG.md",
+            "start_line": 5,
+            "end_line": 5,
+            "quote": "Receipt correction: receipt totals are now computed from unrounded line amounts and rounded once, fixing 1-cent receipt mismatches (INC-4471)."
+          },
+          {
+            "path": "fixtures/shop/releases/checkout-2.1/CHANGELOG.md",
+            "start_line": 6,
+            "end_line": 6,
+            "quote": "Basket rollout support: the order summary shows basket headings when a saved cart has baskets; pricing reads cart/v1 and cart/v2."
+          }
+        ]
+      },
+      "consistent": true,
+      "telemetry": {
+        "model_calls": 1,
+        "http_attempts": 1,
+        "reported_usage_totals": {
+          "promptTokenCount": 7277,
+          "candidatesTokenCount": 355,
+          "totalTokenCount": 7632
+        },
+        "usage_unknown_calls": 0,
+        "model_elapsed_s": 3.781032083032187,
+        "pacing_wait_s": 0,
+        "reported_retry_wait_s": 0,
+        "retry_wait_accounting": "included in model elapsed; individual backoff durations unavailable"
+      },
+      "elapsed_s": 4.036790833051782
+    }
+  ],
+  "aligned_blocks": [
+    1,
+    2,
+    3
+  ],
+  "consistent_counts": {
+    "graph_grounding_checker": 3,
+    "flat_grounding_checker": 3
+  },
+  "verdict": "tie",
+  "complete": true,
+  "denominator": 3,
+  "interpretation": "Evidence consistency of grounding/retrieval with shared checker; request fit reported separately. Clarification semantics are ungraded. Byte/shape readability does not establish cross-service behavior."
+}

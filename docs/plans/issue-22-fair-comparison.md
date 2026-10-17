@@ -1,5 +1,7 @@
 # Issue #22 implementation plan
 
+Execution note (2026-10-18): implementation and the nine-observation acceptance batch are complete; see [STATUS](../STATUS.md#fair-comparison-and-relationship-ablation--issue-22-2026-10-18) and the [portable primary bundle](../../evals/evidence/issue-22/live-5a7160f-gemini31lite-05/README.md). The user authorized Gemini after Groq refusals. The planning assumptions below are retained as history.
+
 Planning date: 2026-10-17. Issue: [#22 — Make the LLM control comparison fair and isolate the graph's contribution](https://github.com/Ep1cGaimer/FalkorDB_agent/issues/22).
 
 This document is a reviewed implementation plan, not a claim that the feature or live evaluation has been completed. No live model calls were made while preparing it.
