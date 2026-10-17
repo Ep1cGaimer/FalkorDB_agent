@@ -22,11 +22,10 @@ with the retained payload bytes on stdin -- exactly the ``probes.run_probe`` sub
 bounds (64 KiB input, 5 s timeout, 8 KiB stdout cap, hash-checked payload). Payload bytes are never
 shown to the model; it must probe to learn readability, just as the product must.
 
-The control differs from the product in exactly one way, on purpose: it must also name a disposition,
-because that is what this evaluation scores. The product's disposition is computed by trusted code
-from bound receipts; here the model's own claim is recorded verbatim and independently scored against
-``evals/expected/dispositions.json`` by ``evals/score_controls.py``. Nothing here is an answer source:
-the oracle is never read, imported or referenced at runtime.
+This legacy workflow asks the model to select individual probes and claim a disposition within its
+turn budget. The product automatically enumerates all obligations after grounding. The matched
+flat_grounding_checker arm isolates grounding with the same downstream checker; this legacy arm
+measures the broader workflow difference. The oracle is never delivered to the model.
 
 Two neutral, comparable notes: (a) the control sees WHOLE files, which is at least as much as the
 product's changelog/code excerpts; (b) the system prompt carries the same safety rules (existing
@@ -48,6 +47,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 if str(REPO_ROOT / "src") not in sys.path:
@@ -73,7 +73,8 @@ MAX_RESULT_CHARS = 20000
 DISPOSITIONS = ("BLOCKED", "NEEDS_EVIDENCE", "BOUNDED_PASS")
 PROBE_TOOL = "run_reader_probe"
 TERMINAL_TOOL = "submit_assessment"
-TOOLS = (PROBE_TOOL, TERMINAL_TOOL)
+CLARIFICATION_TOOL = "ask_clarification"
+TOOLS = (PROBE_TOOL, TERMINAL_TOOL, CLARIFICATION_TOOL)
 
 SYSTEM_PROMPT = """You are the grounding step of RollbackWitness, a release-rollback safety tool.
 Your only job: translate an on-call engineer's behavioral request into (a) a proposed fleet of
@@ -120,10 +121,10 @@ Rules:
   byte/shape readability of the records you checked only.
 - `alternative`: at most ONE alternative fleet of existing artifacts, when the primary fleet is
   blocked or lacks evidence; omit it if you have no alternative.
-- If the request cannot be fully bound to one artifact, say so in the evidence, but you must still
-  call submit_assessment.
+- If intent cannot be bound, use ask_clarification(question, unresolved, citations), a terminal
+  question with unresolved request phrases and optional exact excerpt quotes. Otherwise call submit_assessment.
 - Reuse probe results already returned in this conversation; do not repeat identical probes.
-You have at most 8 turns. Finish by calling the submit_assessment function through the tools API.
+You have at most 8 turns. Finish by calling submit_assessment or ask_clarification through the tools API.
 A plain text message containing JSON is not a tool call. Do not answer in prose."""
 
 
@@ -254,11 +255,15 @@ class FlatControlTools:
                 spec = spec or {}
                 if not isinstance(spec, dict):
                     raise ValueError(f"fleet[{service!r}] must be an object with version and flags")
+                if set(spec) - {"version", "flags"}:
+                    raise ValueError("unknown fleet fields; use version and flags")
                 entries.append({"service": service, "version": spec.get("version"), "flags": spec.get("flags")})
         elif isinstance(raw, list):
             for item in raw:
                 if not isinstance(item, dict):
                     raise ValueError("each fleet entry must be an object with service and version")
+                if set(item) - {"service", "version", "flags"}:
+                    raise ValueError("unknown fleet fields; use service, version and flags")
                 entries.append({"service": item.get("service"), "version": item.get("version"),
                                 "flags": item.get("flags")})
         else:
@@ -281,23 +286,12 @@ class FlatControlTools:
             flags = e.get("flags")
             if flags is None:
                 flags = {}
-            if isinstance(flags, dict):
-                parsed = {str(k): bool(v) for k, v in flags.items()}
-            elif isinstance(flags, list):
-                parsed = {}
-                for f in flags:
-                    if not isinstance(f, dict) or not isinstance(f.get("name"), str):
-                        raise ValueError(f"flags for {service} must be {{name, enabled}} entries")
-                    parsed[str(f["name"])] = bool(f.get("enabled"))
-            else:
-                raise ValueError(f"flags for {service} must be a map or a list of {{name, enabled}}")
+            parsed = grounding._flags_dict(flags)
             undeclared = sorted(set(parsed) - set(declared))
             if undeclared:
                 raise ValueError(f"flags {undeclared} are not declared by {service} {version}")
             merged = dict(declared)
             merged.update(parsed)
-            if merged != declared:
-                errors.append(f"explicit_flags: {service} {version} {merged}")
             fleet[service] = {"version": version, "flags": merged}
 
         completed = sorted(set(self.deployments) - set(fleet))
@@ -345,6 +339,9 @@ CONTROL_TOOL_SPECS: list[dict] = [
          "alternative": {"type": "array", "description": "optional single alternative fleet", "items": _ENTRY}},
          "required": ["fleet", "disposition", "evidence"]}},
 ]
+
+
+CONTROL_TOOL_SPECS.append(next(s for s in grounding.TOOL_SPECS if s["name"] == CLARIFICATION_TOOL))
 
 
 def _declarations() -> list[dict]:
@@ -452,8 +449,23 @@ def flat_context(fixture_root: Path | str = FIXTURE_ROOT, snapshot: str = DEFAUL
     return "".join(parts)
 
 
+def _delivered_context(fixture_root, snapshot):
+    from evals.flat_grounding import context
+    return context(fixture_root, snapshot)
+
+
+def _clarify(args, fixture_root, snapshot):
+    from evals.flat_grounding import source_catalog
+    excerpts, releases = {}, {}
+    grounding._collect(source_catalog(fixture_root, snapshot)["releases"], excerpts, releases)
+    result, errors = grounding._finish(CLARIFICATION_TOOL, args, excerpts, releases)
+    if errors:
+        raise ValueError("; ".join(errors))
+    return {**result.model_dump(mode="json"), "raw_arguments": _jsonable(args)}, []
+
+
 def _user_message(request_text: str, fixture_root: Path | str, snapshot: str) -> str:
-    return f"Rollback request: {request_text}\n\n{flat_context(fixture_root, snapshot)}"
+    return f"Rollback request: {request_text}\n\n{_delivered_context(fixture_root, snapshot)}"
 
 
 # --------------------------------------------------------------------------- loop
@@ -532,17 +544,18 @@ def _run_loop(request_text: str, tools: FlatControlTools, adapter: grounding.Pro
                 messages.append(adapter.tool_message(call, {"error": bad}))
                 continue
             args = dict(args)
-            if name == TERMINAL_TOOL:
+            if name in (TERMINAL_TOOL, CLARIFICATION_TOOL):
                 try:
-                    answer, errors = _finalize(args, tools)
+                    answer, errors = (_clarify(args, fixture_root, snapshot) if name == CLARIFICATION_TOOL
+                                      else _finalize(args, tools))
                 except (ValueError, KeyError, TypeError, AttributeError) as exc:
                     message = f"invalid {TERMINAL_TOOL} call: {exc}"
                     payload = {"error": message}
-                    audit.append({"name": TERMINAL_TOOL, "args": _jsonable(args), "error": message})
-                    events.append({"type": "tool", "name": TERMINAL_TOOL, "args": _jsonable(args),
+                    audit.append({"name": name, "args": _jsonable(args), "error": message})
+                    events.append({"type": "tool", "name": name, "args": _jsonable(args),
                                    "error": message})
                 else:
-                    events.append({"type": "terminal", "name": TERMINAL_TOOL, "args": _jsonable(args)})
+                    events.append({"type": "terminal", "name": name, "args": _jsonable(args)})
                     return answer, errors, audit, events, turns
             elif name in _DISPATCH:
                 try:
@@ -626,7 +639,7 @@ def run_control(request_text: str = REQUEST, *, transport: Callable[[dict], dict
         files = context_files(fixture_root, snapshot)
         transcript = {
             "control": "flat_context_no_graph",
-            "control_version": 5,
+            "control_version": 6,
             "request_text": request_text,
             "snapshot": snapshot.removeprefix("snapshot:"),
             "model": model_used,
@@ -660,7 +673,7 @@ def run_control(request_text: str = REQUEST, *, transport: Callable[[dict], dict
     if save:
         # Provider failures must not disappear from the dataset. Partial probe/event history is
         # unavailable when a transport raises; say so instead of fabricating zero observed work.
-        path = save_transcript({"control": "flat_context_no_graph", "control_version": 5,
+        path = save_transcript({"control": "flat_context_no_graph", "control_version": 6,
                                 "request_text": request_text, "snapshot": snapshot.removeprefix("snapshot:"),
                                 "model": abandoned[-1]["model"] if abandoned else "unknown", "live": True,
                                 "temperature": TEMPERATURE, "max_turns": MAX_TURNS, "system_prompt": SYSTEM_PROMPT,
@@ -697,6 +710,8 @@ def main(argv: list[str] | None = None) -> int:
           f"tool calls={transcript['tool_call_count']}")
     if transcript["aborted"]:
         print("ABORTED: " + "; ".join(transcript["validation_errors"]))
+    elif transcript["result"].get("kind") == "CLARIFICATION":
+        print("CLARIFICATION: " + transcript["result"]["question"])
     else:
         r = transcript["result"]
         print(f"fleet: {json.dumps(r['fleet'], sort_keys=True)}")

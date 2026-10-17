@@ -316,6 +316,7 @@ def run_from_control(transcript: dict, fixtures: dict, manifest: dict) -> dict:
         "model_turns": transcript.get("model_turns"),
         "tool_calls": transcript.get("tool_call_count", len(transcript.get("tool_calls") or [])),
         "aborted": bool(transcript.get("aborted") or result is None),
+        "clarification": (result or {}).get("kind") == "CLARIFICATION",
         "transcript": transcript.get("_path"),
     }
 
@@ -389,7 +390,8 @@ def runs_from_report(report: dict, fixtures: dict, manifest: dict) -> list[dict]
                          "disposition": None, "alternative": None, "probed": {},
                          "model_turns": _turns_from_grounding_transcript(attempt.get("transcript")),
                          "tool_calls": len(grounding.get("tool_calls") or []), "aborted": True,
-                         "clarification": kind == "CLARIFICATION",
+                         "clarification": (kind == "CLARIFICATION" and not any(
+                             e.startswith("GROUNDING_ABORTED") for e in grounding.get("validation_errors", []))),
                          "outcome": attempt.get("outcome"), "transcript": attempt.get("transcript")})
             continue
         plan = detail.get("plan") or {}
@@ -690,6 +692,7 @@ def collect(control_dir: Path | str = CONTROL_DIR, report_dir: Path | str = REPO
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Score product reports and flat-context control runs against the oracle.")
+    ap.add_argument("--bundle", type=Path, help="verify and rescore a portable issue-22 bundle offline")
     ap.add_argument("--controls", default=str(CONTROL_DIR))
     ap.add_argument("--reports", default=str(REPORT_DIR))
     ap.add_argument("--oracle", default=str(ORACLE_PATH))
@@ -697,6 +700,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--json", help="also write the scored rows to this path")
     args = ap.parse_args(argv)
 
+    if args.bundle:
+        from evals.comparison_evidence import verify, rescore, comparison_markdown
+        verify(args.bundle)
+        scores = rescore(args.bundle)
+        print(comparison_markdown(scores))
+        if args.json:
+            Path(args.json).write_text(json.dumps(scores, indent=2), encoding="utf-8")
+        return 0
     control_rows, product_rows = collect(args.controls, args.reports, args.oracle, args.fixture_root)
     rows = product_rows + control_rows
     print("## Product vs flat-context control — scored against evals/expected/dispositions.json "

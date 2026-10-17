@@ -155,7 +155,7 @@ def test_flat_context_has_every_file_and_no_payloads():
 # --------------------------------------------------------------------------- allowlist / probe wiring
 
 def test_dispatch_allowlist_is_exactly_the_declared_tools():
-    assert control.TOOLS == ("run_reader_probe", "submit_assessment")
+    assert control.TOOLS == ("run_reader_probe", "submit_assessment", "ask_clarification")
     assert set(control._DISPATCH) == {"run_reader_probe"}
     declared = [f["name"] for group in control._declarations() for f in group["functionDeclarations"]]
     assert declared == list(control.TOOLS)
@@ -807,6 +807,9 @@ def test_live_control_runs_once(tmp_path):
     assert transcript["model"] in chain
     assert transcript["aborted"] is False, transcript["validation_errors"]
     assert not transcript["validation_errors"], transcript["validation_errors"]
+    if transcript["result"].get("kind") == "CLARIFICATION":
+        assert transcript["result"]["question"].strip()
+        return  # usable terminal execution; no readability verdict
     assert transcript["result"]["disposition"] in control.DISPOSITIONS
     assert set(transcript["result"]["fleet"]) == {"cart", "checkout"}
     if transcript["result"]["disposition"] == "BOUNDED_PASS":
