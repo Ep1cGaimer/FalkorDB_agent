@@ -83,7 +83,7 @@ Ignored local evidence is under `artifacts/grounding-eval/`: `issue-17-live-regr
 author-reported evidence, not downloadable repository artifacts. The original issue #2 table and
 three tracked ambiguous transcripts below are unchanged.
 
-### Main sync and current validation — `c56384f`
+### Main sync checkpoint — `c56384f`
 
 Merged `origin/main` at `bc4bcf012879d48f2bf505b18f0603dc7fce729c` (PR #13). Kept its required tool
 calls, compact wire history, sanitized failure artifacts, quota pacing and repeated-excerpt handling.
@@ -99,8 +99,60 @@ projection removes them, and capped-away text is still not marked delivered.
   attempt. This does **not** establish that `8baa3f3`'s artifact-identity precedence fixed the
   earlier semantic failure. Raw local log: `artifacts/grounding-eval/issue-17-live-build-identity.log`;
   sanitized failure transcripts remain under `artifacts/grounding/failures/`.
-- Final eight-case live regression and complete 15-run evaluation are **pending quota recovery**.
-  Issue #17 is not yet demonstrated resolved, and no PR readiness claim is made.
+- At this checkpoint the final live regressions and complete 15-run evaluation were pending quota
+  recovery. The subsequent Gemini attempts and final draft-PR status are recorded next.
+
+### Draft PR checkpoint — source revision `368ba03`
+
+**Preliminary checks pass; live acceptance remains incomplete.** The operator requested a PR at
+this point with the rate-limit blocker reported explicitly. Issue #17 remains open; this is a draft
+for review, not a claim that the ambiguity behavior is resolved or ready to merge.
+
+| Check | Observed result on the latest source |
+|---|---|
+| `.venv/bin/python -m pytest -q -m 'not live' --tb=short` | **538 passed, 9 deselected**, zero skips. |
+| `.venv/bin/python scripts/smoke.py` | **8/8 PASS**, graph `rw_smoke_030277ac` deleted. |
+| `git diff --check` | Pass. |
+| Main sync | `git pull --no-rebase origin main`: already up to date at `bc4bcf0`. |
+| Final nine-test live suite | **Incomplete**; includes eight grounding cases and the separate control. |
+| Required `evals/run_grounding_cases.py --runs 3` | **Not completed on the final source**; no new complete 15-row table is claimed. |
+
+The operator authorized another locally configured provider after both Groq models exhausted their
+daily token allowances. The worktree-only ignored configuration was pinned to
+`gemini:gemini-3.8-flash`; source defaults were not changed. The Gemini adapter already existed.
+
+- A targeted named-old-build run at `35ecb2b` **passed**: earlier cart artifact selected, checkout's
+  receipt correction retained, exact citations and no validation errors. This is one observation,
+  not a complete regression result.
+- The first full Gemini invocation was interrupted after **1 failed, 1 passed**. Main over-clarified
+  a named rollout; ambiguous correctly asked for its missing referent. The generic title rule in
+  `368ba03` now treats named feature/rollout/fix titles as searchable identifiers even when their
+  implementing version is unknown. That final semantic change remains unverified live.
+- The latest live invocation (`pytest -q -m live -x -s`) was interrupted after repeated HTTP 429
+  responses in its first case; **no test completed**. It is not a semantic pass or a complete batch.
+
+**Measured rate-limit blocker.** Earlier Groq responses refused calls against a
+**200,000-token daily allowance per model** for both configured models. Gemini's diagnostic HTTP 429 identified
+`GenerateRequestsPerDayPerProjectPerModel-FreeTier`, quota value **20 requests/day**, and a
+`retryDelay` of **57,699 seconds** (about 16 hours). The key authenticated successfully in earlier
+calls; the remaining blocker is available generation capacity. These are observed account/model
+limits, not a promise about future availability. Google documents that quotas are project-scoped
+and daily request quotas reset at midnight Pacific time; see [Gemini rate limits](https://ai.google.dev/gemini-api/docs/rate-limits).
+No billing changes or paid-tier upgrade were performed.
+
+All failure artifacts, diagnostics and environment files stay ignored and local; **none are added
+to this branch or its push**. STATUS reports outcomes without raw provider/account details. Local
+logs include `issue-17-gemini-build-identity.log`, `issue-17-gemini-live-regression.log`,
+`issue-17-gemini-live-v2.log`, `issue-17-gemini-quota.json`, `issue-17-offline-title-rule.log` and
+`issue-17-pr-smoke.log` under `artifacts/grounding-eval/`. The curated historical issue #2 transcripts
+remain unchanged. These new local measurements are author-reported, not downloadable artifacts.
+
+Before marking this PR ready: restore sufficient provider capacity, rerun all nine live tests, run
+one complete 15-observation batch, audit exact citations and the actual questions/proposed fleets,
+and record the complete table here separately from the baseline below. Require all three ambiguous
+observations to clarify before artifact selection and all main/named-old-build controls to preserve
+the requested behavior/artifact. Keep the disputed historical `inseparable` label and caveat intact;
+kind matches alone do not establish semantic correctness or retained-data compatibility.
 
 ## MCP exposure — 2026-10-17
 
