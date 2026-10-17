@@ -83,6 +83,25 @@ Ignored local evidence is under `artifacts/grounding-eval/`: `issue-17-live-regr
 author-reported evidence, not downloadable repository artifacts. The original issue #2 table and
 three tracked ambiguous transcripts below are unchanged.
 
+### Main sync and current validation — `c56384f`
+
+Merged `origin/main` at `bc4bcf012879d48f2bf505b18f0603dc7fce729c` (PR #13). Kept its required tool
+calls, compact wire history, sanitized failure artifacts, quota pacing and repeated-excerpt handling.
+Intent rejection recovery uses the same helper, restricted to `assess_intent`, with at most two
+attempts inside the shared eight-call cap. Deduplication checks trusted hashes before the provider
+projection removes them, and capped-away text is still not marked delivered.
+
+- `.venv/bin/python -m pytest -q -m 'not live' --tb=short` → **538 passed, 9 deselected**, zero skips.
+  This includes all incoming provider/control tests and four new checks for rejection recovery and
+  exhaustion during request-only assessment across both adapters.
+- `.venv/bin/python scripts/smoke.py` → **8/8 PASS**, graph `rw_smoke_21375b78` deleted.
+- The targeted named-old-build live rerun was refused by both models' daily quotas on every outer
+  attempt. This does **not** establish that `8baa3f3`'s artifact-identity precedence fixed the
+  earlier semantic failure. Raw local log: `artifacts/grounding-eval/issue-17-live-build-identity.log`;
+  sanitized failure transcripts remain under `artifacts/grounding/failures/`.
+- Final eight-case live regression and complete 15-run evaluation are **pending quota recovery**.
+  Issue #17 is not yet demonstrated resolved, and no PR readiness claim is made.
+
 ## MCP exposure — 2026-10-17
 
 Implemented six optional stdio tools through the existing single-worker HTTP API, strict transport
