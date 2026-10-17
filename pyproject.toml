@@ -4,6 +4,9 @@ version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = ["falkordb==1.8.0", "redis==8.1.0", "pydantic==2.14.1", "fastapi==0.143.2", "starlette==1.8.0", "uvicorn==0.54.0", "httpx==0.28.1"]
 
+[project.optional-dependencies]
+mcp = ["mcp==2.3.0"]
+
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]

@@ -1,6 +1,7 @@
 import { api, ApiError } from "./api.mjs";
 import { disposition, preferredCheck, replayMatches, recordedAnswers, replayCandidates, usedReplays, workspaceTitle } from "./model.mjs";
 import { currentAttempt, contextFor, sidebar, topbar, investigationView, overlay } from "./views.mjs";
+import { investigationFromSearch, loadInvestigation, adoptInvestigation } from "./handoff.mjs";
 
 // Local UI audit origin, not an authenticated person's identity. Explicit clicks still
 // confirm scope and approve simulation; the server retains every evidence/approval gate.
@@ -66,7 +67,7 @@ async function restoreNavigation(target) {
   state.error = null;
   if (state.busy) render();
   if (view.investigationId && !inv) {
-    try { inv = await api("GET", `/api/investigations/${view.investigationId}`); }
+    try { inv = await loadInvestigation(view.investigationId); }
     catch (failure) { error = failure; }
   }
   if (version !== restorationVersion) return;
@@ -83,8 +84,7 @@ async function restoreNavigation(target) {
     state.form.mode = inv.mode;
     state.form.snapshot = inv.snapshot_id.replace(/^snapshot:/, "");
     if (!owned) {
-      state.form.request = inv.original_request_text || inv.request_text.split("\n\nAgent asked:")[0];
-      if (inv.mode === "live") state.liveRequest = state.form.request;
+      adoptInvestigation(state, inv);
     }
   } else if (!state.contexts.some(c => c.snapshot === state.form.snapshot)) {
     state.form.snapshot = state.contexts[0]?.snapshot || "";
@@ -147,13 +147,12 @@ async function execute(label, fn) {
 }
 
 async function refresh() {
-  state.inv = await api("GET", `/api/investigations/${state.inv.id}`);
+  state.inv = await loadInvestigation(state.inv.id);
 }
 
 function selectLatest(inv) {
   navigate(() => {
-    state.inv = inv; state.attemptIndex = inv.attempts.length - 1; state.selected = null; state.overlay = null;
-    state.form.mode = inv.mode; state.form.snapshot = inv.snapshot_id.replace(/^snapshot:/, "");
+    adoptInvestigation(state, inv);
   });
 }
 
@@ -238,9 +237,12 @@ const actions = {
   openInvestigation(id) {
     execute("Loading investigation…", async () => {
       state.overlay = null; state.focusRecord = null;
-      selectLatest(await api("GET", `/api/investigations/${id}`));
+      selectLatest(await loadInvestigation(id));
       document.getElementById("sidebar").classList.remove("open");
     });
+  },
+  refreshInvestigation() {
+    execute("Refreshing stored evidence…", async () => { selectLatest(await loadInvestigation(state.inv.id)); });
   },
   newInvestigation() {
     if (state.busy) return;
@@ -315,7 +317,8 @@ async function boot() {
   else state.contextError = `Fixture inventory unavailable: ${results[0].reason.message}`;
   if (results[1].status === "fulfilled") state.transcripts = results[1].value;
   else state.error = new ApiError(0, `Saved transcripts unavailable: ${results[1].reason.message}`);
-  await restoreNavigation({ entry: history.state, hash: location.hash });
+  const handoff = location.hash ? null : investigationFromSearch(location.search);
+  await restoreNavigation({ entry: handoff ? null : history.state, hash: handoff ? `#investigation/${handoff}` : location.hash });
 }
 
 window.addEventListener("popstate", event => restoreNavigation({ entry: event.state, hash: location.hash }));

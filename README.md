@@ -57,6 +57,15 @@ Try it:
 .venv\Scripts\python.exe scripts\serve.py
 ```
 
+## Local MCP tools
+
+Install the optional bridge with `sh scripts/setup.sh --mcp` (PowerShell: `scripts\setup.ps1 -Mcp`).
+Start the existing HTTP API with `scripts/serve.py`; a stdio host then launches `scripts/serve_mcp.py`
+using absolute interpreter/script paths. Six tools start, list and read investigations/transcripts,
+answer a clarification and request an alternative. Human scope confirmation, approval and local
+simulation remain in the console through the returned review URL. See [docs/MCP.md](docs/MCP.md)
+for host configuration, strict inputs, size/time limits and restart/retry behavior.
+
 ## Evidence and honest limits
 
 - **Independent oracle:** 8 hand-derived cases (`evals/expected/`) — the real pipeline on real FalkorDB matches all 8 (disposition, exact obligations, probe results, gaps).

@@ -1,6 +1,9 @@
 """Step-wise local API. Only server-held evidence can authorize simulation."""
 from __future__ import annotations
 
+import base64
+import binascii
+import re
 from dataclasses import dataclass, field
 from copy import deepcopy
 from datetime import datetime, timezone
@@ -10,18 +13,21 @@ import logging
 import mimetypes
 from pathlib import Path
 from threading import RLock
-from typing import Any, Callable, Literal
+from typing import Annotated, Any, Callable, Literal
 from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
 from .contracts import (Approval, CandidatePlan, Disposition, FleetEntry,
                         GroundingClarification, GroundingResult, MAX_PLANS_PER_SESSION,
-                        ScopeConfirmation, VerificationResult)
+                        ScopeConfirmation, SimulationReceipt, VerificationResult)
+from .api_contracts import (ERROR_RESPONSES, PAGE_RESPONSES, InvestigationView,
+                            InvestigationSummary, TranscriptSummary, ReportView)
 from .simulation import DEFAULT_FORBIDDEN_IDENTITIES, SimulationRefused
+from .grounding import LIVE_PROVIDER_PREFIXES
 
 log = logging.getLogger("rw.api")
 
@@ -66,9 +72,6 @@ class EvidenceDrift(SimulationRefused):
         super().__init__(EVIDENCE_DRIFT_REASON)
 
 
-LIVE_PROVIDER_PREFIXES = ("groq:", "gemini:")
-
-
 class RequestBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -78,6 +81,11 @@ class InvestigationRequest(RequestBody):
     mode: Literal["live", "replay"] = "live"
     replay_path: str | None = None
     snapshot: Literal["snap-001", "snap-002-partial", "snap-003-orphan"] = "snap-001"
+
+
+class StoredInvestigationRequest(InvestigationRequest):
+    """The composed request after an answer has a separate bound from HTTP creation."""
+    request_text: str = Field(min_length=1, max_length=28000)
 
 
 class ScopeRequest(RequestBody):
@@ -234,6 +242,48 @@ class Investigation:
                 **(attempts[-1] if attempts else {})}
 
 
+def _page_cursor(kind: str, key: list[str]) -> str:
+    return base64.urlsafe_b64encode(json.dumps([1, kind, key], separators=(",", ":")).encode()).decode().rstrip("=")
+
+
+def _read_cursor(kind: str, limit: int | None, cursor: str | None) -> list[str] | None:
+    if cursor is None:
+        return None
+    try:
+        if limit is None or not re.fullmatch(r"[A-Za-z0-9_-]{1,512}", cursor):
+            raise ValueError
+        decoded = base64.b64decode(cursor + "=" * (-len(cursor) % 4), altchars=b"-_", validate=True)
+        version, endpoint, key = json.loads(decoded)
+        if type(version) is not int or version != 1 or endpoint != kind or not isinstance(key, list):
+            raise ValueError
+        if kind == "investigations":
+            valid = len(key) == 1 and isinstance(key[0], str) and re.fullmatch(r"[0-9a-f]{32}", key[0])
+        else:
+            valid = (len(key) == 2 and all(isinstance(v, str) and 0 < len(v) <= 255 for v in key)
+                     and not any(c in key[1] for c in "/\\:"))
+            if valid:
+                valid = datetime.fromisoformat(key[0]).utcoffset() is not None
+        if not valid:
+            raise ValueError
+        return key
+    except (ValueError, TypeError, binascii.Error):
+        raise HTTPException(422, "invalid pagination cursor") from None
+
+
+def _page(rows, kind, limit, key, response):
+    if limit is None:
+        return rows
+    rowkey = ((lambda r: [r["id"]]) if kind == "investigations"
+              else (lambda r: [r["mtime"], r["file_name"]]))
+    reverse = kind == "transcripts"
+    ordered = sorted(rows, key=rowkey, reverse=reverse)
+    if key is not None:
+        ordered = [r for r in ordered if (rowkey(r) < key if reverse else rowkey(r) > key)]
+    if len(ordered) > limit:
+        response.headers["X-Next-Cursor"] = _page_cursor(kind, rowkey(ordered[limit - 1]))
+    return ordered[:limit]
+
+
 def _now():
     return datetime.now(timezone.utc).isoformat()
 
@@ -315,6 +365,9 @@ def create_app(*, session_factory: Callable | None = None,
             except grounding.GroundingError as exc:
                 log.warning("grounding unavailable: %s", exc)
                 raise HTTPException(502, provider_failure(exc)) from exc
+        if (inv.request.mode == "live" and isinstance(result.result, GroundingClarification)
+                and len(result.result.question) > 3000):
+            raise HTTPException(502, {"code": "provider_error", "message": PROVIDER_MESSAGES["provider_error"]})
         if result.request_text != inv.request.request_text:
             raise SimulationRefused("grounding request does not match this investigation")
         errors = list(result.validation_errors)
@@ -330,7 +383,7 @@ def create_app(*, session_factory: Callable | None = None,
                 raise SimulationRefused("alternative must be a different plan")
         inv.attempts.append(Attempt(result, str(transcript) if transcript else None, plan, errors))
 
-    @app.post("/api/investigations")
+    @app.post("/api/investigations", response_model=InvestigationView, responses=ERROR_RESPONSES, response_model_exclude_unset=True)
     def create_investigation(body: InvestigationRequest):
         nonlocal initialized
         if not body.request_text.strip():
@@ -359,13 +412,25 @@ def create_app(*, session_factory: Callable | None = None,
             investigations[inv.id] = inv
         return inv.public()
 
-    @app.get("/api/transcripts")
-    def list_transcripts():
+    @app.get("/api/transcripts", response_model=list[TranscriptSummary], responses=PAGE_RESPONSES, response_model_exclude_unset=True)
+    def list_transcripts(response: Response, limit: Annotated[int | None, Query(ge=1, le=100)] = None,
+                         cursor: Annotated[str | None, Query(max_length=512)] = None):
+        key = _read_cursor("transcripts", limit, cursor)
         transcripts = []
         for candidate in transcript_root.glob("*.json"):
             try:
                 path = replay_file(candidate)
-                data = json.loads(path.read_text(encoding="utf-8"))
+                if limit is not None:
+                    # The stat is only a fast path: the bounded read also handles growing files.
+                    if path.stat().st_size > 1024 * 1024:
+                        continue
+                    with path.open("rb") as stream:
+                        raw = stream.read(1024 * 1024 + 1)
+                    if len(raw) > 1024 * 1024:
+                        continue
+                    data = json.loads(raw)
+                else:
+                    data = json.loads(path.read_text(encoding="utf-8"))
                 result = data.get("result", {})
                 if not isinstance(result, dict):
                     continue
@@ -382,10 +447,13 @@ def create_app(*, session_factory: Callable | None = None,
                     "mtime": datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat()})
             except (OSError, ValueError, AttributeError, HTTPException):
                 continue
-        return sorted(transcripts, key=lambda row: (row["mtime"], row["file_name"]), reverse=True)
+        rows = sorted(transcripts, key=lambda row: (row["mtime"], row["file_name"]), reverse=True)
+        return _page(rows, "transcripts", limit, key, response)
 
-    @app.get("/api/investigations")
-    def list_investigations():
+    @app.get("/api/investigations", response_model=list[InvestigationSummary], responses=PAGE_RESPONSES, response_model_exclude_unset=True)
+    def list_investigations(response: Response, limit: Annotated[int | None, Query(ge=1, le=100)] = None,
+                            cursor: Annotated[str | None, Query(max_length=512)] = None):
+        key = _read_cursor("investigations", limit, cursor)
         with registry_lock:
             entries = list(investigations.values())
         rows = []
@@ -395,9 +463,9 @@ def create_app(*, session_factory: Callable | None = None,
                 rows.append({"id": inv.id, "investigation_id": inv.id,
                     "request_text": inv.request.request_text, "mode": inv.request.mode,
                     "latest_disposition": report["verification"]["disposition"] if report else None})
-        return rows
+        return _page(rows, "investigations", limit, key, response)
 
-    @app.get("/api/investigations/{identifier}")
+    @app.get("/api/investigations/{identifier}", response_model=InvestigationView, responses=ERROR_RESPONSES, response_model_exclude_unset=True)
     def get_state(identifier: str):
         inv = get_investigation(identifier)
         with inv.lock:
@@ -416,7 +484,7 @@ def create_app(*, session_factory: Callable | None = None,
                               "snapshot_id": "snapshot:" + manifest["snapshot"]})
         return snapshots
 
-    @app.post("/api/investigations/{identifier}/plans/{plan_hash}/confirm-scope")
+    @app.post("/api/investigations/{identifier}/plans/{plan_hash}/confirm-scope", response_model=ReportView, responses=ERROR_RESPONSES, response_model_exclude_unset=True)
     def confirm_scope(identifier: str, plan_hash: str, body: ScopeRequest):
         inv = get_investigation(identifier)
         with inv.lock:
@@ -429,7 +497,7 @@ def create_app(*, session_factory: Callable | None = None,
             public = inv.public()
             return next(a["report"] for a in public["attempts"] if a["plan_hash"] == plan_hash)
 
-    @app.post("/api/investigations/{identifier}/alternative")
+    @app.post("/api/investigations/{identifier}/alternative", response_model=InvestigationView, responses=ERROR_RESPONSES, response_model_exclude_unset=True)
     def alternative(identifier: str, body: AlternativeRequest | None = None):
         from .pipeline import summarize_for_agent
         inv = get_investigation(identifier)
@@ -448,7 +516,7 @@ def create_app(*, session_factory: Callable | None = None,
             ground_attempt(inv, summarize_for_agent(latest.report), replay_path)
             return inv.public()
 
-    @app.post("/api/investigations/{identifier}/answer")
+    @app.post("/api/investigations/{identifier}/answer", response_model=InvestigationView, responses=ERROR_RESPONSES, response_model_exclude_unset=True)
     def answer_clarification(identifier: str, body: AnswerRequest):
         from .pipeline import with_answer
         inv = get_investigation(identifier)
@@ -467,7 +535,9 @@ def create_app(*, session_factory: Callable | None = None,
                 raise HTTPException(422, "replay_path requires replay mode")
             original = inv.request
             bound = with_answer(original.request_text, latest.grounding.result.question, body.answer.strip())
-            inv.request = original.model_copy(update={"request_text": bound})
+            if len(bound) > 28000:
+                raise HTTPException(422, "answered request exceeds 28000 characters")
+            inv.request = StoredInvestigationRequest.model_validate({**original.model_dump(), "request_text": bound})
             try:
                 ground_attempt(inv, None, replay_path)
             except BaseException:
@@ -500,7 +570,7 @@ def create_app(*, session_factory: Callable | None = None,
             raise EvidenceDrift(drift)
         return verification
 
-    @app.post("/api/investigations/{identifier}/plans/{plan_hash}/approve")
+    @app.post("/api/investigations/{identifier}/plans/{plan_hash}/approve", response_model=Approval, responses=ERROR_RESPONSES, response_model_exclude_unset=True)
     def approve(identifier: str, plan_hash: str, body: ApprovalRequest):
         from .simulation import record_approval
         inv = get_investigation(identifier)
@@ -517,7 +587,7 @@ def create_app(*, session_factory: Callable | None = None,
             attempt.approval = approval
             return approval
 
-    @app.post("/api/investigations/{identifier}/plans/{plan_hash}/simulate")
+    @app.post("/api/investigations/{identifier}/plans/{plan_hash}/simulate", response_model=SimulationReceipt, responses=ERROR_RESPONSES, response_model_exclude_unset=True)
     def simulate_plan(identifier: str, plan_hash: str):
         from . import graph, simulation, verification
         inv = get_investigation(identifier)
