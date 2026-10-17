@@ -284,6 +284,7 @@ def test_system_prompt_has_a_generic_ambiguity_rule_without_fixture_names():
     assert "Build timestamps, recency, history order, or an assumed calendar anchor" in prompt
     assert "actual unresolved request" in prompt
     assert "explicit artifact or an evidence-supported behavioral relationship" in prompt
+    assert "retrieved history cannot supply an identity the operator omitted" in prompt
     assert "without an unnecessary time question" in prompt and "operator answer" in prompt
     assert "across the relevant services" in prompt and "Retaining downstream support" in prompt
     lowered = prompt.lower()
