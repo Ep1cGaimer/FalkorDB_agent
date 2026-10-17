@@ -19,15 +19,20 @@ TOOL_SPECS = [s for s in g.TOOL_SPECS if s['name'] in g.TERMINAL_TOOLS]
 
 def source_catalog(fixture_root=control.FIXTURE_ROOT, snapshot=control.DEFAULT_SNAPSHOT):
     """Use the importer's pure extraction, without connecting to or traversing a graph."""
-    releases, excerpts, routes, ids, _, _, _ = G._collect_releases(Path(fixture_root))
+    releases, excerpts, routes, ids, declarations, _, _ = G._collect_releases(Path(fixture_root))
     manifest = json.loads((Path(fixture_root) / 'snapshots' / snapshot.removeprefix('snapshot:') /
                            'manifest.json').read_text(encoding='utf-8'))
+    route_stores = {(d['release_id'], r['name']): r.get('reads_from')
+                    for d in declarations for r in d['declaration'].get('routes', [])}
     rows = []
     for release in releases:
         rows.append({'release_id': release['id'], 'service': release['service'],
                      'version': release['version'], 'artifact_hash': release['artifact_hash'],
                      'declared_flags': json.loads(release['declared_flags_json']),
-                     'routes': [{'route_id': r['id'], 'name': r['name']} for r in routes
+                     'routes': [{'route_id': r['id'], 'name': r['name'],
+                                 'store_id': ('store:' + route_stores[(r['release_id'], r['name'])].removeprefix('store:')
+                                              if isinstance(route_stores[(r['release_id'], r['name'])], str)
+                                              and route_stores[(r['release_id'], r['name'])] else None)} for r in routes
                                 if r['release_id'] == release['id']],
                      'excerpts': [{**ex, 'excerpt_id': ex['id'],
                                    'span': f"{ex['line_start']}-{ex['line_end']}"}
@@ -46,9 +51,9 @@ def context(fixture_root=control.FIXTURE_ROOT, snapshot=control.DEFAULT_SNAPSHOT
     for release in catalog['releases']:
         parts.append(' | '.join([release['release_id'], release['service'], release['version'],
                                   json.dumps(release['declared_flags'], separators=(',', ':'))]) + '\n')
-    parts.append('\nTrusted route addresses: route_id | release route name (store is declared in release.json)\n')
+    parts.append('\nTrusted route addresses: route_id | store_id | release route name\n')
     for release in catalog['releases']:
-        parts.extend(r['route_id'] + ' | ' + r['name'] + '\n' for r in release['routes'])
+        parts.extend(r['route_id'] + ' | ' + str(r['store_id']) + ' | ' + r['name'] + '\n' for r in release['routes'])
     parts.append('\nTrusted citation addresses: excerpt_id | kind | file within release | inclusive line span | content_hash\n')
     for release in catalog['releases']:
         for e in release['excerpts']:

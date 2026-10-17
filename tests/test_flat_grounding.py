@@ -51,6 +51,9 @@ def test_source_catalog_matches_importer_and_full_raw_files():
     context = flat.context()
     for path in legacy.context_files():
         assert path.read_text().rstrip() in context
+    for release in catalog['releases']:
+        for route in release['routes']:
+            assert route['route_id'] in context and route['store_id'] in context
     assert 'expected_probe' not in context and 'expected_disposition' not in context
 
 

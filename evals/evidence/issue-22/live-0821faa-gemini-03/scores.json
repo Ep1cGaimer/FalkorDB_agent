@@ -1,0 +1,84 @@
+{
+  "protocol_version": 1,
+  "rows": [
+    {
+      "block": 1,
+      "arm": "graph_grounding_checker",
+      "status": "failed",
+      "outcome": "OPERATIONAL_ERROR",
+      "telemetry": {
+        "model_calls": 2,
+        "http_attempts": 7,
+        "reported_usage_totals": {
+          "promptTokenCount": 1269,
+          "candidatesTokenCount": 10,
+          "totalTokenCount": 1310,
+          "thoughtsTokenCount": 31
+        },
+        "usage_unknown_calls": 1,
+        "model_elapsed_s": 117.71623900003033,
+        "pacing_wait_s": 0,
+        "reported_retry_wait_s": 60.0,
+        "retry_wait_accounting": "included in model elapsed; individual backoff durations unavailable"
+      },
+      "elapsed_s": 117.77177674998529
+    },
+    {
+      "block": 1,
+      "arm": "flat_grounding_checker",
+      "status": "unrun",
+      "outcome": "UNRUN"
+    },
+    {
+      "block": 1,
+      "arm": "flat_assessment",
+      "status": "unrun",
+      "outcome": "UNRUN"
+    },
+    {
+      "block": 2,
+      "arm": "flat_grounding_checker",
+      "status": "unrun",
+      "outcome": "UNRUN"
+    },
+    {
+      "block": 2,
+      "arm": "flat_assessment",
+      "status": "unrun",
+      "outcome": "UNRUN"
+    },
+    {
+      "block": 2,
+      "arm": "graph_grounding_checker",
+      "status": "unrun",
+      "outcome": "UNRUN"
+    },
+    {
+      "block": 3,
+      "arm": "flat_assessment",
+      "status": "unrun",
+      "outcome": "UNRUN"
+    },
+    {
+      "block": 3,
+      "arm": "graph_grounding_checker",
+      "status": "unrun",
+      "outcome": "UNRUN"
+    },
+    {
+      "block": 3,
+      "arm": "flat_grounding_checker",
+      "status": "unrun",
+      "outcome": "UNRUN"
+    }
+  ],
+  "aligned_blocks": [],
+  "consistent_counts": {
+    "graph_grounding_checker": 0,
+    "flat_grounding_checker": 0
+  },
+  "verdict": "incomplete: no aligned completed blocks",
+  "complete": false,
+  "denominator": 0,
+  "interpretation": "Evidence consistency of grounding/retrieval with shared checker; request fit reported separately. Clarification semantics are ungraded. Byte/shape readability does not establish cross-service behavior."
+}
