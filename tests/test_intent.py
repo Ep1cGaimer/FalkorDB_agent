@@ -73,3 +73,14 @@ def test_service_names_are_scope_not_anchors():
     assert intent.is_anchored("the cart update", set())  # unknown services fall back to anchors
     assert not intent.names_a_change("cart")
     assert intent.check_references(["the checkout release"], "Revert the checkout release", SERVICES)
+
+
+def test_fragments_inside_words_are_not_operator_phrases():
+    """A reference must align with whole words; 'kno' inside 'know' cannot anchor an answer and
+    'art' inside 'cart' cannot cover it."""
+    request = with_answer("Undo that change", "Which one?", "I don't know")
+    errors = intent.check_references(["that change", "kno"], request, SERVICES)
+    assert any(e.startswith("INTENT_REFERENCE_NOT_OPERATOR_TEXT") for e in errors)
+    assert any(e.startswith("INTENT_UNRESOLVED") for e in errors)
+    errors = intent.check_references(["art"], "Roll back cart 1.4", SERVICES)
+    assert any(e.startswith("INTENT_REFERENCE_NOT_OPERATOR_TEXT") for e in errors)

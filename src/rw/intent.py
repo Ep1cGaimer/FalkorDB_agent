@@ -96,14 +96,13 @@ def check_references(references: object, request_text: str, services: set[str]) 
     original_phrases: list[str] = []
     lowered_original, lowered_answer = original.lower(), (answer or "").lower()
     for phrase in references:
-        needle = phrase.lower()
-        start = lowered_original.find(needle)
-        if start >= 0:
+        # Whole words only: a fragment such as "kno" inside "know" is not something the operator said.
+        pattern = re.compile(r"(?<![a-z0-9])" + re.escape(phrase.strip().lower()) + r"(?![a-z0-9])")
+        matches = [(m.start(), m.end()) for m in pattern.finditer(lowered_original)]
+        if matches:
             original_phrases.append(phrase)
-            while start >= 0:
-                original_spans.append((start, start + len(needle)))
-                start = lowered_original.find(needle, start + 1)
-        elif answer and needle in lowered_answer:
+            original_spans.extend(matches)
+        elif answer and pattern.search(lowered_answer):
             answer_phrases.append(phrase)
         else:
             errors.append(f"INTENT_REFERENCE_NOT_OPERATOR_TEXT: {phrase!r} is not verbatim text the operator "
