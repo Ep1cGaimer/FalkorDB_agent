@@ -317,6 +317,8 @@ async function boot() {
   const results = await Promise.allSettled([api("GET", "/api/snapshots"), api("GET", "/api/transcripts"), loadHistory(),
     api("GET", "/api/samples")]);
   if (results[3].status === "fulfilled") state.samples = results[3].value;
+  // A fixture's first sample starts in the request box so a demo can run with one click.
+  if (state.samples.length && !state.form.request) state.form.request = state.liveRequest = state.samples[0].request;
   if (results[0].status === "fulfilled") {
     state.contexts = results[0].value;
     state.form.snapshot = state.contexts[0]?.snapshot || "";
