@@ -26,7 +26,7 @@ Observed on Windows 11, Python 3.12, FalkorDB 6.0.2, with the MCP extra installe
 
 | Check | Observed result |
 |---|---|
-| Non-live suite | `.venv\Scripts\python.exe -m pytest -q -m "not live" -p no:cacheprovider`: **676 passed, 3 deselected**, 0 skipped. |
+| Non-live suite | `.venv\Scripts\python.exe -m pytest -q -m "not live" -p no:cacheprovider`: **679 passed, 3 deselected**, 0 skipped. |
 | Deterministic smoke | `scripts\smoke.py`: all checks PASS. |
 | Operator fleet CLI | `scripts\investigate.py --fleet cart=1.4 --confirm-as you`: **BLOCKED**. |
 | Relational control | `evals\relational_control.py`: SQL = FalkorDB = oracle in **8/8** cases, compared as full five-field keys. |

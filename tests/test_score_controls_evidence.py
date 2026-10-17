@@ -11,6 +11,8 @@ import importlib.util
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 
 spec = importlib.util.spec_from_file_location("score_controls_w4", ROOT / "evals" / "score_controls.py")
@@ -391,4 +393,36 @@ def test_reported_evidence_gap_leaves_a_bounded_pass_unsupported():
     [run] = scoring.runs_from_report(report, FIXTURES, MANIFESTS["snap-001"])
     row = scoring.score_run(run, OI, FIXTURES, MANIFESTS)
     assert row["established_passes"] == 4
+    assert row["unsupported_pass"] and not scoring.consistent(row)
+
+
+@pytest.mark.parametrize("bad_result", [None, "TIMEOUT"])
+def test_invalid_receipt_result_next_to_a_pass_is_unresolved_not_dropped(bad_result):
+    """A bound receipt with an invalid result must count as UNKNOWN; dropping it would let the
+    other PASS receipt for the same key stand alone and score a supported BOUNDED_PASS."""
+    receipts = [{"obligation_hash": ob_hash(i), "tuple": obligation_tuple(*pair), "result": "PASS"}
+                for i, pair in enumerate(CASE_B_PAIRS)]
+    receipts.append({"obligation_hash": ob_hash(1), "tuple": obligation_tuple(*CASE_B_PAIRS[1]),
+                     "result": bad_result})
+    run = from_report(make_report(receipts, claim="BOUNDED_PASS"))
+    assert run["probed"][full_key(*CASE_B_PAIRS[1])] == "UNKNOWN"
+    row = score(run)
+    assert row["unsupported_pass"] and not scoring.consistent(row)
+
+
+def test_control_probe_with_an_unrecognised_status_is_unresolved():
+    transcript = {
+        "_path": str(Path("artifacts/controls/llm_flat_20261015T101112000000Z.json")),
+        "model": "m", "live": True, "snapshot": "snap-001", "aborted": False,
+        "model_turns": 5, "tool_call_count": 5,
+        "result": {"fleet": {"cart": {"version": "1.5", "flags": {"basket_v2": False}},
+                             "checkout": {"version": "2.1", "flags": {}}},
+                   "disposition": "BOUNDED_PASS"},
+        "probe_calls": [{"service": s, "version": v, "record_id": r, "result": {"status": "PASS"}}
+                        for s, v, r in CASE_B_PAIRS]
+                       + [{"service": "cart", "version": "1.5", "record_id": "saved-cart-2002",
+                           "result": {"status": "TIMEOUT"}}],
+    }
+    row = score(scoring.run_from_control(transcript, FIXTURES, MANIFESTS["snap-001"]))
+    assert row["unknown_probes"] == 1
     assert row["unsupported_pass"] and not scoring.consistent(row)

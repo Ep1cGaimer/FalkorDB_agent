@@ -275,8 +275,10 @@ def run_from_control(transcript: dict, fixtures: dict, manifest: dict) -> dict:
     for call in probes:
         res = call.get("result") or {}
         status = res.get("status")
-        if call.get("error") or status not in {"PASS", "FAIL", "UNKNOWN"}:
-            continue
+        if call.get("error") or status is None:
+            continue  # a rejected call, or one with no result, earns no probe credit
+        if status not in {"PASS", "FAIL", "UNKNOWN"}:
+            status = "UNKNOWN"  # an executed probe with an unrecognised status (e.g. TIMEOUT) is unresolved
         service, version, record_id = (call.get(f) for f in ("service", "version", "record_id"))
         if not all(isinstance(value, str) and value for value in (service, version, record_id)):
             continue
@@ -432,10 +434,13 @@ def runs_from_report(report: dict, fixtures: dict, manifest: dict) -> list[dict]
                 notes.append(f"invalid product obligation identity: {key}; no credit")
                 continue
             for receipt in applicable:
-                if receipt.get("result") not in {"PASS", "FAIL", "UNKNOWN"}:
-                    notes.append(f"invalid product receipt result for {key}; no credit")
-                    continue
-                results_by_key.setdefault(key, []).append(receipt.get("result"))
+                result = receipt.get("result")
+                if result not in {"PASS", "FAIL", "UNKNOWN"}:
+                    # a bound receipt with an invalid result is unresolved evidence, never dropped:
+                    # dropping it would let another PASS for the same key stand alone
+                    notes.append(f"invalid product receipt result {result!r} for {key}; counted as UNKNOWN")
+                    result = "UNKNOWN"
+                results_by_key.setdefault(key, []).append(result)
         probed = {key: _dominant_result(list(results)) for key, results in results_by_key.items()}
         if unbound:
             notes.append(f"{unbound} saved probe receipt(s) did not bind to this plan's obligation "
