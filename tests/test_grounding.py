@@ -59,7 +59,19 @@ class FakeTools:
         return [], {"name": "get_excerpts", "rows": 0, "truncated": False}
 
 
+# Most scripted proposals answer run()'s request "Undo the basket rollout"; a test that uses another
+# request, or checks request_references itself, passes request_references explicitly.
+DEFAULT_REFERENCES = ["the basket rollout"]
+
+
+def _with_references(name, args):
+    if name == "propose_fleet" and "request_references" not in args:
+        args = {**args, "request_references": DEFAULT_REFERENCES}
+    return args
+
+
 def call(_name, **args):
+    args = _with_references(_name, args)
     return {"candidates": [{"content": {"role": "model", "parts": [{"functionCall": {"name": _name, "args": args}}]}}]}
 
 
@@ -93,7 +105,7 @@ GROQ_MODEL = "groq:openai/gpt-oss-120b"
 
 def groq_call(name, call_id="call_1", arguments=None, **args):
     """One Groq/OpenAI-compatible Chat Completions response carrying a single tool call."""
-    encoded = arguments if arguments is not None else json.dumps(args)
+    encoded = arguments if arguments is not None else json.dumps(_with_references(name, args))
     return {"id": "chatcmpl-1", "object": "chat.completion", "model": "openai/gpt-oss-120b", "choices": [
         {"index": 0, "finish_reason": "tool_calls", "message": {
             "role": "assistant", "content": None,
@@ -646,7 +658,7 @@ def test_tools_against_real_graph_no_errors(tmp_path):
                                                                 "flags": [{"name": "basket_v2", "enabled": False}]}],
                                      citations=[{"excerpt_id": changelog["excerpt_id"],
                                                  "quote": changelog["text"]}], rationale="r")])
-        gr2, _ = grounding.ground("r", tools, transport=t2, artifact_dir=tmp_path)
+        gr2, _ = grounding.ground("Undo the basket rollout", tools, transport=t2, artifact_dir=tmp_path)
         assert isinstance(gr2.result, GroundingProposal) and gr2.validation_errors == []
     finally:
         _drop_test_graphs(db)
@@ -1519,3 +1531,55 @@ def test_string_flag_value_is_an_invalid_call_not_silent_true(tmp_path):
     reply = t.bodies[2]["contents"][-1]["parts"][0]["functionResponse"]["response"]
     assert "invalid propose_fleet call" in reply["error"] and "enabled" in reply["error"]
     assert isinstance(gr.result, GroundingClarification) and not grounding.is_aborted(gr)
+
+
+# --------------------------------------------------------------------------- request references (#17)
+
+VAGUE_REQUEST = "Roll back the cart change from last week."
+
+
+def _vague_proposal(references):
+    return call("propose_fleet", changes=[{"service": "cart", "release_id": "release:cart:old"}],
+                citations=[{"excerpt_id": EX_ID, "quote": "Receipt correction"}],
+                request_references=references, rationale="guessing the older cart build")
+
+
+def test_vague_request_proposal_gets_a_correction_and_the_agent_asks(tmp_path):
+    """A proposal for a change named only by service and time is refused by trusted code; the one
+    correction round tells the agent to ask, and the clarification is the result."""
+    t = ScriptedTransport([call("current_fleet"), call("release_history", service="cart"),
+                           _vague_proposal(["the cart change from last week"]),
+                           call("ask_clarification", question="Which cart change do you mean?",
+                                unresolved=["the cart change from last week"])])
+    gr, path = grounding.ground(VAGUE_REQUEST, FakeTools(), transport=t, artifact_dir=tmp_path)
+    assert isinstance(gr.result, GroundingClarification) and gr.validation_errors == []
+    saved = json.loads(path.read_text())
+    [correction] = [e for e in saved["events"] if e["type"] == "citation_correction"]
+    assert any(e.startswith("INTENT_UNRESOLVED") for e in correction["errors"])
+    reply = [m for m in t.bodies[3]["contents"] if m["role"] == "user"][-1]["parts"][0]["functionResponse"]
+    assert "ask_clarification" in reply["response"]["error"]
+
+
+def test_vague_request_proposal_repeated_after_correction_is_rejected(tmp_path):
+    t = ScriptedTransport([call("current_fleet"), call("release_history", service="cart"),
+                           _vague_proposal(["the cart change from last week"]),
+                           _vague_proposal(["the cart change from last week"])])
+    gr, _ = grounding.ground(VAGUE_REQUEST, FakeTools(), transport=t, artifact_dir=tmp_path)
+    assert isinstance(gr.result, GroundingProposal)
+    assert any(e.startswith("INTENT_UNRESOLVED") for e in gr.validation_errors)
+
+
+def test_omitting_the_vague_phrase_does_not_pass(tmp_path):
+    t = ScriptedTransport([call("current_fleet"), call("release_history", service="cart"),
+                           _vague_proposal(["cart"]), _vague_proposal(["cart"])])
+    gr, _ = grounding.ground(VAGUE_REQUEST, FakeTools(), transport=t, artifact_dir=tmp_path)
+    assert any(e.startswith("INTENT_REFERENCE_INCOMPLETE") for e in gr.validation_errors)
+
+
+def test_service_names_come_from_the_trusted_fleet_even_without_release_history(tmp_path):
+    """Skipping release_history must not let 'cart' count as an anchor."""
+    t = ScriptedTransport([call("current_fleet"),
+                           _vague_proposal(["the cart change from last week"]),
+                           _vague_proposal(["the cart change from last week"])])
+    gr, _ = grounding.ground(VAGUE_REQUEST, FakeTools(), transport=t, artifact_dir=tmp_path)
+    assert any(e.startswith("INTENT_UNRESOLVED") for e in gr.validation_errors)

@@ -24,6 +24,7 @@ from typing import Any, Callable, NamedTuple
 
 import httpx
 
+from rw import intent
 from rw.contracts import (
     Citation,
     FleetEntry,
@@ -78,8 +79,13 @@ Rules:
   behavior to keep and the behavior to undo exist only in the same artifact and no declared flag
   separates them, or when the available evidence cannot bind a request phrase to one artifact.
 - When a request names a change only by time or a vague reference ("that release", "the change",
-  "last week") and more than one release or behavior could match, call ask_clarification listing the
-  candidate releases with citations instead of choosing one yourself.
+  "last week"), call ask_clarification asking which change or release the operator means, listing
+  the candidate releases with citations instead of choosing one yourself.
+- propose_fleet requires request_references: copy, word for word, the phrases of the operator's own
+  request (and answer, if they answered a question) that identify what to undo and what to keep.
+  Together they must cover the whole request. Trusted code rejects a proposal whose references are
+  not the operator's exact words, leave part of the request out, or only identify a change by time
+  or by a generic word; in that case ask_clarification instead.
 - Only list services in `changes` that you propose to change from the current fleet.
 - You do NOT decide whether a proposal is compatible with stored data. A deterministic checker does
   that after you. You cannot approve, apply, or deploy anything.
@@ -253,7 +259,11 @@ TOOL_SPECS: list[dict] = [
                                  "required": ["name", "enabled"]}}},
              "required": ["service", "release_id"]}},
          "citations": {"type": "array", "items": _CITATION},
-         "rationale": _S}, "required": ["changes", "citations", "rationale"]}},
+         "request_references": {"type": "array", "items": _S,
+                                "description": "the exact phrases of the operator's own words that identify "
+                                               "what to undo and what to keep; together they must cover "
+                                               "the whole request"},
+         "rationale": _S}, "required": ["changes", "citations", "request_references", "rationale"]}},
     {"name": "ask_clarification",
      "description": "TERMINAL. Ask the engineer a precise question instead of guessing.",
      "parameters": {"type": "object", "properties": {
@@ -839,11 +849,22 @@ def _user_message(request_text: str, alternative_context: str | None) -> str:
 
 CITATION_RULE = ("quotes must be exact contiguous substrings of the excerpt text; "
                  "never use '...' or paraphrase")
+REFERENCE_RULE = ("request_references must be the operator's own exact words, cover the whole request, "
+                  "and identify a specific change (a time or a generic word such as 'the change' does not)")
+
+
+def _fleet_services(tools: Any) -> set[str]:
+    """Service names of the bound snapshot's current fleet (empty if the tools cannot provide it)."""
+    try:
+        rows, _ = tools.current_fleet()
+    except Exception:  # a scripted/fake tools object without a fleet; releases already supply names
+        return set()
+    return {str(r["service"]) for r in rows or [] if isinstance(r, dict) and r.get("service")}
 
 
 def _citation_errors(errors: list[str]) -> list[str]:
-    """The trusted citation-check failures only; other validation errors are unrelated to quoting."""
-    return [e for e in errors if e.startswith("CITATION_")]
+    """The trusted citation and request-reference failures: the ones a single correction can fix."""
+    return [e for e in errors if e.startswith(("CITATION_", "INTENT_"))]
 
 
 def _handle_call(name: Any, args: dict, tools: Any, excerpts: dict, releases: dict,
@@ -877,6 +898,14 @@ def _handle_call(name: Any, args: dict, tools: Any, excerpts: dict, releases: di
     if name in TERMINAL_TOOLS:
         try:
             res, errs = _finish(name, args, excerpts, releases)
+            if name == "propose_fleet":
+                # Trusted check that the proposal answers what the operator identified (issue #17).
+                services = {str(info.get("service")) for info in releases.values() if info.get("service")}
+                # Service names come from trusted reads too, so a model that skipped release_history
+                # cannot make a bare service name count as an anchor.
+                services |= _fleet_services(tools)
+                errs = errs + intent.check_references(args.get("request_references"),
+                                                      state.get("request_text", ""), services)
         except (ValueError, KeyError, TypeError, AttributeError) as e:
             # Any malformed terminal field is an invalid call reported back to the model —
             # never an uncaught crash that would bypass the provider chain fallback.
@@ -886,8 +915,9 @@ def _handle_call(name: Any, args: dict, tools: Any, excerpts: dict, releases: di
         bad_citations = _citation_errors(errs)
         if errs and len(bad_citations) == len(errs) and not state.get("citation_correction_used"):
             state["citation_correction_used"] = True
-            msg = (f"{name} rejected: citation check failed: " + "; ".join(bad_citations)
-                   + f". {CITATION_RULE}. Resend {name} with quotes copied exactly from the excerpt text.")
+            msg = (f"{name} rejected: " + "; ".join(bad_citations)
+                   + f". {CITATION_RULE}. {REFERENCE_RULE}. Resend {name} with these fixed, or call "
+                   "ask_clarification if the operator's words do not identify one change.")
             audit.append({"name": name, "args": _jsonable(args), "rows": 0,
                           "error": "citation_correction"})
             events.append({"type": "citation_correction", "name": name, "args": _jsonable(args),
@@ -958,7 +988,7 @@ def _run_loop(request_text: str, tools: Any, transport: Callable[[dict], dict],
     releases: dict[str, dict] = {}
     audit: list[dict] = []
     events: list[dict] = []
-    state: dict = {"citation_correction_used": False}
+    state: dict = {"citation_correction_used": False, "request_text": request_text}
 
     def aborted(reason: str):
         res = GroundingClarification(question=f"Grounding aborted: {reason}", unresolved=[])
