@@ -1,21 +1,19 @@
-"""Trusted check that a proposal is grounded in what the operator actually identified (issue #17).
+"""Trusted check that a rollback request identifies the change it asks for (issue #17).
 
-`propose_fleet` must list `request_references`: the exact phrases of the operator's own words that
-identify what to undo or keep. Trusted code then decides, without asking the model, whether those
-phrases pin down a change:
+Trusted code, not the model, splits the operator's request into clauses (on punctuation and on
+joining words such as "and" and "but") and requires every clause that asks to undo or change
+something to carry a concrete anchor: a word that is not grammar, a rollback verb, a relative time,
+a generic change noun ("change", "update", "build", ...) or a service name. "Roll back the cart
+change from last week." and "Undo it." have no anchor and are unresolved; "Undo the basket
+rollout, but keep the receipt correction." and "Roll cart back to 1.4" are not.
 
-- Each phrase must be verbatim text the operator wrote (the original request or the operator's
-  clarification answer), never the agent's own question.
-- Together they must cover every meaningful word of the original request, so a vague part
-  ("from last week") cannot simply be left out.
-- A phrase that names a change ("change", "update", "build", a relative time such as "last week")
-  but contains no concrete anchor (a behavior word such as "basket", or a version such as "1.4") is
-  unresolved. Service names alone are scope, not anchors.
+An operator answer to the agent's question resolves an unresolved request only when it carries an
+anchor and no negation or uncertainty ("no idea", "I'm not sure" do not). Only operator-authored
+text counts: the original request and the operator's answer, never the agent's question.
 
-An operator answer that itself contains an anchored phrase resolves the original request's vague
-phrases. The check is lexical and deliberately generic: it uses no fixture names, versions, dates or
-expected answers. It cannot prove the model bound an anchored phrase to the right artifact; the
-citation and checker steps cover that.
+The check is lexical and deliberately generic: no fixture names, versions, dates or expected answers.
+It cannot show that an anchored request was bound to the right artifact; that interpretation remains
+the model's (and the operator's, who confirms scope). Citations and the checker do not prove it.
 """
 from __future__ import annotations
 
@@ -25,97 +23,109 @@ QUESTION_MARK = "\n\nAgent asked: "
 ANSWER_MARK = "\nOperator answered: "
 
 _TOKEN = re.compile(r"[a-z0-9]+(?:\.[a-z0-9]+)*")
+_CONTRACTIONS = {"n't": " not", "'m": " am", "'re": " are", "'s": " is", "'ve": " have", "'ll": " will",
+                 "'d": " would"}
+_CLAUSE_BREAK = re.compile(r"[,;:.!?\n()\[\]]+|\b(?:and|but|while|whereas|except|then|also|plus|or)\b")
 
-# Grammar, rollback verbs and non-committal answer words: never an anchor, never need coverage.
+# Grammar and filler: never an anchor.
 STOPWORDS = frozenset("""
-a an the this that these those it its it's of to from in on off at by for with into onto and or but
-not no yes so as than then there here what which who whom whose when where while if is are was were
-be been being do does did done has have had having will would can could should may might must
-i we you they he she me us our my your their his her them
-please just only also again back roll rolled rollback rollbacks undo undone revert reverted restore
-restored keep kept turn turned disable disabled enable enabled remove removed go went put return
-ran run running use used using want need make made
-know sure unsure idk remember think guess maybe whatever any anything something some don t didn
-isn wasn can't cannot
+a an the this that these those it its of to from in on off at by for with into onto as than there here
+what which who whom whose when where if is are am was were be been being do does did done has have had
+having will would can could should may might must shall i we you they he she me us our my your their
+his her them please just only so too very really still now already
 """.split())
-
-# A relative time or a generic change noun marks a phrase as naming a change, but anchors nothing.
+# Asking to undo or change something: never an anchor, and marks a clause as needing one.
+ACTION_WORDS = frozenset("""
+undo undone roll rolled rolling rollback back revert reverted reverting restore restored disable
+disabled remove removed drop dropped turn turned switch switched go went return put get bring pull
+redeploy deploy downgrade reset change replace swap fix ran run running use used using want need make
+made keep kept leave left retain preserve stay enable enabled
+""".split())
+# A relative time or a generic change noun: marks a clause as naming a change, anchors nothing.
 TIME_TERMS = frozenset("""
 last past previous prior recent recently earlier ago latest newest current new old older before after
 today yesterday tonight tomorrow week weeks weekend month months day days night morning afternoon
 evening hour hours minute minutes year years monday tuesday wednesday thursday friday saturday sunday
 """.split())
 GENERIC_NOUNS = frozenset("""
-change changes changed update updates updated release releases released build builds deploy deploys
-deployed deployment deployments version versions patch patches commit commits push pushed rollout
-rollouts feature features fix fixes fixed correction corrections thing things stuff one ones work
+change changes changed update updates updated release releases released build builds deploys deployed
+deployment deployments version versions patch patches commit commits push pushed rollout rollouts
+feature features fixes fixed correction corrections thing things stuff one ones work code
+""".split())
+# In an operator answer, any of these means the operator did not identify the change.
+UNCERTAIN = frozenset("""
+not no nope never unsure idea know dunno idk maybe perhaps whatever either any anything something guess
+think remember sure clue unclear
 """.split())
 
 
-def _words(text: str) -> list[tuple[str, int, int]]:
-    """Lower-cased word tokens with their character spans (versions such as 1.4 stay one token)."""
-    return [(m.group(0), m.start(), m.end()) for m in _TOKEN.finditer(text.lower())]
+def _normalize(text: str, services: set[str]) -> str:
+    """Lower-case, expand contractions, and blank out whole service names (including hyphenated ones)."""
+    out = text.lower().replace("’", "'")
+    for short, long in _CONTRACTIONS.items():
+        out = out.replace(short, long)
+    for service in sorted(services, key=len, reverse=True):
+        out = re.sub(r"(?<![a-z0-9-])" + re.escape(service.lower()) + r"(?![a-z0-9-])", " ", out)
+    return out
 
 
-def operator_texts(request_text: str) -> tuple[str, str | None]:
-    """(original request, operator answer or None), split off the agent's question.
+def _words(text: str) -> list[str]:
+    return _TOKEN.findall(text)
+
+
+def clauses(text: str, services: set[str]) -> list[list[str]]:
+    """The request split into word lists by trusted code, so no model choice can merge a vague clause
+    with an unrelated anchored one."""
+    return [w for w in (_words(part) for part in _CLAUSE_BREAK.split(_normalize(text, services)) if part) if w]
+
+
+def _anchors(words: list[str]) -> list[str]:
+    return [w for w in words
+            if w not in STOPWORDS and w not in ACTION_WORDS and w not in TIME_TERMS and w not in GENERIC_NOUNS]
+
+
+def operator_texts(request_text: str) -> tuple[str, str | None, bool]:
+    """(original request, operator answer or None, well_formed).
 
     `pipeline.with_answer` builds "<request>\\n\\nAgent asked: <question>\\nOperator answered: <answer>".
-    The answer is taken after the LAST answer marker, so a model-authored question can never inject
-    text that is treated as the operator's.
+    Either marker appearing more than once (in the operator's text or in a model-authored question)
+    makes the provenance ambiguous, and the request is then treated as unresolved.
     """
-    if QUESTION_MARK in request_text and ANSWER_MARK in request_text:
-        original = request_text.split(QUESTION_MARK, 1)[0]
-        answer = request_text.rsplit(ANSWER_MARK, 1)[1]
-        return original, answer
-    return request_text, None
+    asked, answered = request_text.count(QUESTION_MARK), request_text.count(ANSWER_MARK)
+    if asked == 0 and answered == 0:
+        return request_text, None, True
+    if asked != 1 or answered != 1 or request_text.index(QUESTION_MARK) > request_text.index(ANSWER_MARK):
+        return request_text.split(QUESTION_MARK, 1)[0], None, False
+    original, rest = request_text.split(QUESTION_MARK, 1)
+    return original, rest.split(ANSWER_MARK, 1)[1], True
 
 
-def is_anchored(phrase: str, services: set[str]) -> bool:
-    """A phrase anchors a change when some word is not grammar, time, a generic noun or a service."""
-    return any(w not in STOPWORDS and w not in TIME_TERMS and w not in GENERIC_NOUNS and w not in services
-               for w, _, _ in _words(phrase))
+def unresolved_clauses(text: str, services: set[str]) -> list[str]:
+    """Clauses that ask to undo or change something without a concrete anchor."""
+    out = []
+    for words in clauses(text, services):
+        names_change = any(w in ACTION_WORDS or w in TIME_TERMS or w in GENERIC_NOUNS for w in words)
+        if names_change and not _anchors(words):
+            out.append(" ".join(words))
+    return out
 
 
-def names_a_change(phrase: str) -> bool:
-    """Whether a phrase refers to a change at all (a service name alone is only scope)."""
-    return any(w in TIME_TERMS or w in GENERIC_NOUNS for w, _, _ in _words(phrase))
+def answer_identifies(answer: str, services: set[str]) -> bool:
+    words = [w for part in clauses(answer, services) for w in part]
+    return bool(_anchors(words)) and not any(w in UNCERTAIN for w in words)
 
 
-def check_references(references: object, request_text: str, services: set[str]) -> list[str]:
-    """Validation errors for a proposal's `request_references`; empty when the request is grounded."""
-    services = {s.lower() for s in services}
-    if not isinstance(references, list) or not references \
-            or not all(isinstance(r, str) and r.strip() for r in references):
-        return ["INTENT_REFERENCES_MISSING: list request_references, the exact phrases of the operator's "
-                "request that identify what to undo and what to keep"]
-    original, answer = operator_texts(request_text)
-    errors: list[str] = []
-    original_spans: list[tuple[int, int]] = []
-    answer_phrases: list[str] = []
-    original_phrases: list[str] = []
-    lowered_original, lowered_answer = original.lower(), (answer or "").lower()
-    for phrase in references:
-        # Whole words only: a fragment such as "kno" inside "know" is not something the operator said.
-        pattern = re.compile(r"(?<![a-z0-9])" + re.escape(phrase.strip().lower()) + r"(?![a-z0-9])")
-        matches = [(m.start(), m.end()) for m in pattern.finditer(lowered_original)]
-        if matches:
-            original_phrases.append(phrase)
-            original_spans.extend(matches)
-        elif answer and pattern.search(lowered_answer):
-            answer_phrases.append(phrase)
-        else:
-            errors.append(f"INTENT_REFERENCE_NOT_OPERATOR_TEXT: {phrase!r} is not verbatim text the operator "
-                          "wrote (the agent's own question does not count)")
-    uncovered = sorted({w for w, s, e in _words(original) if w not in STOPWORDS
-                        and not any(a <= s and e <= b for a, b in original_spans)})
-    if uncovered:
-        errors.append("INTENT_REFERENCE_INCOMPLETE: request_references must cover every part of the "
-                      f"operator's request; not covered: {uncovered}")
-    answered = any(is_anchored(p, services) for p in answer_phrases)
-    if not answered:
-        for phrase in original_phrases:
-            if names_a_change(phrase) and not is_anchored(phrase, services):
-                errors.append(f"INTENT_UNRESOLVED: {phrase!r} does not identify one specific change; call "
-                              "ask_clarification and ask which change or release the operator means")
-    return errors
+def check_request(request_text: str, services: set[str] | None) -> list[str]:
+    """Errors when the operator's request does not identify the change; empty when it does."""
+    if services is None:
+        return ["INTENT_UNRESOLVED: the current fleet could not be read, so the request cannot be checked; "
+                "call ask_clarification"]
+    original, answer, well_formed = operator_texts(request_text)
+    if not well_formed:
+        return ["INTENT_UNRESOLVED: the request text contains the reserved 'Agent asked:' / 'Operator "
+                "answered:' markers more than once; call ask_clarification"]
+    vague = unresolved_clauses(original, services)
+    if not vague or (answer is not None and answer_identifies(answer, services)):
+        return []
+    return [f"INTENT_UNRESOLVED: {clause!r} does not identify one specific change; call ask_clarification "
+            "and ask which change or release the operator means" for clause in vague]
