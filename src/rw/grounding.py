@@ -72,11 +72,16 @@ Rules:
 - Back every release you keep or change with a `changelog` excerpt that describes the behavior you
   rely on. A `code` excerpt may supplement that evidence, but a version string on its own (for
   example a health() return value) never shows what a build does or does not do.
-- Before choosing a release, bind the requested change or behavior using the request (including any
-  operator answer) and retrieved evidence. For an unresolved time or vague change reference, call
+- Before calling propose_fleet, establish WHICH change the operator means separately from HOW to
+  undo it. Bind the requested change or behavior using the request (including any operator answer)
+  and retrieved evidence. For an unresolved time or vague change reference, call
   ask_clarification even if only one plausible candidate exists: missing evidence is enough.
+  Knowing how to undo the only change in the retrieved history does not identify it as the intended
+  change. Never discard an unsupported time qualifier to make the request fit the available history.
   Build timestamps, recency, history order, or an assumed calendar anchor do not establish which
   change the operator means. A dated artifact alone does not resolve the requested change.
+  An unresolved reference blocks ALL proposals, including flag-only mitigations. Do not choose a
+  release or flag until that reference is resolved; ask_clarification must come first.
   Ask for the missing change, release/version, or time window and put the actual unresolved request
   phrases in `unresolved`. If presenting candidates, cite their descriptions; multiple candidates
   are not required to ask a question.

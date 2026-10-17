@@ -279,6 +279,8 @@ def test_system_prompt_has_a_generic_ambiguity_rule_without_fixture_names():
     prompt = grounding.SYSTEM_PROMPT
     assert "ask_clarification" in prompt
     assert "only one plausible candidate" in prompt and "missing evidence is enough" in prompt
+    assert "Never discard an unsupported time qualifier" in prompt
+    assert "including flag-only mitigations" in prompt
     assert "Build timestamps, recency, history order, or an assumed calendar anchor" in prompt
     assert "actual unresolved request" in prompt
     assert "explicit artifact or an evidence-supported behavioral relationship" in prompt
