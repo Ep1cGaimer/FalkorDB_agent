@@ -63,6 +63,8 @@ The rebased source revision `cdf5a9a` also passed all three CI jobs and GitGuard
 
 ### PR review status
 
+*Historical (2026-10-17, before merge): PRs #13 and #16 have since merged into `main`.*
+
 [PR #16](https://github.com/Ep1cGaimer/FalkorDB_agent/pull/16) is open. The reviewer requested
 removing PR #14's unrelated commit, response-schema compatibility coverage, shared bridge constants,
 explicit HTTP behavior-change documentation, porting handoff to PR #15's modules and this status update.
@@ -305,7 +307,7 @@ Validation on the same application commit:
   | inseparable | CLARIFICATION | match | match | run 1 cited a code quote absent from the excerpt (`CITATION_QUOTE_NOT_IN_EXCERPT`, dropped by validation) |
   | named-old-build | PROPOSAL | match | match | proposed `cart=1.4` |
   | keep-everything | CLARIFICATION | match | match | asked instead of proposing |
-- **Live LLM control (#3) has no live run** — same quota limits; the control prompt is larger than
+- **Live LLM control (#3) had no live run at that time** (since then, only author-reported results exist; see [ISSUE_3_FIX_REPORT.md](ISSUE_3_FIX_REPORT.md)) — same quota limits; the control prompt is larger than
   `qwen3.8-27b`'s per-minute input cap, so it cannot be served on the current chain, not a code
   defect. No control score is claimed (open item #3).
 - **Live model access from this machine is flaky for Gemini**: `gemini-3.8-flash` and larger fail
