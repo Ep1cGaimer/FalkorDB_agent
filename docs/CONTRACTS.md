@@ -211,7 +211,8 @@ obligation_paths(g, plan_id, snapshot_id) -> rows: plan_id, deployment_id, servi
     # the multi-hop path Plan-HAS_DEPLOYMENT->Deployment-RUNS->Release-EXECUTES_ROUTE->ReaderRoute-READS_FROM->StateStore<-IN_STORE-Batch{snapshot_id}
     # with OPTIONAL MATCH (Batch)-WRITTEN_BY->(writer Release)
 write_receipt(g, receipt: ProbeReceipt) -> probe_id
-receipts_for(g, obligation_hashes: list[str]) -> rows: probe_id, obligation_hash, result, receipt_json
+receipts_for(g, obligation_hashes: list[str]) -> rows: probe_id, obligation_hash, result, receipt_json   # historical copies included
+receipts_by_id(g, probe_ids: list[str]) -> same columns            # exactly these ProbeRuns; Session.verify reads back only the receipts it just wrote
 ```
 
 Release node properties: id, service, version, artifact_hash, codec_hash, codec_path (posix, relative to repo root), built_at, bundle_id (omitted if null), declared_flags_json, no_state_read. Excerpts: one per CHANGELOG bullet/paragraph (`kind="changelog"`) and one per top-level `def` in codec.py (`kind="code"`), with 1-based inclusive line spans.
@@ -224,6 +225,9 @@ load_release_declarations(fixture_root) -> {release_id: {service, version, artif
     codec_path, codec_hash, routes: {route_id: route_dict}, no_state_read}}     # independent of the graph
 release_index_by_service_version(declarations) -> {(service, version): release_id}  # ambiguous keys dropped
 materialize_plan(proposal, current_fleet_rows, release_rows_by_service, snapshot_id, manifest_hash, request_text, origin, label) -> (CandidatePlan | None, errors)
+    # sets CandidatePlan.baseline_fleet_hash = fleet_hash(observed current fleet rows); it is part of plan_hash(),
+    # so the same proposal against a different baseline is a different plan. fleet_hash(entries) (contracts.py)
+    # hashes service/release_id/flags sorted by service; `changed` is excluded.
 validate_citations(citations, excerpt_rows) -> errors
 build_evidence(plan, manifest, manifest_hash, route_rows, route_log, inventories, path_rows, path_log,
                probe_spec_for, environment_hash, *, declarations) -> GraphEvidence
@@ -292,6 +296,8 @@ identity mismatch and never FAILs from its own checks.
 
 A provider-neutral bounded tool loop (≤ 8 model turns) over the read-only tools `current_fleet`, `release_history`, `store_readers`, `get_excerpts` and the terminal tools `propose_fleet(changes, citations, rationale)` / `ask_clarification(question, unresolved, citations)`. Returns `GroundingResult`. Read tools, argument validation, citation hashing, the audit trail and terminal validation are written once and shared; only conversation rendering and response parsing differ per provider. A terminal call whose only failures are citation-check errors (`CITATION_*`) earns one correction round: the loop stays open and that model gets the exact failures plus the quoting rule so it can resend verbatim quotes. A second invalid terminal call ends the loop as before, and the round is recorded as a `citation_correction` event in the transcript/audit.
 
+`propose_fleet` requires citation coverage: every entry in `changes` needs at least one verbatim citation of a `changelog` excerpt of that same release, otherwise `CITATION_MISSING: <release_id> ...` (eligible for the one correction round). `Session.plan_from_proposal` repeats the check for `origin="agent"` proposals against the graph's excerpt rows; operator/fixture fleets (`--fleet`, controls, oracle) are not agent proposals and skip it. Flag values must be real booleans (`"false"`, `0`, `null` are invalid calls, never coerced). Tool-call arguments that are not a JSON object get an `arguments must be a JSON object` error and the loop continues. A provider envelope with the wrong shape (null or non-list `choices`/`candidates`, non-dict message/content/parts) raises `GroundingError(code="malformed_response")` with a fixed message; the next configured model is tried, and the raw body is never recorded (a `model` event is written only after a successful parse).
+
 Providers are chosen by `RW_GROUNDING_MODEL` (comma-separated `provider:model`; a bare entry means `gemini:`); the default chain is `groq:openai/gpt-oss-120b,groq:qwen/qwen3.8-27b`.
 
 - `groq` — OpenAI-compatible Chat Completions (`GROQ_API_KEY`, Bearer header only), `tool_choice: "required"`, `parallel_tool_calls: false`, temperature 0. Assistant content and `tool_calls` IDs/arguments are preserved before matching tool replies; provider-only reasoning metadata is not fed back. Tool-result JSON is compact UTF-8 with unchanged decoded values. Completion tokens are capped by `RW_GROUNDING_MAX_COMPLETION_TOKENS` (default 2048); GPT-OSS reasoning effort is set by `RW_GROUNDING_REASONING_EFFORT` (default `medium`, accepts `low`/`medium`/`high`).
@@ -309,12 +315,14 @@ The standalone flat-context CLI now loads `.env`. Its version-4 protocol uses `s
 
 ### `src/rw/simulation.py`
 
-SQLite ledger under `artifacts/sim.sqlite` (git-ignored). `record_approval(db_path=DEFAULT_DB_PATH, approval=None, verification=None, forbidden_identities=DEFAULT_FORBIDDEN_IDENTITIES)` refuses a verification that is not `BOUNDED_PASS`, a mismatched `verification_hash`/`plan_hash`/`snapshot_manifest_hash`, and a missing or forbidden approver identity (the model can never be the approver). `simulate(db_path=DEFAULT_DB_PATH, approval=None, verification=None, current_manifest_hash=None, current_fleet=None, plan=None) -> SimulationReceipt` (raises `SimulationRefused`) additionally requires the recorded approval, a current manifest hash equal to the approval's, matching plan/verification identities, and a current fleet, and applies each idempotency key (`h([plan_hash, verification_hash])`) exactly once — a duplicate returns the stored receipt with `applied=False`.
+SQLite ledger under `artifacts/sim.sqlite` (git-ignored). `record_approval(db_path=DEFAULT_DB_PATH, approval=None, verification=None, forbidden_identities=DEFAULT_FORBIDDEN_IDENTITIES)` refuses a verification that is not `BOUNDED_PASS`, a mismatched `verification_hash`/`plan_hash`/`snapshot_manifest_hash`, and a missing or forbidden approver identity (the model can never be the approver). `simulate(db_path=DEFAULT_DB_PATH, approval=None, verification=None, current_manifest_hash=None, current_fleet=None, plan=None) -> SimulationReceipt` (raises `SimulationRefused`) additionally requires the recorded approval, a current manifest hash equal to the approval's, matching plan/verification identities, and a current fleet, and applies each idempotency key (`h([plan_hash, verification_hash])`) exactly once — a duplicate returns the stored receipt with `applied=False`. Before the first application it also refuses `current fleet changed since the plan was built` when `fleet_hash(current_fleet) != plan.baseline_fleet_hash` (a plan without a baseline can never be simulated); this runs after the idempotency lookup, so a repeat stays `applied=False`. `previous_fleet_hash` is `fleet_hash(current_fleet)`.
 
 ### API (`src/rw/api.py`)
 
-`create_app(...)` builds the FastAPI app; `scripts/serve.py` binds `127.0.0.1:8000`. No endpoint lets
-the model approve, apply or deploy anything.
+`create_app(...)` builds the FastAPI app; `scripts/serve.py` binds `127.0.0.1:8000`. The grounding
+agent and the MCP bridge have no approve, apply or deploy tool, and approval refuses the configured model
+identities. The HTTP API itself is unauthenticated and local-only: anyone who can reach it can supply a
+human-looking approver label, so the label is an operator name, not verified identity (see [MCP.md](MCP.md)).
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -324,8 +332,8 @@ the model approve, apply or deploy anything.
 | POST | `/api/investigations/{identifier}/plans/{plan_hash}/confirm-scope` | human scope confirmation for one plan |
 | POST | `/api/investigations/{identifier}/answer` | one clarification round: body `{"answer": str, "replay_path": str \| null}`; the answer is folded into the request text via `pipeline.with_answer` and the session re-grounds against it. Blank answer → 422; a second round is refused; in replay mode `replay_path` is required, in live mode it is rejected (422) |
 | POST | `/api/investigations/{identifier}/alternative` | at most one alternative, only after `BLOCKED` / `NEEDS_EVIDENCE` |
-| POST | `/api/investigations/{identifier}/plans/{plan_hash}/approve` | human approval: only for `BOUNDED_PASS` and only on current bytes (409 `{"detail": {"reason", "drift"}, "reason"}` when `revalidate` reports drift) |
-| POST | `/api/investigations/{identifier}/plans/{plan_hash}/simulate` | local idempotent simulation (409 on drift); never a deployment |
+| POST | `/api/investigations/{identifier}/plans/{plan_hash}/approve` | human approval: only for `BOUNDED_PASS`, only on current bytes (409 `{"detail": {"reason", "drift"}, "reason"}` when `revalidate` reports drift) and only on the fleet the plan was built against (409 `current fleet changed since the plan was built`) |
+| POST | `/api/investigations/{identifier}/plans/{plan_hash}/simulate` | local idempotent simulation (409 on drift, including fleet drift since the plan was built); never a deployment |
 | GET | `/api/snapshots` | read-only fixture manifests, their hashes and explicit `data_origin: "synthetic_fixture"` for initial workspace context; does not initialize a graph or call a model |
 | GET | `/` | the investigation workspace (visible synthetic-fixture and live/replay context; humanized disposition labels: Blocked, Needs evidence, Bounded pass; API disposition values are unchanged) |
 | GET | `/static/{path}` | same-origin CSS, browser modules and the SVG favicon; no frontend build step |
