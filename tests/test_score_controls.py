@@ -92,7 +92,7 @@ def test_full_pipeline_sql_and_control_score(identity_fixture_root, identity_ind
     transcript, path = control.run_control(transport=transport, fixture_root=identity_fixture_root,
                                           artifact_dir=tmp_path)
     saved = json.loads(path.read_text(encoding="utf-8"))
-    assert saved["control_version"] == 5
+    assert saved["control_version"] == 6
     assert all(obligation_key(call) in expected for call in saved["probe_calls"])
     assert all(item["sha256"].startswith("sha256:") for item in saved["context_files"])
     context = (transport.bodies[0]["contents"][0]["parts"][0]["text"] if provider == "gemini"

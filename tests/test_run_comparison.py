@@ -1,116 +1,167 @@
-"""Comparison CLI regression tests: fake provider/test process, real scoring, no network or graph."""
-from __future__ import annotations
-
-import importlib.util
+"""Schedule/checkpoint/failure-boundary tests without provider or database access."""
 import json
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from evals import run_comparison as runner
+from evals.comparison_telemetry import MeasuredTransport
+from rw import grounding as g
 
-ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location("run_comparison", ROOT / "evals" / "run_comparison.py")
-runner = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(runner)
-MODEL = "groq:comparison-test"
+MODEL = 'groq:scripted'
 
 
 @pytest.fixture
-def comparison(monkeypatch, tmp_path):
-    # main() pins RW_GROUNDING_MODEL in os.environ; register it so teardown restores the original.
-    monkeypatch.setenv("RW_GROUNDING_MODEL", MODEL)
-    monkeypatch.setattr(runner.config, "load_env", lambda: None)
-    monkeypatch.setattr(runner.grounding, "has_credentials", lambda model: True)
-    monkeypatch.setattr(runner.grounding, "make_transport", lambda model: SimpleNamespace(settings={}))
-    cleaned = []
-
-    class Session:
-        def __init__(self, graph_name):
-            self.g = SimpleNamespace(delete=lambda: cleaned.append(graph_name))
-
-    monkeypatch.setattr(runner, "Session", Session)
-
-    def pytest_process(args, **kwargs):
-        directory = Path(args[args.index("--basetemp") + 1])
-        directory.mkdir(parents=True)
-        (directory / "llm_flat_trial.json").write_text(json.dumps({
-            "model": MODEL, "live": True, "snapshot": "snap-001",
-            "result": {"fleet": {"cart": {"version": "1.5", "flags": {"basket_v2": False}},
-                                 "checkout": {"version": "2.1"}}, "disposition": "BOUNDED_PASS"},
-            "probe_calls": [], "model_turns": 1
-        }))
-        junit = args[args.index("--junitxml") + 1]
-        Path(junit).write_text('<testsuites><testsuite tests="1" failures="0" errors="0" skipped="0"/></testsuites>')
-        return SimpleNamespace(returncode=0)
-
-    monkeypatch.setattr(runner.subprocess, "run", pytest_process)
-    return tmp_path / "trial", cleaned
+def setup(monkeypatch, tmp_path):
+    monkeypatch.setattr(runner.grounding, 'make_transport', lambda model: SimpleNamespace(settings={}))
+    return tmp_path / 'batch'
 
 
-def report(outcome, **extra):
-    return {"request": runner.REQUEST, "snapshot": "snap-001", "attempts": [{
-        "outcome": outcome, "grounding": {"model": MODEL, "live": True, "result": {}}, **extra
-    }]}
+def observed(slot, model, out, port):
+    return {**slot, 'status': 'completed', 'outcome': 'REJECTED_PROPOSAL', 'model': model}
 
 
-@pytest.mark.parametrize("failure", ["raised", "outcome", "flag"])
-def test_provider_error_never_completes_comparison_even_when_model_matches(comparison, monkeypatch, failure):
-    out, cleaned = comparison
-
-    def product(*args, **kwargs):
-        if failure == "raised":
-            # A successful prefix establishes the same model, but the subsequent call failed.
-            transcript = out / "grounding" / "failure.json"
-            transcript.write_text(json.dumps({"live": True}))
-            error = runner.grounding.GroundingError("HTTP 429 org_FAKE000 SECRET-KEY raw_provider_body")
-            error.transcript_path = transcript
-            raise error
-        return report("PROVIDER_ERROR") if failure == "outcome" else report("BLOCKED", provider_failed=True)
-
-    monkeypatch.setattr(runner, "run_investigation", product)
-    assert runner.main(["--runs", "3", "--model", MODEL, "--out", str(out)]) == 1
-    manifest = json.loads((out / "manifest.json").read_text())
-    assert len(manifest["pairs"]) == 1 and len(cleaned) == 1
-    assert manifest["pairs"][0]["same_model"] is True
-    assert manifest["pairs"][0]["product_completed"] is False
-    assert not manifest["requested_pairs_complete"] and not manifest["issue_3_complete"]
-    raw = (out / "reports" / "product-1.json").read_text()
-    assert all(marker not in raw for marker in ("org_FAKE", "SECRET-KEY", "raw_provider_body"))
+def test_rotated_schedule_and_semantic_failures_complete(setup):
+    manifest = runner.collect(setup, 3, MODEL, execute=observed)
+    assert manifest['complete'] and len(manifest['slots']) == 9
+    assert [s['arm'] for s in manifest['slots'][::3]] == list(runner.ARMS)
+    assert all(s['status'] == 'completed' for s in manifest['slots'])
 
 
-def test_honest_blocked_and_needs_evidence_outcomes_can_complete_the_comparison(comparison, monkeypatch):
-    out, cleaned = comparison
-    outcomes = iter(["BLOCKED", "NEEDS_EVIDENCE", "BOUNDED_PASS"])
-    monkeypatch.setattr(runner, "run_investigation", lambda *a, **kw: report(next(outcomes)))
-    assert runner.main(["--runs", "3", "--model", MODEL, "--out", str(out)]) == 0
-    manifest = json.loads((out / "manifest.json").read_text())
-    assert manifest["requested_pairs_complete"] and manifest["issue_3_complete"]
-    assert all(p["product_completed"] and p["same_model"] for p in manifest["pairs"])
-    assert len(cleaned) == 3
+@pytest.mark.parametrize('failed_slot', [0, 1, 4, 8])
+@pytest.mark.parametrize('failure', ['PROVIDER_ERROR', 'TIMEOUT', 'TURN_EXHAUSTION', 'MODEL_MISMATCH'])
+def test_failure_preserved_and_remaining_slots_unrun(setup, failed_slot, failure):
+    calls = []
+    def execute(slot, *args):
+        calls.append(slot)
+        return {**observed(slot, *args), **({'status': 'failed', 'outcome': failure}
+                                          if len(calls) == failed_slot + 1 else {})}
+    manifest = runner.collect(setup, 3, MODEL, execute=execute)
+    assert not manifest['complete']
+    assert len(calls) == failed_slot + 1
+    assert [s['status'] for s in manifest['slots']] == ['completed'] * failed_slot + ['failed'] + ['unrun'] * (8 - failed_slot)
+    assert json.loads((setup / manifest['slots'][failed_slot]['path']).read_text())['outcome'] == failure
 
 
-@pytest.mark.parametrize("name", ["releases/cart/CHANGELOG.md", "payloads/record.bin"])
-def test_source_inventory_detects_evidence_changes_additions_and_removals(tmp_path, name):
-    (tmp_path / "pyproject.toml").write_text("[project]")
-    evidence = tmp_path / "fixtures" / "shop" / name
-    evidence.parent.mkdir(parents=True)
-    evidence.write_bytes(b"original bytes")
+def test_source_drift_stops_and_preserves_observation(setup, monkeypatch):
+    original = runner.source_hashes
+    drift = False
+    monkeypatch.setattr(runner, 'source_hashes', lambda *a, **kw: {'changed': 'hash'} if drift else original(*a, **kw))
+    def execute(*args):
+        nonlocal drift
+        drift = True
+        return observed(*args)
+    manifest = runner.collect(setup, 3, MODEL, execute=execute)
+    assert not manifest['complete'] and manifest['slots'][0]['status'] == 'failed'
+    assert json.loads((setup / manifest['slots'][0]['path']).read_text())['source_drift']
+
+
+@pytest.mark.parametrize('name', ['fixtures/shop/releases/new/CHANGELOG.md', 'fixtures/shop/payloads/record.bin'])
+def test_source_inventory_detects_changes_additions_removals(tmp_path, name):
+    p = tmp_path / name
+    p.parent.mkdir(parents=True)
     initial = runner.source_hashes(tmp_path)
-    key = evidence.relative_to(tmp_path).as_posix()
-    assert key in initial
-    evidence.write_bytes(b"changed bytes")
-    changed = runner.source_hashes(tmp_path)
-    assert changed != initial and changed[key] != initial[key]
-    evidence.unlink()
-    assert runner.source_hashes(tmp_path) != initial
-    evidence.write_bytes(b"original bytes")
+    p.write_bytes(b'first')
+    added = runner.source_hashes(tmp_path)
+    assert added != initial
+    p.write_bytes(b'second')
+    assert runner.source_hashes(tmp_path) != added
+    p.unlink()
     assert runner.source_hashes(tmp_path) == initial
 
 
-def test_source_inventory_excludes_generated_eval_results_but_not_fixture_evidence(tmp_path):
-    (tmp_path / "pyproject.toml").write_text("[project]")
-    for name in ("evals/results/generated.json", "fixtures/results/retained.bin", "fixtures/__pycache__/cache.pyc"):
-        path = tmp_path / name
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(b"data")
-    assert set(runner.source_hashes(tmp_path)) == {"pyproject.toml", "fixtures/results/retained.bin"}
+def test_inventory_excludes_outputs_but_separates_expectations(tmp_path):
+    for name in ['evals/evidence/new.json', 'evals/results/new.json', 'artifacts/new.json',
+                 'evals/expected/oracle.json', 'fixtures/results/retained.bin']:
+        p = tmp_path / name
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(b'facts')
+    assert set(runner.source_hashes(tmp_path)) == {'fixtures/results/retained.bin'}
+    assert set(runner.source_hashes(tmp_path, expectations=True)) == {'evals/expected/oracle.json'}
+
+
+@pytest.mark.parametrize('usage', [{'prompt_tokens': 0, 'completion_tokens': 2, 'total_tokens': 2}, None,
+                                  {'prompt_tokens': True, 'total_tokens': '5', 'secret': 'gsk_FAKE'}])
+def test_telemetry_usage_numbers_unknown_and_model_identity(usage):
+    transport = SimpleNamespace(provider='groq', trace=[])
+    class Underlying:
+        provider = transport.provider
+        trace = transport.trace
+        def __call__(self, body):
+            self.trace.append({'status': 200})
+            return {'model': 'scripted', 'usage': usage, 'choices': [{'message': {'role': 'assistant', 'content': 'text'}}]}
+    times = iter([10, 13])
+    measured = MeasuredTransport(Underlying(), MODEL, clock=lambda: next(times))
+    measured({'messages': [], 'tools': []})
+    summary = measured.summary()
+    assert summary['model_calls'] == 1 and summary['http_attempts'] == 1 and summary['model_elapsed_s'] == 3
+    if usage and 'completion_tokens' in usage:
+        assert summary['reported_usage_totals'] == usage and summary['usage_unknown_calls'] == 0
+    else:
+        assert summary['reported_usage_totals'] == {} and summary['usage_unknown_calls'] == 1
+
+
+def test_telemetry_rejected_and_wrong_model():
+    class Underlying:
+        provider = 'groq'
+        trace = []
+        def __call__(self, body): return {'model': 'different'}
+    measured = MeasuredTransport(Underlying(), MODEL)
+    with pytest.raises(g.GroundingError): measured({})
+    assert measured.model_mismatch and measured.summary()['usage_unknown_calls'] == 1
+
+
+def test_cleanup_failure_does_not_hide_original_provider_failure(monkeypatch, tmp_path):
+    class Underlying:
+        provider = 'groq'
+        def __call__(self, body): raise g.GroundingError('secret gsk_FAKE', code='quota')
+    monkeypatch.setattr(runner.grounding, 'make_transport', lambda model: Underlying())
+    monkeypatch.setattr(runner.G, 'connect', lambda **kw: SimpleNamespace(list_graphs=lambda: []))
+    class Session:
+        def __init__(self, **kwargs):
+            self.g = None
+            connection = SimpleNamespace(info=lambda section: {'redis_version': 'test'},
+                                         execute_command=lambda *args: [['name', 'graph', 'ver', 60002]])
+            self.db = SimpleNamespace(connection=connection,
+                list_graphs=lambda: (_ for _ in ()).throw(RuntimeError('cleanup error')))
+        def verify(self): pass
+    monkeypatch.setattr(runner, 'Session', Session)
+    monkeypatch.setattr(runner, 'run_investigation', lambda *a, **kw: (_ for _ in ()).throw(g.GroundingError('gsk_SECRET')))
+    result = runner.execute_arm(runner.schedule(1)[0], MODEL, tmp_path, 6382)
+    assert result['status'] == 'failed' and 'cleanup' in result and 'error' in result
+    assert result['error']['code'] == 'provider_error'
+    assert 'gsk_SECRET' not in json.dumps(result)
+
+
+def test_gemini_cap_usage_and_wire_hash(monkeypatch):
+    from rw.contracts import h
+    monkeypatch.setenv('RW_GROUNDING_MAX_COMPLETION_TOKENS', '1000')
+    bodies = []
+    class Underlying:
+        provider = 'gemini'
+        def __call__(self, body):
+            bodies.append(body)
+            return {'modelVersion': 'scripted', 'candidates': [{'content': {'parts': [{'text': 'response'}]}}],
+                    'usageMetadata': {'promptTokenCount': 0, 'candidatesTokenCount': 10,
+                                      'totalTokenCount': 10, 'account_id': 'SECRET'}}
+    measured = MeasuredTransport(Underlying(), 'gemini:scripted')
+    measured({'generationConfig': {'temperature': 0}, 'contents': []})
+    assert bodies[0]['generationConfig'] == {'temperature': 0, 'maxOutputTokens': 1000}
+    assert measured.calls[0]['request_hash'] == h(bodies[0])
+    assert measured.summary()['reported_usage_totals'] == {
+        'promptTokenCount': 0, 'candidatesTokenCount': 10, 'totalTokenCount': 10}
+
+
+def test_gemini_uses_product_retries_with_attempt_and_wait_trace(monkeypatch):
+    from evals.comparison_telemetry import evaluation_transport
+    monkeypatch.setenv('GEMINI_API_KEY', 'FAKE')
+    def post(url, body, headers, sleep, timeout, attempts, model, observe):
+        assert timeout == 90 and model == 'gemini:scripted'
+        observe(SimpleNamespace(status_code=429))
+        sleep(0)
+        observe(SimpleNamespace(status_code=200))
+        return {'ok': True}
+    monkeypatch.setattr(g, '_retrying_post', post)
+    transport = evaluation_transport('gemini:scripted')
+    assert transport({}) == {'ok': True}
+    assert transport.trace == [{'status': 429}, {'retry_wait_s': 0}, {'status': 200}]

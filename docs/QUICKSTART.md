@@ -209,15 +209,19 @@ reasoning effort for GPT-OSS, and paces subsequent requests from reported rate-l
 Generated-call errors can be corrected within the same eight-turn budget. These changes do not
 increase the account's quota; see [the fix and verification report](ISSUE_3_FIX_REPORT.md).
 
-To collect the issue #3 comparison on one model (Linux/WSL):
+To collect the issue #22 matched comparison on one model (Linux/WSL), with a dedicated
+FalkorDB on port 6382 and `GEMINI_API_KEY` configured:
 
 ```bash
 RW_GROUNDING_MAX_COMPLETION_TOKENS=1000 \
-  .venv/bin/python evals/run_comparison.py --runs 3 --model groq:qwen/qwen3.8-27b
+  .venv/bin/python evals/run_comparison.py --runs 3 --model gemini:gemini-3.1-flash-lite \
+  --db-port 6382 --out artifacts/issue-22/NEW-BATCH
 ```
 
-This makes live provider calls and saves the exact scorer output plus test evidence under a unique
-`artifacts/issue-3/` directory. A failed pair is retained and stops the run; skips do not count as passes.
+This collects three rotated arms and preserves failed/unrun slots. Export, verify and rescore the
+portable bundle using [evals/README.md](../evals/README.md). The [committed primary result](../evals/evidence/issue-22/live-5a7160f-gemini31lite-05/comparison.md)
+is a tie in readability evidence; it does not establish full request fit. Quota and model availability
+can change; never combine providers or models within an acceptance batch.
 
 ## 7. Console
 

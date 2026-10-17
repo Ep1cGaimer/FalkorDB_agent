@@ -2,7 +2,11 @@
 
 Issue: [Groq free-tier limits for live use](https://github.com/Ep1cGaimer/FalkorDB_agent/issues/4).
 
-## Decision
+Issue #22 update (2026-10-18): the new flat context exceeded this Groq model's allowance in two preserved attempts. The primary three-arm batch instead used one pinned
+`gemini:gemini-3.1-flash-lite` after the user authorized Gemini. See [STATUS](STATUS.md#fair-comparison-and-relationship-ablation--issue-22-2026-10-18)
+and [current collection commands](../evals/README.md). The choice and author-reported evidence below are historical.
+
+## Historical decision
 
 Use the smaller evaluation budget on the existing Groq free tier. Pin the application and both sides
 of a comparison to `groq:qwen/qwen3.8-27b`, cap generated completions at 1000 tokens, and run the
@@ -14,7 +18,7 @@ RW_GROUNDING_MAX_COMPLETION_TOKENS=1000
 ```
 
 ```bash
-RW_GROUNDING_MAX_COMPLETION_TOKENS=1000 .venv/bin/python evals/run_comparison.py --runs 3 --model groq:qwen/qwen3.8-27b
+RW_GROUNDING_MAX_COMPLETION_TOKENS=1000 .venv/bin/python evals/run_comparison.py --runs 3 --model groq:qwen/qwen3.8-27b --out artifacts/issue-22/NEW-BATCH
 ```
 
 The author reported exercising this option against the project's control and product. The historical

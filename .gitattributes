@@ -7,6 +7,9 @@
 fixtures/** -text
 tests/fixtures/** -text
 
+# Portable comparison bundles are hashed byte-for-byte, including their scoring inputs.
+evals/evidence/** -text
+
 # Retained payload bytes are opaque records: keep them byte-exact and undiffed.
 *.bin binary
 

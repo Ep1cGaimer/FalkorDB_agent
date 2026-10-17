@@ -125,6 +125,10 @@ These are model-assisted requests: a clarification or a different proposal must 
 
 ## Reproduce the comparison
 
+The runner described below is historical. Issue #22 replaces test/product pairs with three rotated
+arms and portable bundles; use [the current instructions](../evals/README.md). The committed
+[primary comparison](../evals/evidence/issue-22/live-5a7160f-gemini31lite-05/comparison.md) preserves a tie.
+
 With FalkorDB running and the key configured locally:
 
 ```bash
