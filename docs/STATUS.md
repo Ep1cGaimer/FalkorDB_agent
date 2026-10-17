@@ -2,9 +2,8 @@
 
 Updated 2026-10-16 (full issue #2 live grounding evaluation at `771ce38`; prior dated validation
 and partial evaluations preserved below). Each row names the task that ran it.
-Product: **RollbackWitness**, build mode. Current evaluation branch:
-`fix/issue-2-live-grounding-eval` from `main`. Synthetic fixture only — no production data
-or product deployment.
+Product: **RollbackWitness**, build mode, branch `main`. Synthetic fixture only — no
+production data or product deployment.
 
 Every row below is a command that was actually run, with its observed output. Nothing here is a plan
 or an estimate.
@@ -151,12 +150,20 @@ these different small samples do not isolate the prompt rule's causal effect or 
 reliability. Any generic disambiguation remediation and re-evaluation should be a
 separate change; no runtime behavior was tuned to this batch.
 
+Follow-up: [#17 — Clarify ambiguous rollback references before proposing a release](https://github.com/Ep1cGaimer/FalkorDB_agent/issues/17)
+tracks the unresolved ambiguity behavior and its re-evaluation.
+
 ### Local audit artifacts
 
-All filenames below are under `artifacts/grounding/`, in run order. Transcripts, logs,
-metadata (`artifacts/grounding-eval/issue-2-metadata.json`), cleanup verification, and
-raw reports are git-ignored local evidence, not files included in this PR. The measured
-table, hashes, interpretation, and filename mappings are retained here in tracked docs.
+All filenames below are under `artifacts/grounding/`, in run order. The three
+ambiguous-case transcripts are included in this PR for review:
+[run 1](../artifacts/grounding/70a0b3fbd63b17a3.json),
+[run 2](../artifacts/grounding/4f5d394955ed1fda.json), and
+[run 3](../artifacts/grounding/459f0e5b394a2f39.json).
+The remaining transcripts, logs, metadata (`artifacts/grounding-eval/issue-2-metadata.json`),
+cleanup verification, and raw reports remain git-ignored local evidence. Results for
+the other cases are author-reported; the measured table, hashes, interpretation, and
+filename mappings are retained here in tracked docs.
 
 | case | run 1 transcript | run 2 transcript | run 3 transcript |
 |---|---|---|---|
