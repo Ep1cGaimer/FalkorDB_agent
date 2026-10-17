@@ -98,6 +98,9 @@ function requestPanel(s, a) {
     placeholder: "Describe what to undo and what must be kept…" });
   return panel("What should the rollback do?", "Review the proposed versions first, then check whether they can read the saved data.", el("div", { class: "panel-body" },
     el("label", { for: "request", class: "sr-only" }, "Rollback request"), textarea,
+    s.samples.length ? el("div", { class: "sample-requests" }, el("span", { class: "small subtle" }, "Try:"),
+      s.samples.map(x => el("button", { type: "button", class: "sample-request", title: x.request, disabled: !!s.busy,
+        onclick: () => a.useSample(x.request) }, x.label))) : null,
     el("div", { class: "request-toolbar" },
       button("Investigate rollback", a.start, { id: "start-button", "data-action": "start", symbol: "arrow", disabled: !a.canStart() }))));
 }

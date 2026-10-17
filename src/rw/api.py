@@ -497,6 +497,16 @@ def create_app(*, session_factory: Callable | None = None,
         with inv.lock:
             return inv.public()
 
+    @app.get("/api/samples")
+    def list_samples():
+        """Example requests a fixture ships for demos (sample_requests.json); never used by checks."""
+        from .pipeline import FIXTURE_ROOT
+
+        path = FIXTURE_ROOT / "sample_requests.json"
+        rows = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else []
+        return [{"label": str(r["label"]), "request": str(r["request"])} for r in rows
+                if isinstance(r, dict) and r.get("label") and r.get("request")]
+
     @app.get("/api/snapshots")
     def list_snapshots():
         """Read-only fixture context; does not initialize a graph or call a model."""
