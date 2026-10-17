@@ -44,6 +44,9 @@ def test_source_catalog_matches_importer_and_full_raw_files():
     delivered = {e['excerpt_id']: e for r in catalog['releases'] for e in r['excerpts']}
     assert set(delivered) == {e['id'] for e in excerpts}
     for ex in excerpts:
+        release = next(r for r in catalog['releases'] if r['release_id'] == ex['release_id'])
+        raw = legacy.FIXTURE_ROOT / 'releases' / f"{release['service']}-{release['version']}" / ex['path']
+        assert ex['text'] in raw.read_text()
         assert all(delivered[ex['id']][k] == v for k, v in ex.items())
     context = flat.context()
     for path in legacy.context_files():

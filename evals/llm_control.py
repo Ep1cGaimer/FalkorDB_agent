@@ -417,13 +417,16 @@ def source_path(path: Path) -> str:
     return path.relative_to(REPO_ROOT).as_posix() if path.is_relative_to(REPO_ROOT) else path.as_posix()
 
 
-def flat_context(fixture_root: Path | str = FIXTURE_ROOT, snapshot: str = DEFAULT_SNAPSHOT) -> str:
+def flat_context(fixture_root: Path | str = FIXTURE_ROOT, snapshot: str = DEFAULT_SNAPSHOT, *,
+                 identities: bool = True) -> str:
     """All raw facts as plain text, each labelled with its repository-relative path."""
     parts = ["Raw release and retained-state facts, verbatim. SYNTHETIC FIXTURE — generated test data."]
     for path in context_files(fixture_root, snapshot):
         rel = source_path(path)
         text = path.read_text(encoding="utf-8")
         parts.append(f"\n===== FILE: {rel} =====\n{text.rstrip()}\n")
+    if not identities:
+        return "".join(parts)
     parts.append("\nTrusted canonical identities (derived from the named source files, not probe outcomes):\n")
     for declaration_path in sorted((Path(fixture_root) / "releases").glob("*/release.json")):
         declaration = json.loads(declaration_path.read_text(encoding="utf-8"))

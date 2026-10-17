@@ -19,7 +19,7 @@ TOOL_SPECS = [s for s in g.TOOL_SPECS if s['name'] in g.TERMINAL_TOOLS]
 
 def source_catalog(fixture_root=control.FIXTURE_ROOT, snapshot=control.DEFAULT_SNAPSHOT):
     """Use the importer's pure extraction, without connecting to or traversing a graph."""
-    releases, excerpts, _, ids, _, _, _ = G._collect_releases(Path(fixture_root))
+    releases, excerpts, routes, ids, _, _, _ = G._collect_releases(Path(fixture_root))
     manifest = json.loads((Path(fixture_root) / 'snapshots' / snapshot.removeprefix('snapshot:') /
                            'manifest.json').read_text(encoding='utf-8'))
     rows = []
@@ -27,6 +27,8 @@ def source_catalog(fixture_root=control.FIXTURE_ROOT, snapshot=control.DEFAULT_S
         rows.append({'release_id': release['id'], 'service': release['service'],
                      'version': release['version'], 'artifact_hash': release['artifact_hash'],
                      'declared_flags': json.loads(release['declared_flags_json']),
+                     'routes': [{'route_id': r['id'], 'name': r['name']} for r in routes
+                                if r['release_id'] == release['id']],
                      'excerpts': [{**ex, 'excerpt_id': ex['id'],
                                    'span': f"{ex['line_start']}-{ex['line_end']}"}
                                   for ex in excerpts if ex['release_id'] == release['id']]})
@@ -35,8 +37,24 @@ def source_catalog(fixture_root=control.FIXTURE_ROOT, snapshot=control.DEFAULT_S
 
 
 def context(fixture_root=control.FIXTURE_ROOT, snapshot=control.DEFAULT_SNAPSHOT):
-    return (control.flat_context(fixture_root, snapshot) + '\nTrusted citation addresses:\n' +
-            json.dumps(source_catalog(fixture_root, snapshot), ensure_ascii=False))
+    catalog = source_catalog(fixture_root, snapshot)
+    # Excerpt bytes already occur in the raw files. Annotations give exact addresses without
+    # repeating those bytes (which can exceed provider input limits). The validator uses the same
+    # full extraction; every seeded text must be a substring of a delivered raw file.
+    parts = [control.flat_context(fixture_root, snapshot, identities=False),
+             '\nTrusted release addresses: release_id | service | version | declared flags\n']
+    for release in catalog['releases']:
+        parts.append(' | '.join([release['release_id'], release['service'], release['version'],
+                                  json.dumps(release['declared_flags'], separators=(',', ':'))]) + '\n')
+    parts.append('\nTrusted route addresses: route_id | release route name (store is declared in release.json)\n')
+    for release in catalog['releases']:
+        parts.extend(r['route_id'] + ' | ' + r['name'] + '\n' for r in release['routes'])
+    parts.append('\nTrusted citation addresses: excerpt_id | kind | file within release | inclusive line span | content_hash\n')
+    for release in catalog['releases']:
+        for e in release['excerpts']:
+            parts.append(' | '.join(e[key] for key in ('excerpt_id', 'kind', 'path', 'span', 'content_hash')) + '\n')
+    return ''.join(parts)
+
 
 
 class FlatGemini(g.GeminiProvider):
