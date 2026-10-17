@@ -579,8 +579,8 @@ def test_groq_transport_retry_after_not_retryable_and_missing_key(monkeypatch):
 def test_groq_replay_replays_in_openai_format(tmp_path, monkeypatch):
     script = [groq_call("release_history", call_id="call_a", service="cart"),
               groq_call("propose_fleet", call_id="call_b",
-                        changes=[{"service": "cart", "release_id": "release:cart:old"}], citations=[],
-                        rationale="r")]
+                        changes=[{"service": "cart", "release_id": "release:cart:old"}],
+                        citations=[{"excerpt_id": EX_ID, "quote": "Receipt correction"}], rationale="r")]
     gr, path, _tools, _t = groq_run(script, tmp_path)
     assert json.loads(path.read_text())["provider"] == "groq"
     replayed: list[dict] = []
@@ -636,12 +636,16 @@ def test_tools_against_real_graph_no_errors(tmp_path):
                                                       "store_readers", "get_excerpts"]
         assert all("error" not in c and c["rows"] > 0 for c in gr.tool_calls), gr.tool_calls
         assert not grounding.is_aborted(gr)
-        # a proposal naming the real cart 1.4 release with the real declared flag validates cleanly
+        # a proposal naming the real cart 1.5 release, citing its real changelog excerpt verbatim,
+        # with the real declared flag, validates cleanly
         rels = {r["version"]: r["release_id"] for r in tools.release_history("cart")[0]}
+        hist = {r["release_id"]: r for r in tools.release_history("cart")[0]}
+        changelog = next(e for e in hist[rels["1.5"]]["excerpts"] if e["kind"] == "changelog")
         t2 = ScriptedTransport([call("current_fleet"), call("release_history", service="cart"),
                                 call("propose_fleet", changes=[{"service": "cart", "release_id": rels["1.5"],
                                                                 "flags": [{"name": "basket_v2", "enabled": False}]}],
-                                     citations=[], rationale="r")])
+                                     citations=[{"excerpt_id": changelog["excerpt_id"],
+                                                 "quote": changelog["text"]}], rationale="r")])
         gr2, _ = grounding.ground("r", tools, transport=t2, artifact_dir=tmp_path)
         assert isinstance(gr2.result, GroundingProposal) and gr2.validation_errors == []
     finally:
@@ -1036,3 +1040,226 @@ def test_error_response_usage_cannot_smuggle_raw_provider_text_into_trace(monkey
         transport({})
     assert transport.trace[0]["usage"] is None
     assert private not in json.dumps({"error": error.value.details, "trace": transport.trace})
+
+
+# --------------------------------------------------------------------------- citation coverage
+
+def _two_release_tools():
+    """FakeTools variant exposing two releases, each with its own changelog + one code excerpt."""
+
+    class TwoReleaseTools(FakeTools):
+        def release_history(self, service):
+            self.calls.append(f"release_history:{service}")
+            rows = [
+                {"release_id": "release:cart:new", "service": "cart", "version": "1.6", "depth": 0,
+                 "declared_flags": [], "excerpts": [
+                     {"excerpt_id": "excerpt:new:CHANGELOG.md:1-1", "kind": "changelog",
+                      "text": "New: basket totals are exact.", "content_hash": "sha256:" + "11" * 32}]},
+                {"release_id": "release:cart:old", "service": "cart", "version": "1.4", "depth": 1,
+                 "declared_flags": [], "excerpts": [
+                     {"excerpt_id": "excerpt:old:CHANGELOG.md:2-2", "kind": "changelog",
+                      "text": "Old: receipt correction.", "content_hash": "sha256:" + "22" * 32},
+                     {"excerpt_id": "excerpt:old:codec.py:1-1", "kind": "code",
+                      "text": "def read_cart(data): return json.loads(data)",
+                      "content_hash": "sha256:" + "33" * 32}]},
+            ]
+            return rows, {"name": "release_history", "rows": len(rows), "truncated": False}
+
+    return TwoReleaseTools
+
+
+def test_uncited_proposal_is_rejected(tmp_path):
+    """A propose_fleet with no citations at all can no longer pass with zero errors."""
+    uncited = call("propose_fleet", changes=[{"service": "cart", "release_id": "release:cart:old"}],
+                   citations=[], rationale="r")
+    gr, _, _, t = run([call("release_history", service="cart"), uncited, uncited], tmp_path)
+    assert isinstance(gr.result, GroundingProposal)  # rejected downstream, never aborted
+    assert gr.validation_errors == ["CITATION_MISSING: release:cart:old has no verbatim changelog "
+                                    "citation from that release"]
+    assert not grounding.is_aborted(gr)
+    assert len(t.bodies) == 3  # citation-only failure got its one correction round, then ended
+
+
+def test_citation_from_another_release_is_not_coverage(tmp_path):
+    """A verbatim quote from release A's changelog cannot cover a change to release B."""
+    wrong = call("propose_fleet", changes=[{"service": "cart", "release_id": "release:cart:new"}],
+                 citations=[{"excerpt_id": "excerpt:old:CHANGELOG.md:2-2",
+                             "quote": "Old: receipt correction."}], rationale="r")
+    tools = _two_release_tools()()
+    t = ScriptedTransport([call("release_history", service="cart"), wrong, wrong])
+    gr, _ = grounding.ground("Undo the basket rollout", tools, transport=t, artifact_dir=tmp_path)
+    assert gr.validation_errors == ["CITATION_MISSING: release:cart:new has no verbatim changelog "
+                                    "citation from that release"]
+    assert len(t.bodies) == 3
+
+
+def test_missing_citation_correction_round_recovers(tmp_path):
+    """An uncited proposal is told exactly what is missing, and a cited resend wins."""
+    uncited = call("propose_fleet", changes=[{"service": "cart", "release_id": "release:cart:old"}],
+                   citations=[], rationale="r")
+    fixed = call("propose_fleet", changes=[{"service": "cart", "release_id": "release:cart:old"}],
+                 citations=[{"excerpt_id": EX_ID, "quote": "Receipt correction"}], rationale="r")
+    gr, path, _, t = run([call("release_history", service="cart"), uncited, fixed], tmp_path)
+    assert isinstance(gr.result, GroundingProposal) and gr.validation_errors == []
+    reply = t.bodies[2]["contents"][-1]["parts"][0]["functionResponse"]["response"]
+    assert "CITATION_MISSING" in reply["error"]
+    assert grounding.replay(path).result == gr.result
+
+
+def test_code_excerpt_citation_is_not_changelog_coverage(tmp_path):
+    """A verbatim code-excerpt quote is real evidence but never satisfies the changelog rule."""
+    code_cited = call("propose_fleet", changes=[{"service": "cart", "release_id": "release:cart:old"}],
+                      citations=[{"excerpt_id": "excerpt:old:codec.py:1-1",
+                                  "quote": "def read_cart(data): return json.loads(data)"}],
+                      rationale="r")
+    tools = _two_release_tools()()
+    t = ScriptedTransport([call("release_history", service="cart"), code_cited, code_cited])
+    gr, _ = grounding.ground("Undo the basket rollout", tools, transport=t, artifact_dir=tmp_path)
+    assert gr.validation_errors == ["CITATION_MISSING: release:cart:old has no verbatim changelog "
+                                    "citation from that release"]
+    assert len(t.bodies) == 3
+
+
+# --------------------------------------------------------------------------- malformed envelopes
+
+GEMINI_MALFORMED = [
+    {"candidates": None},
+    {"candidates": {"x": 1}},
+    {"candidates": [None]},
+    {"candidates": ["nope"]},
+    {"candidates": [{"content": [1, 2]}]},
+    {"candidates": [{"content": {"parts": {"a": 1}}}]},
+    {"candidates": [{"content": {"parts": [None]}}]},
+    {"candidates": [{"content": {"parts": [5]}}]},
+    {"candidates": [{"content": {"parts": [{"functionCall": 7}]}}]},
+]
+
+GROQ_MALFORMED = [
+    {"choices": None},
+    {"choices": {"x": 1}},
+    {"choices": [None]},
+    {"choices": ["nope"]},
+    {"choices": [{"message": "hi"}]},
+    {"choices": [{"message": [1, 2]}]},
+    {"choices": [{"message": {"tool_calls": {"x": 1}}}]},
+    {"choices": [{"message": {"tool_calls": [None]}}]},
+    {"choices": [{"message": {"tool_calls": [{"function": "nope"}]}}]},
+]
+
+
+@pytest.mark.parametrize("resp", GEMINI_MALFORMED)
+def test_gemini_malformed_envelopes_raise_sanitized_error(resp):
+    with pytest.raises(grounding.GroundingError) as ei:
+        grounding.GeminiProvider().parse(resp)
+    assert ei.value.status is None and ei.value.code == "malformed_response"
+    assert grounding.provider_error_details(ei.value) == {
+        "status": None, "code": "malformed_response",
+        "message": "Provider returned a malformed response."}
+
+
+@pytest.mark.parametrize("resp", GROQ_MALFORMED)
+def test_groq_malformed_envelopes_raise_sanitized_error(resp):
+    with pytest.raises(grounding.GroundingError) as ei:
+        grounding.GroqProvider().parse(resp)
+    assert ei.value.status is None and ei.value.code == "malformed_response"
+    assert grounding.provider_error_details(ei.value) == {
+        "status": None, "code": "malformed_response",
+        "message": "Provider returned a malformed response."}
+
+
+def test_malformed_response_falls_through_to_next_chain_model(tmp_path):
+    """A malformed envelope kills only its chain entry; the next model runs from turn 0."""
+    made, bodies = [], {}
+
+    def factory(spec):
+        made.append(spec)
+        n = []
+
+        def tr(body):
+            bodies.setdefault(spec, []).append(body)
+            n.append(1)
+            if spec == "groq:m1":
+                return {"choices": {"x": 1}}
+            return groq_call("ask_clarification", call_id="m2-1", question="q", unresolved=[])
+        tr.model_used, tr.provider = spec, "groq"
+        return tr
+
+    gr, path = grounding.ground("r", FakeTools(), artifact_dir=tmp_path, transport_factory=factory,
+                                models=["groq:m1", "groq:m2"])
+    assert made == ["groq:m1", "groq:m2"] and gr.model == "groq:m2"
+    assert isinstance(gr.result, GroundingClarification)
+    saved = json.loads(path.read_text())
+    assert saved["abandoned_attempts"][0]["error"] == {
+        "status": None, "code": "malformed_response", "message": "Provider returned a malformed response."}
+    assert '"x": 1' not in path.read_text()  # the raw malformed body is never persisted
+
+
+def test_malformed_response_preserves_sanitized_prefix_and_fails_closed(tmp_path):
+    """A mid-conversation malformed response keeps the successful prefix but never its raw body."""
+    t = FakeGroqTransport([groq_call("current_fleet"), {"choices": {"SECRET-BODY": 1}}])
+    with pytest.raises(grounding.GroundingError) as ei:
+        grounding.ground("r", FakeTools(), transport=t, artifact_dir=tmp_path)
+    saved = json.loads(ei.value.transcript_path.read_text())
+    assert saved["provider_failed"] and saved["result"] is None
+    assert [e["type"] for e in saved["abandoned_attempts"][0]["events"]] == ["model", "tool"]
+    assert "SECRET-BODY" not in json.dumps(saved)
+
+
+# --------------------------------------------------------------------------- non-object tool arguments
+
+def test_groq_non_object_arguments_are_rejected_and_loop_continues(tmp_path):
+    script = [groq_call("release_history", call_id="c1", arguments="[1,2]"),
+              groq_call("release_history", call_id="c2", service="cart"),
+              groq_call("ask_clarification", call_id="c3", question="q", unresolved=[])]
+    gr, _, tools, t = groq_run(script, tmp_path)
+    reply = json.loads(tool_replies(t, 1)[0]["content"])
+    assert reply == {"error": "arguments must be a JSON object"}
+    assert "release_history:cart" in tools.calls  # the loop continued to a real call
+    assert isinstance(gr.result, GroundingClarification)
+    assert any(c["name"] == "release_history" and c.get("error") == "arguments must be a JSON object"
+               for c in gr.tool_calls)
+
+
+def test_gemini_non_mapping_function_args_are_rejected_and_loop_continues(tmp_path):
+    raw = {"candidates": [{"content": {"role": "model",
+                                       "parts": [{"functionCall": {"name": "propose_fleet",
+                                                                   "args": [1, 2]}}]}}]}
+    gr, _, tools, t = run([raw, call("ask_clarification", question="q", unresolved=[])], tmp_path)
+    reply = t.bodies[1]["contents"][-1]["parts"][0]["functionResponse"]["response"]
+    assert reply == {"error": "arguments must be a JSON object"}
+    assert tools.calls == []  # nothing executed with non-object arguments
+    assert isinstance(gr.result, GroundingClarification)
+
+
+# --------------------------------------------------------------------------- strict flags
+
+@pytest.mark.parametrize("bad", [
+    [{"name": "basket_v2", "enabled": "false"}],
+    [{"name": "basket_v2", "enabled": 0}],
+    [{"name": "basket_v2", "enabled": 1}],
+    [{"name": "basket_v2", "enabled": None}],
+    [{"enabled": False}],                       # missing name
+    [{"name": "basket_v2"}],                    # missing enabled
+    [{"name": 5, "enabled": True}],             # name must be a string
+    ["basket_v2"],                              # entry not an object
+])
+def test_flag_list_entries_must_be_name_str_enabled_bool(bad):
+    with pytest.raises(ValueError):
+        grounding._flags_dict(bad)
+
+
+@pytest.mark.parametrize("bad", [{"basket_v2": "false"}, {"basket_v2": 0}, {"basket_v2": None}])
+def test_flag_dict_values_must_be_real_bools(bad):
+    with pytest.raises(ValueError):
+        grounding._flags_dict(bad)
+
+
+def test_string_flag_value_is_an_invalid_call_not_silent_true(tmp_path):
+    bad = call("propose_fleet", changes=[{"service": "cart", "release_id": "release:cart:old",
+                                          "flags": [{"name": "basket_v2", "enabled": "false"}]}],
+               citations=[{"excerpt_id": EX_ID, "quote": "Receipt correction"}], rationale="r")
+    gr, _, _, t = run([call("release_history", service="cart"), bad,
+                       call("ask_clarification", question="q", unresolved=[])], tmp_path)
+    reply = t.bodies[2]["contents"][-1]["parts"][0]["functionResponse"]["response"]
+    assert "invalid propose_fleet call" in reply["error"] and "enabled" in reply["error"]
+    assert isinstance(gr.result, GroundingClarification) and not grounding.is_aborted(gr)

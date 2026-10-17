@@ -106,7 +106,14 @@ _PROVIDER_ERROR_MESSAGES = {
     "transport_error": "Provider connection failed.",
     "timeout": "Provider request timed out.",
     "tool_use_failed": "Provider rejected a generated tool call.",
+    "malformed_response": "Provider returned a malformed response.",
 }
+
+
+def _malformed_response() -> GroundingError:
+    """Fixed, sanitized error for a provider envelope whose shape does not validate."""
+    return GroundingError(_PROVIDER_ERROR_MESSAGES["malformed_response"], status=None,
+                          code="malformed_response")
 
 
 def provider_error_details(error: GroundingError) -> dict:
@@ -306,11 +313,43 @@ class GeminiProvider(Provider):
                 "generationConfig": {"temperature": 0}}
 
     def parse(self, resp: dict) -> tuple[str, list[ToolCall], Any]:
-        cand = ((resp or {}).get("candidates") or [{}])[0]
-        parts = (cand.get("content") or {}).get("parts") or []
-        calls = [ToolCall(id=None, name=p["functionCall"].get("name"),
-                          args=dict(p["functionCall"].get("args") or {}))
-                 for p in parts if "functionCall" in p]
+        if not isinstance(resp, dict):
+            raise _malformed_response()
+        candidates = resp.get("candidates")
+        if candidates is None and "candidates" in resp:
+            raise _malformed_response()
+        candidates = candidates or []
+        if not isinstance(candidates, list):
+            raise _malformed_response()
+        cand = candidates[0] if candidates else {}
+        if not isinstance(cand, dict):
+            raise _malformed_response()
+        content = cand.get("content")
+        if content is None and "content" in cand:
+            raise _malformed_response()
+        content = content or {}
+        if not isinstance(content, dict):
+            raise _malformed_response()
+        parts = content.get("parts")
+        if parts is None and "parts" in content:
+            raise _malformed_response()
+        parts = parts or []
+        if not isinstance(parts, list) or not all(isinstance(p, dict) for p in parts):
+            raise _malformed_response()
+        calls = []
+        for p in parts:
+            call = p.get("functionCall")
+            if call is None and "functionCall" in p:
+                raise _malformed_response()
+            if call is not None:
+                if not isinstance(call, dict):
+                    raise _malformed_response()
+                args = call.get("args")
+                if args is None:
+                    args = {}
+                elif isinstance(args, dict):
+                    args = dict(args)  # non-mapping args stay raw; _handle_call rejects them
+                calls.append(ToolCall(id=None, name=call.get("name"), args=args))
         text = " ".join(p["text"] for p in parts if isinstance(p.get("text"), str))
         return text, calls, {"role": "model", "parts": parts}
 
@@ -339,16 +378,49 @@ class GroqProvider(Provider):
                 "parallel_tool_calls": False}
 
     def parse(self, resp: dict) -> tuple[str, list[ToolCall], Any]:
-        message = dict((((resp or {}).get("choices") or [{}])[0].get("message")) or {})
+        if not isinstance(resp, dict):
+            raise _malformed_response()
+        choices = resp.get("choices")
+        if choices is None and "choices" in resp:
+            raise _malformed_response()
+        choices = choices or []
+        if not isinstance(choices, list):
+            raise _malformed_response()
+        first = choices[0] if choices else {}
+        if not isinstance(first, dict):
+            raise _malformed_response()
+        message = first.get("message")
+        if message is None and "message" in first:
+            raise _malformed_response()
+        if message is None:
+            message = {}
+        elif not isinstance(message, dict):
+            raise _malformed_response()
+        tool_calls = message.get("tool_calls")
+        if tool_calls is None and "tool_calls" in message:
+            raise _malformed_response()
+        tool_calls = tool_calls or []
+        if not isinstance(tool_calls, list) or not all(isinstance(tc, dict) for tc in tool_calls):
+            raise _malformed_response()
         calls: list[ToolCall] = []
-        for tc in message.get("tool_calls") or []:
-            fn = (tc or {}).get("function") or {}
-            try:
-                args = json.loads(fn.get("arguments") or "{}")
-            except (TypeError, ValueError):
-                args = {}
-            calls.append(ToolCall(id=tc.get("id"), name=fn.get("name"),
-                                  args=args if isinstance(args, dict) else {}))
+        for tc in tool_calls:
+            fn = tc.get("function")
+            if fn is None and "function" in tc:
+                raise _malformed_response()
+            fn = fn or {}
+            if not isinstance(fn, dict):
+                raise _malformed_response()
+            raw = fn.get("arguments")
+            if raw is None:
+                args: Any = {}
+            elif isinstance(raw, str):
+                try:
+                    args = json.loads(raw)
+                except ValueError:
+                    args = raw  # unparseable/non-object; _handle_call rejects it, the loop continues
+            else:
+                args = raw
+            calls.append(ToolCall(id=tc.get("id"), name=fn.get("name"), args=args))
         text = message.get("content") if isinstance(message.get("content"), str) else ""
         return text, calls, message
 
@@ -658,12 +730,23 @@ def _reference_repeated_text(value: Any, delivered: set[tuple[str, str]]) -> Any
 
 
 def _flags_dict(flags: Any) -> dict[str, bool]:
+    """Only real booleans pass: `"false"`, 0 or None must fail loudly, never become True."""
     if flags is None:
         return {}
     if isinstance(flags, dict):
-        return {str(k): bool(v) for k, v in flags.items()}
+        bad = [k for k, v in flags.items() if not isinstance(v, bool)]
+        if bad:
+            raise ValueError("flag values must be booleans, got: "
+                             + ", ".join(f"{k!r}={flags[k]!r}" for k in bad))
+        return {str(k): v for k, v in flags.items()}
     if isinstance(flags, list):
-        return {str(f["name"]): bool(f["enabled"]) for f in flags}
+        out: dict[str, bool] = {}
+        for f in flags:
+            if (not isinstance(f, dict) or not isinstance(f.get("name"), str)
+                    or not isinstance(f.get("enabled"), bool)):
+                raise ValueError("flags must be a list of {name: str, enabled: bool}")
+            out[f["name"]] = f["enabled"]
+        return out
     raise ValueError("flags must be a list of {name, enabled}")
 
 
@@ -682,10 +765,26 @@ def _citations(raw: Any, excerpts: dict, errors: list[str]) -> list[Citation]:
     return out
 
 
+def _changelog_covered(release_id: str, citations: list[Citation], excerpts: dict) -> bool:
+    """Whether one citation quotes (verbatim) a `changelog` excerpt of exactly this release.
+
+    Rows collected by `_collect` carry `kind` (from the graph excerpt) and `release_id` (the row's
+    own, or the release whose history returned it). A quote that is not a verbatim substring of the
+    trusted row text never counts as coverage.
+    """
+    for cit in citations:
+        row = excerpts.get(cit.excerpt_id) or {}
+        if (row.get("kind") == "changelog" and row.get("release_id") == release_id
+                and isinstance(cit.quote, str) and cit.quote and cit.quote in (row.get("text") or "")):
+            return True
+    return False
+
+
 def _finish(name: str, args: dict, excerpts: dict, releases: dict) -> tuple[Any, list[str]]:
     """Validate a terminal call into a GroundingProposal/Clarification. Raises ValueError if malformed."""
     errors: list[str] = []
     if name == "propose_fleet":
+        citations = _citations(args.get("citations"), excerpts, errors)
         changes = []
         for ch in args.get("changes") or []:
             rid, svc = ch["release_id"], ch["service"]
@@ -699,10 +798,13 @@ def _finish(name: str, args: dict, excerpts: dict, releases: dict) -> tuple[Any,
                 for f in flags:
                     if f not in info["flags"]:
                         errors.append(f"UNDECLARED_FLAG: {f!r} not declared by {rid}")
+            if not _changelog_covered(rid, citations, excerpts):
+                errors.append(f"CITATION_MISSING: {rid} has no verbatim changelog citation from "
+                              "that release")
             changes.append(FleetEntry(service=svc, release_id=rid, flags=flags))
         if not changes:
             raise ValueError("propose_fleet requires at least one change; use ask_clarification otherwise")
-        return GroundingProposal(changes=changes, citations=_citations(args.get("citations"), excerpts, errors),
+        return GroundingProposal(changes=changes, citations=citations,
                                  rationale=str(args.get("rationale", ""))), errors
     question = args.get("question")
     if not isinstance(question, str) or not question.strip():
@@ -744,6 +846,11 @@ def _handle_call(name: Any, args: dict, tools: Any, excerpts: dict, releases: di
     call, ends the loop as before.
     """
     state = state if state is not None else {}
+    if not isinstance(args, dict):
+        msg = "arguments must be a JSON object"
+        audit.append({"name": str(name)[:60], "args": _jsonable(args), "rows": 0, "error": msg})
+        events.append({"type": "tool", "name": str(name)[:60], "args": _jsonable(args), "error": msg})
+        return {"error": msg}, None
     if name in TERMINAL_TOOLS:
         try:
             res, errs = _finish(name, args, excerpts, releases)
@@ -836,8 +943,12 @@ def _run_loop(request_text: str, tools: Any, transport: Callable[[dict], dict],
         resp = model_response(transport, adapter, messages, events, turn)
         if resp is None:
             continue
+        try:
+            text, calls, native = adapter.parse(resp)
+        except GroundingError as exc:
+            exc.events = list(events)  # the sanitized successful prefix, never the raw response
+            raise
         events.append({"type": "model", "turn": turn, "response": _jsonable(resp)})
-        text, calls, native = adapter.parse(resp)
         if not calls:
             messages.append({"role": "user", "text": "Respond only by calling a tool."})
             continue
@@ -845,7 +956,7 @@ def _run_loop(request_text: str, tools: Any, transport: Callable[[dict], dict],
         # Gemini retains raw parts and their thought signatures.
         messages.append({"role": "assistant", "native": native, "text": text})
         for call in calls:
-            payload, terminal = _handle_call(call.name, call.args or {}, tools, excerpts, releases,
+            payload, terminal = _handle_call(call.name, call.args, tools, excerpts, releases,
                                              audit, events, state)
             if terminal is not None:
                 res, errs = terminal
