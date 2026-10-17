@@ -46,6 +46,26 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+def _agent_citation_gate(proposal: GroundingProposal, ex_rows: list[dict[str, Any]]) -> list[str]:
+    """Defense in depth for agent-origin proposals: a plan's candidate must be grounded.
+
+    Every `changes` entry of an agent proposal must carry at least one citation whose excerpt
+    row (as the graph actually returned it via ``get_excerpts``) is a *changelog* excerpt of
+    exactly the release the agent chose — the row's fields, not the citation's claim, are the
+    evidence. Fixture/operator fleets (origin "fixture", e.g. ``investigate.py --fleet`` and
+    the controls) are authored by trusted code and never pass through this gate.
+    """
+    by_id = {row["excerpt_id"]: row for row in ex_rows}
+    errors: list[str] = []
+    for change in proposal.changes:
+        if not any(row is not None and row["kind"] == "changelog" and row["release_id"] == change.release_id
+                   for row in (by_id.get(c.excerpt_id) for c in proposal.citations)):
+            errors.append(
+                f"CITATION_MISSING: change {change.service!r} to {change.release_id!r} cites no "
+                f"changelog excerpt of that release")
+    return errors
+
+
 def startup_check(codec_path: str, timeout_s: int = 5) -> dict[str, Any]:
     """What a typical deploy verification sees: the build loads and answers health().
 
@@ -82,9 +102,12 @@ class Session:
         fleet_rows, _ = G.current_fleet(self.g, self.snapshot_id)
         releases = {r["service"]: G.releases_for_service(self.g, r["service"])[0] for r in fleet_rows}
         errors: list[str] = []
+        ex_rows: list[dict[str, Any]] = []
         if proposal.citations:
             ex_rows, _ = G.get_excerpts(self.g, [c.excerpt_id for c in proposal.citations])
             errors += validate_citations(proposal.citations, ex_rows)
+        if origin == "agent":
+            errors += _agent_citation_gate(proposal, ex_rows)
         plan, plan_errors = materialize_plan(proposal, fleet_rows, releases, self.snapshot_id,
                                              self.manifest_hash, request_text, origin, label)
         return (plan if not errors else None), errors + plan_errors
@@ -141,10 +164,13 @@ class Session:
             receipt = P.run_probe(ob, REPO_ROOT / path) if path else None
             if receipt is not None:
                 written.add(G.write_receipt(self.g, receipt))
-        # read receipts back from FalkorDB by exact obligation hash; historical receipt reuse is
-        # excluded, so only ProbeRuns written by this verification count
-        rows, receipt_log = G.receipts_for(self.g, [o.obligation_hash for o in evidence.obligations])
-        receipts = [ProbeReceipt.model_validate_json(r["receipt_json"]) for r in rows if r["probe_id"] in written]
+        # read the receipts this verification wrote back from FalkorDB by exact ProbeRun id:
+        # selecting by obligation hash alone would sweep historical ProbeRun copies into the
+        # cap, and once ~200 of them accumulate for one hash the fresh receipts fall past it.
+        # Only ProbeRuns written by this verification count; anything absent is then no
+        # applicable receipt and stays an evidence gap, never a silent pass
+        rows, receipt_log = G.receipts_by_id(self.g, sorted(written))
+        receipts = [ProbeReceipt.model_validate_json(r["receipt_json"]) for r in rows]
         result = dispose(evidence, receipts)
         startup = {}
         for r in route_rows:

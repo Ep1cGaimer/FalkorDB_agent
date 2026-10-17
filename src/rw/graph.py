@@ -1036,7 +1036,7 @@ FOREACH (_ IN CASE WHEN b IS NULL THEN [] ELSE [1] END | MERGE (pr)-[:TESTS_BATC
 
 
 def receipts_for(graph: Any, obligation_hashes: list[str], cap: int = QUERY_CAP):
-    """Receipts stored for the given obligation hashes."""
+    """Receipts stored for the given obligation hashes (historical copies included)."""
     query = """
 MATCH (pr:ProbeRun)
 WHERE pr.obligation_hash IN $obligation_hashes
@@ -1050,6 +1050,33 @@ LIMIT $limit
         "receipts_for",
         query,
         {"obligation_hashes": list(obligation_hashes)},
+        ("probe_id", "obligation_hash", "result", "receipt_json"),
+        cap,
+    )
+
+
+def receipts_by_id(graph: Any, probe_ids: list[str], cap: int = QUERY_CAP):
+    """Probe receipts for exactly the given ProbeRun ids — fresh receipts only.
+
+    ``receipts_for`` selects by obligation hash, so every historical ProbeRun copy competes for
+    the same cap; this reads back a verification's own receipts without them, whatever their
+    history. A cap+1 result is still reported ``truncated`` by ``_read`` and missing ids simply
+    return no row, so a truncated or absent receipt stays visible as an evidence gap.
+    Returns the same columns as ``receipts_for``.
+    """
+    query = """
+MATCH (pr:ProbeRun)
+WHERE pr.id IN $probe_ids
+RETURN pr.id AS probe_id, pr.obligation_hash AS obligation_hash, pr.result AS result,
+       pr.receipt_json AS receipt_json
+ORDER BY pr.obligation_hash, pr.id
+LIMIT $limit
+"""
+    return _read(
+        graph,
+        "receipts_by_id",
+        query,
+        {"probe_ids": list(probe_ids)},
         ("probe_id", "obligation_hash", "result", "receipt_json"),
         cap,
     )

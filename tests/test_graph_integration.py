@@ -593,3 +593,37 @@ def test_write_receipt_and_receipts_for_round_trip(graph):
     assert log["truncated"] is False
 
     assert handle.ro_query("MATCH (pr:ProbeRun) RETURN count(pr) AS c").result_set == [[1]]
+
+
+def test_receipts_by_id_round_trip_and_truncation(graph):
+    handle, _ = graph
+    receipt = build_receipt()
+    sibling = receipt.model_copy(update={"executed_at": "2026-10-14T00:00:00Z"})
+    id_a = graph_module.write_receipt(handle, receipt)
+    id_b = graph_module.write_receipt(handle, sibling)
+    assert id_a != id_b, "distinct executed_at makes distinct ProbeRun ids for this obligation hash"
+
+    # Only the ids asked for come back; the sibling copy of the same obligation hash is
+    # invisible to an id-scoped read.
+    rows, log = graph_module.receipts_by_id(handle, [id_a])
+    assert log["name"] == "receipts_by_id" and log["truncated"] is False
+    assert [row["probe_id"] for row in rows] == [id_a]
+    assert json.loads(rows[0]["receipt_json"]) == json.loads(receipt.model_dump_json())
+    assert ProbeReceipt.model_validate_json(rows[0]["receipt_json"]) == receipt
+
+    rows, log = graph_module.receipts_by_id(handle, [id_a, id_b])
+    assert log["truncated"] is False
+    assert [row["probe_id"] for row in rows] == sorted([id_a, id_b])  # ORDER BY hash, id
+    assert all(row["obligation_hash"] == receipt.obligation_hash for row in rows)
+    assert {row["result"] for row in rows} == {"FAIL"}
+
+    # Two ids under a cap of one: one row back, cap+1 reported truncated, params carry the ids.
+    rows, log = graph_module.receipts_by_id(handle, [id_a, id_b], cap=1)
+    assert len(rows) == 1 and log["truncated"] is True
+    assert log["params"]["limit"] == 2 and log["params"]["probe_ids"] == [id_a, id_b]
+
+    unknown, log = graph_module.receipts_by_id(handle, ["probe:no-such-id"])
+    assert unknown == [] and log["truncated"] is False
+
+    empty, log = graph_module.receipts_by_id(handle, [])
+    assert empty == [] and log["truncated"] is False
