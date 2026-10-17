@@ -646,7 +646,7 @@ def _handle_call(name: Any, args: dict, tools: Any, excerpts: dict, releases: di
 
 
 def _assess_intent(request: str, transport: Callable[[dict], dict], adapter: Provider,
-                   events: list[dict]) -> tuple[int, intent.IntentDecision | None]:
+                   events: list[dict], *, version: int = intent.VERSION) -> tuple[int, intent.IntentDecision | intent.LegacyIntentDecision | None]:
     """At most two request-only calls; no path here can dispatch an artifact tool."""
     messages = [{"role": "user", "text": request}]
     for turn in range(2):
@@ -658,7 +658,7 @@ def _assess_intent(request: str, transport: Callable[[dict], dict], adapter: Pro
             text, calls, native = adapter.parse(response)
             if len(calls) != 1 or calls[0].name != "assess_intent":
                 raise ValueError("call only assess_intent, exactly once; artifact tools are unavailable")
-            decision = intent.IntentDecision.from_call(calls[0].args or {}, request)
+            decision = intent.IntentDecision.from_call(calls[0].args or {}, request, legacy=version == 1)
         except (ValueError, TypeError, AttributeError) as exc:
             error = str(exc)
             events.append({"type": "intent_error", "phase": "intent", "error": error})
@@ -675,7 +675,7 @@ def _assess_intent(request: str, transport: Callable[[dict], dict], adapter: Pro
 
 
 def _run_loop(request_text: str, tools: Any, transport: Callable[[dict], dict],
-              alternative_context: str | None, *, intent_check: bool = True) -> tuple[GroundingProposal | GroundingClarification, list[str],
+              alternative_context: str | None, *, intent_version: int | None = intent.VERSION) -> tuple[GroundingProposal | GroundingClarification, list[str],
                                                        list[dict], list[dict]]:
     """Returns (result, validation_errors, tool_call_audit, events). Aborts degrade to a clarification.
 
@@ -696,8 +696,8 @@ def _run_loop(request_text: str, tools: Any, transport: Callable[[dict], dict],
         return res, [f"GROUNDING_ABORTED: {reason}"], audit, events
 
     used_turns = 0
-    if intent_check:
-        used_turns, decision = _assess_intent(request_text, transport, adapter, events)
+    if intent_version is not None:
+        used_turns, decision = _assess_intent(request_text, transport, adapter, events, version=intent_version)
         if decision is None:
             return aborted("invalid intent assessment")
         if decision.status == "CLARIFY":
@@ -705,8 +705,10 @@ def _run_loop(request_text: str, tools: Any, transport: Callable[[dict], dict],
             events.append({"type": "terminal", "phase": "intent", "name": "ask_clarification",
                            "args": result.model_dump(mode="json")})
             return result, [], audit, events
-        messages[0]["text"] += ("\n\nOperator-named request identifiers (not artifact evidence): "
-                                 + json.dumps(decision.identifiers)
+        reference_context = ([r.model_dump(mode="json") for r in decision.references]
+                             if isinstance(decision, intent.IntentDecision) else decision.identifiers)
+        messages[0]["text"] += ("\n\nOperator request references and relationships (not artifact evidence): "
+                                 + json.dumps(reference_context)
                                  + ". Retrieve release evidence for these before concluding it is unavailable.")
 
     for turn in range(used_turns, MAX_TURNS):
@@ -774,7 +776,7 @@ def ground(request_text: str, tools: Any, transport: Callable[[dict], dict] | No
         gr = GroundingResult(request_text=request_text, result=result, model=model_used, live=True,
                              tool_calls=audit, validation_errors=errors)
         path = _save({"request_text": request_text, "alternative_context": alternative_context,
-                      "intent_version": 1,
+                      "intent_version": intent.VERSION,
                       "intent_prompt_hash": hashlib.sha256(intent.SYSTEM_PROMPT.encode()).hexdigest(),
                       "model": model_used, "provider": _adapter_for(tr).name,
                       "abandoned_attempts": abandoned, "events": events,
@@ -829,8 +831,11 @@ def replay(path: str | Path) -> GroundingResult:
     """
     path = Path(path)
     t = json.loads(path.read_text(encoding="utf-8"))
+    version = t.get("intent_version")
+    if isinstance(version, bool) or version not in (None, 1, intent.VERSION):
+        raise GroundingError(f"unsupported intent transcript version: {version!r}")
     result, errors, audit, _ = _run_loop(t["request_text"], _ReplayTools(t["events"]),
                                          _ReplayTransport(t["events"], t.get("provider", DEFAULT_PROVIDER)),
-                                         t.get("alternative_context"), intent_check=t.get("intent_version") == 1)
+                                         t.get("alternative_context"), intent_version=version)
     return GroundingResult(request_text=t["request_text"], result=result, model=f"replay:{path.name}",
                            live=False, tool_calls=audit, validation_errors=errors)

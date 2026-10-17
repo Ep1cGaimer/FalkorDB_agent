@@ -79,7 +79,7 @@ def scripted_intent(body, provider="gemini"):
         request = body["contents"][0]["parts"][0]["text"]
         render = call
     if names == ["assess_intent"]:
-        return render("assess_intent", status="READY", identifiers=[request], unresolved=[], question="")
+        return render("assess_intent", references=[{"phrase": request, "basis": "NAMED_BEHAVIOR", "relation": "AT"}], question="")
 
 
 class ScriptedTransport:
@@ -306,10 +306,10 @@ def test_system_prompt_has_a_generic_ambiguity_rule_without_fixture_names():
     """Missing intent evidence requires clarification; resolved references can still be proposed."""
     prompt = grounding.SYSTEM_PROMPT + grounding.intent.SYSTEM_PROMPT
     assert "ask_clarification" in prompt
-    assert "Do not invent" in prompt and "only one candidate" in prompt
-    assert "no" in prompt and "calendar anchor" in prompt
+    assert "Never guess an omitted behavior" in prompt and "service name does not identify its change" in prompt
+    assert "You have no release history" in prompt and "calendar anchor" in prompt
     assert "VERBATIM" in prompt and "operator answer" in prompt
-    assert "relationship to a named behavior" in prompt and "unnecessary time question" in prompt
+    assert "build BEFORE a NAMED_BEHAVIOR" in prompt and "unnecessary time question" in prompt
     assert "across the relevant services" in prompt and "Retaining downstream support" in prompt
     lowered = prompt.lower()
     for fixture_word in ("cart", "checkout", "basket", "saved-cart", "receipt correction",
@@ -698,7 +698,8 @@ def _available_chain() -> list[str]:
 @pytest.mark.live
 @pytest.mark.parametrize("case_id", ["main", "ambiguous", "named-old-build",
                                   "ambiguous-yesterday", "ambiguous-single-candidate",
-                                  "answered-ambiguity"])
+                                  "answered-ambiguity", "ambiguous-keep-behavior",
+                                  "ambiguous-unanswered"])
 def test_live_request(case_id):
     config.load_env()  # GROQ_API_KEY from the git-ignored .env; never printed
     chain = _available_chain()
@@ -730,6 +731,12 @@ def test_live_request(case_id):
         request = next(c["text"] for c in cases if c["id"] == source_case)
         if case_id == "ambiguous-yesterday":
             request = request.replace("last week", "yesterday")
+        elif case_id == "ambiguous-keep-behavior":
+            request += " Keep the receipt correction."
+        elif case_id == "ambiguous-unanswered":
+            from rw.pipeline import with_answer
+            request = with_answer(request, "Did you mean the basket rollout?",
+                                  "I don't know which change; I only know it was last week.")
         elif case_id == "answered-ambiguity":
             from rw.pipeline import with_answer
             request = with_answer(request, "Which change or release do you mean?",
