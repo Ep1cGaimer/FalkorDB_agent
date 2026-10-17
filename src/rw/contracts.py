@@ -138,6 +138,18 @@ class FleetEntry(Frozen):
     changed: bool = False  # differs from current deployment (filled by trusted code)
 
 
+def fleet_hash(entries: list[FleetEntry]) -> str:
+    """Canonical hash of a fleet from the facts that define it: ``service``, ``release_id``, ``flags``.
+
+    ``changed`` is excluded, so the same observed deployments hash identically however the diff was
+    computed, and entries are sorted by service before hashing (lists that are sets are sorted).
+    Approval and simulation compare this hash against :attr:`CandidatePlan.baseline_fleet_hash` so a
+    plan can only act on the fleet it was built against.
+    """
+    return h(sorted([entry.model_dump(mode="json", include={"service", "release_id", "flags"})
+                     for entry in entries], key=lambda dump: dump["service"]))
+
+
 class GroundingProposal(Frozen):
     kind: Literal["PROPOSAL"] = "PROPOSAL"
     changes: list[FleetEntry]      # only services the agent proposes to change; trusted code completes the fleet
@@ -169,6 +181,7 @@ class CandidatePlan(Frozen):
     snapshot_manifest_hash: str
     request_text_hash: str
     fleet: list[FleetEntry]        # every service in the snapshot, sorted by service
+    baseline_fleet_hash: str = ""  # fleet_hash of the observed fleet rows this plan was materialized from; "" only for plans not built from observed rows
     source_hashes: list[str]       # content hashes of cited excerpts, sorted
     origin: Literal["agent", "fixture"]
     label: str = ""
@@ -179,6 +192,7 @@ class CandidatePlan(Frozen):
             "snapshot_id": self.snapshot_id,
             "snapshot_manifest_hash": self.snapshot_manifest_hash,
             "request_text_hash": self.request_text_hash,
+            "baseline_fleet_hash": self.baseline_fleet_hash,
             "fleet": sorted([f.model_dump(mode="json", exclude={"changed"}) for f in self.fleet],
                             key=lambda f: f["service"]),
             "source_hashes": sorted(self.source_hashes),

@@ -31,6 +31,7 @@ from .contracts import (
     WitnessHop,
     artifact_hash as release_artifact_hash,
     bh,
+    fleet_hash,
     h,
     repo_rel,
     short,
@@ -270,12 +271,18 @@ def materialize_plan(
         fleet.append(FleetEntry(service=service, release_id=release_id, flags=flags, changed=changed))
 
     source_hashes = sorted({c.content_hash for c in proposal.citations})
+    # the baseline the plan was built against: the fleet exactly as it was observed, so approve and
+    # simulate can refuse if those deployments changed between materialization and approval
+    baseline_fleet_hash = fleet_hash([
+        FleetEntry(service=r["service"], release_id=r["release_id"], flags=dict(r.get("flags") or {}))
+        for r in current_fleet_rows])
     plan = CandidatePlan(
         scope_id=SCOPE_ID,
         snapshot_id=snapshot_id,
         snapshot_manifest_hash=manifest_hash,
         request_text_hash=h(request_text),
         fleet=fleet,
+        baseline_fleet_hash=baseline_fleet_hash,
         source_hashes=source_hashes,
         origin=origin,  # type: ignore[arg-type]
         label=label,

@@ -25,6 +25,7 @@ from rw.contracts import (
     VerificationResult,
     artifact_hash,
     bh,
+    fleet_hash,
     h,
     release_dir_files,
     short,
@@ -106,6 +107,35 @@ def plan_for(cart_release="release:cart:old", flags=None):
     plan, errors = materialize_plan(prop, CURRENT, RELEASES, SNAP, MHASH, "req", "agent")
     assert not errors, errors
     return plan
+
+
+def observed_fleet(rows):
+    """The FleetEntry list a caller passes the checker from one `current_fleet` read."""
+    return [FleetEntry(service=r["service"], release_id=r["release_id"], flags=dict(r["flags"]))
+            for r in rows]
+
+
+def test_materialized_plan_binds_the_observed_fleet():
+    """materialize_plan hashes the fleet rows the plan was built against, before any proposal."""
+    assert plan_for().baseline_fleet_hash == fleet_hash(observed_fleet(CURRENT))
+
+
+def test_plan_hash_distinguishes_the_same_proposal_against_two_baselines():
+    """The proposal and candidate fleet are identical; only the observed baseline differs, and the
+    plan hash moves with it because approve/simulate must bind that fleet exactly."""
+    first = plan_for()
+    drifted = [dict(row) for row in CURRENT]
+    drifted[0] = drifted[0] | {"flags": {"v2": False}}
+    prop = GroundingProposal(
+        changes=[FleetEntry(service="cart", release_id="release:cart:old", flags={})],
+        citations=[], rationale="t")
+    second, errors = materialize_plan(prop, drifted, RELEASES, SNAP, MHASH, "req", "agent")
+    assert not errors, errors
+    assert [f.model_dump(mode="json") for f in first.fleet] == [f.model_dump(mode="json") for f in second.fleet]
+    assert first.baseline_fleet_hash != second.baseline_fleet_hash
+    assert first.plan_hash() != second.plan_hash()
+    # reproducing against the same observed fleet reproduces the same plan identity
+    assert plan_for().plan_hash() == first.plan_hash()
 
 
 def route_rows(plan, checkout_routes=True, decls=None):

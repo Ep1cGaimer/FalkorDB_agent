@@ -123,15 +123,19 @@ def test_negative_snapshots_keep_missing_evidence_and_scope_binding(api,tmp_path
     from rw.api import create_app
     from rw import graph
     from rw.pipeline import Session
-    from rw.contracts import FleetEntry,GroundingProposal,GroundingResult
+    from rw.contracts import Citation,FleetEntry,GroundingProposal,GroundingResult
     human,_,base=api
     initial=human.post("/api/investigations",json={"request_text":REQUEST}).json()
     session=base.state.investigations[initial["id"]].session
     rows,_=graph.releases_for_service(session.g,"cart")
     release=next(r for r in rows if r["version"]=="1.5")
+    history,_=graph.release_history(session.g,session.snapshot_id,"cart")
+    excerpt=next(ex for row in history if row["release_id"]==release["release_id"]
+                 for ex in row["excerpts"] if ex["kind"]=="changelog")
+    citation=Citation(excerpt_id=excerpt["excerpt_id"],content_hash=excerpt["content_hash"],quote=excerpt["text"])
     def ground(request,tools,alternative_context=None):
         return GroundingResult(request_text=request,result=GroundingProposal(changes=[FleetEntry(service="cart",
-            release_id=release["release_id"],flags={"basket_v2":False})],citations=[],rationale="deterministic"),model="test",live=False),None
+            release_id=release["release_id"],flags={"basket_v2":False})],citations=[citation],rationale="deterministic"),model="test",live=False),None
     app=create_app(session_factory=lambda snapshot:Session(snapshot=snapshot,graph_name=session.graph_name,reimport=False),
         ground_function=ground,db_path=tmp_path/"negative.sqlite")
     with TestClient(app) as console:

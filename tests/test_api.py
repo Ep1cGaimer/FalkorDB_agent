@@ -12,6 +12,7 @@ from rw.contracts import (Citation, FleetEntry, GroundingClarification,
                           GroundingProposal, GroundingResult, bh)
 
 REQUEST = "Undo the basket rollout but keep the receipt correction"
+FLEET_DRIFT = "current fleet changed since the plan was built"
 
 
 @pytest.fixture
@@ -202,7 +203,8 @@ def test_citations_carry_the_real_excerpt_kind(api, tmp_path):
     history, _ = graph.release_history(inv.session.g, inv.session.snapshot_id, "cart")
     code = next(ex for row in history for ex in row["excerpts"] if ex["kind"] == "code")
     source = inv.attempts[0].grounding
-    proposal = source.result.model_copy(update={"citations": [
+    # Keep the changelog citation each changed release needs, and add a code-excerpt citation.
+    proposal = source.result.model_copy(update={"citations": list(source.result.citations) + [
         Citation(excerpt_id=code["excerpt_id"], content_hash=code["content_hash"], quote=code["text"])]})
 
     def code_ground(request, tools, alternative_context=None):
@@ -212,8 +214,11 @@ def test_citations_carry_the_real_excerpt_kind(api, tmp_path):
                      db_path=tmp_path / "kind.sqlite")
     with TestClient(app) as other:
         other_state = create(other)
-        assert other_state["citations"][0]["kind"] == "code"
-        assert other_state["plan"]["citations"][0]["kind"] == "code"
+        kinds = {c["excerpt_id"]: c["kind"] for c in other_state["citations"]}
+        plan_kinds = {c["excerpt_id"]: c["kind"] for c in other_state["plan"]["citations"]}
+        assert kinds[code["excerpt_id"]] == "code"
+        assert plan_kinds[code["excerpt_id"]] == "code"
+        assert "changelog" in kinds.values()
 
 
 @pytest.mark.parametrize("failure", ["adapter", "release", "citation"])
@@ -354,9 +359,14 @@ def test_changed_writer_only_release_blocks_approval(tmp_path):
         rows, log = graph.releases_for_service(session.g, "cart")
         assert not log["truncated"]
         release = next(row for row in rows if row["version"] == "1.5")
+        history, _ = graph.release_history(session.g, session.snapshot_id, "cart")
+        changelog = next(ex for row in history if row["release_id"] == release["release_id"]
+                         for ex in row["excerpts"] if ex["kind"] == "changelog")
+        citation = Citation(excerpt_id=changelog["excerpt_id"], content_hash=changelog["content_hash"],
+                            quote=changelog["text"])
         proposal = GroundingProposal(changes=[FleetEntry(service="cart", release_id=release["release_id"],
                                                          flags={"basket_v2": False})],
-                                     citations=[], rationale="keep 1.5 with the basket rollout off")
+                                     citations=[citation], rationale="keep 1.5 with the basket rollout off")
         return GroundingResult(request_text=request, result=proposal, model="fake-grounder", live=True), None
 
     app = create_app(session_factory=lambda: Session(snapshot="snap-001", graph_name=name,
@@ -378,6 +388,83 @@ def test_changed_writer_only_release_blocks_approval(tmp_path):
             assert client.get(f"/api/investigations/{state['id']}").json()["approval"] is None
     finally:
         session.g.delete()
+
+
+def _deployments(plan_state, app):
+    """Read the deployment rows of one investigation and return a flag-mutating helper."""
+    from rw import graph
+
+    inv = app.state.investigations[plan_state["id"]]
+    rows, log = graph.current_fleet(inv.session.g, inv.session.snapshot_id)
+    assert not log["truncated"]
+    def set_flags(deployment_id, flags):
+        inv.session.g.query("MATCH (d:Deployment {id: $id}) SET d.flags_json = $flags",
+                            params={"id": deployment_id, "flags": json.dumps(flags)})
+    return rows, set_flags
+
+
+def test_fleet_mutation_after_approval_refuses_simulation_and_reapproval(api):
+    """The plan's baseline fleet is part of the approval: a graph flag change after approve refuses."""
+    client, _, original_app = api
+    state = create(client)
+    confirm(client, state)
+    alternative = client.post(f"/api/investigations/{state['id']}/alternative").json()
+    passing = confirm(client, alternative)
+    assert passing["verification"]["disposition"] == "BOUNDED_PASS"
+    approval = client.post(plan_url(alternative) + "/approve", json={"approved_by": "oncall:alice"})
+    assert approval.status_code == 200, approval.text
+
+    rows, set_flags = _deployments(alternative, original_app)
+    cart = next(row for row in rows if row["service"] == "cart")
+    checkout = next(row for row in rows if row["service"] == "checkout")
+    flipped = {name: not value for name, value in cart["flags"].items()}
+    assert flipped != cart["flags"]
+
+    set_flags(cart["deployment_id"], flipped)
+    refused = client.post(plan_url(alternative) + "/simulate")
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["reason"] == FLEET_DRIFT
+    assert refused.json()["detail"] == FLEET_DRIFT
+    # re-approval of the same plan against the drifted fleet is refused before recording
+    reapprove = client.post(plan_url(alternative) + "/approve", json={"approved_by": "oncall:alice"})
+    assert reapprove.status_code == 409, reapprove.text
+    assert reapprove.json()["reason"] == FLEET_DRIFT
+    assert client.get(f"/api/investigations/{state['id']}").json()["simulation"] is None
+
+    # restoring the recorded fleet lets the stored approval apply exactly once
+    set_flags(cart["deployment_id"], cart["flags"])
+    first = client.post(plan_url(alternative) + "/simulate")
+    second = client.post(plan_url(alternative) + "/simulate")
+    assert first.status_code == second.status_code == 200, first.text + second.text
+    assert first.json()["applied"] is True
+    assert second.json()["applied"] is False
+    # once the receipt exists, the idempotent re-read stays a no-op even under fleet drift
+    set_flags(checkout["deployment_id"], {**checkout["flags"], "rw_test_probe": True})
+    replay = client.post(plan_url(alternative) + "/simulate")
+    assert replay.status_code == 200 and replay.json()["applied"] is False
+
+
+def test_fleet_mutation_before_approval_is_refused(api):
+    """A drifted fleet can never be approved: the exact plan executes the fleet it was built against."""
+    client, _, original_app = api
+    state = create(client)
+    confirm(client, state)
+    alternative = client.post(f"/api/investigations/{state['id']}/alternative").json()
+    passing = confirm(client, alternative)
+    assert passing["verification"]["disposition"] == "BOUNDED_PASS"
+
+    rows, set_flags = _deployments(state, original_app)
+    cart = next(row for row in rows if row["service"] == "cart")
+    flipped = {name: not value for name, value in cart["flags"].items()}
+    set_flags(cart["deployment_id"], flipped)
+    response = client.post(plan_url(alternative) + "/approve", json={"approved_by": "oncall:alice"})
+    assert response.status_code == 409, response.text
+    assert response.json()["reason"] == FLEET_DRIFT
+    assert client.get(f"/api/investigations/{state['id']}").json()["approval"] is None
+
+    set_flags(cart["deployment_id"], cart["flags"])
+    approval = client.post(plan_url(alternative) + "/approve", json={"approved_by": "oncall:alice"})
+    assert approval.status_code == 200, approval.text
 
 
 def test_root():
