@@ -127,3 +127,37 @@ def test_cleanup_failure_does_not_hide_original_provider_failure(monkeypatch, tm
     result = runner.execute_arm(runner.schedule(1)[0], MODEL, tmp_path, 6382)
     assert result['status'] == 'failed' and 'cleanup' in result and 'error' in result
     assert 'gsk_SECRET' not in json.dumps(result)
+
+
+def test_gemini_cap_usage_and_wire_hash(monkeypatch):
+    from rw.contracts import h
+    monkeypatch.setenv('RW_GROUNDING_MAX_COMPLETION_TOKENS', '1000')
+    bodies = []
+    class Underlying:
+        provider = 'gemini'
+        def __call__(self, body):
+            bodies.append(body)
+            return {'modelVersion': 'scripted', 'candidates': [{'content': {'parts': [{'text': 'response'}]}}],
+                    'usageMetadata': {'promptTokenCount': 0, 'candidatesTokenCount': 10,
+                                      'totalTokenCount': 10, 'account_id': 'SECRET'}}
+    measured = MeasuredTransport(Underlying(), 'gemini:scripted')
+    measured({'generationConfig': {'temperature': 0}, 'contents': []})
+    assert bodies[0]['generationConfig'] == {'temperature': 0, 'maxOutputTokens': 1000}
+    assert measured.calls[0]['request_hash'] == h(bodies[0])
+    assert measured.summary()['reported_usage_totals'] == {
+        'promptTokenCount': 0, 'candidatesTokenCount': 10, 'totalTokenCount': 10}
+
+
+def test_gemini_uses_product_retries_with_attempt_and_wait_trace(monkeypatch):
+    from evals.comparison_telemetry import evaluation_transport
+    monkeypatch.setenv('GEMINI_API_KEY', 'FAKE')
+    def post(url, body, headers, sleep, timeout, attempts, model, observe):
+        assert timeout == 90 and model == 'gemini:scripted'
+        observe(SimpleNamespace(status_code=429))
+        sleep(0)
+        observe(SimpleNamespace(status_code=200))
+        return {'ok': True}
+    monkeypatch.setattr(g, '_retrying_post', post)
+    transport = evaluation_transport('gemini:scripted')
+    assert transport({}) == {'ok': True}
+    assert transport.trace == [{'status': 429}, {'retry_wait_s': 0}, {'status': 200}]

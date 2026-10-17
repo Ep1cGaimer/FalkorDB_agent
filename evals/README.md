@@ -14,11 +14,11 @@ files into `src/rw/`, and do not tune a holdout to accommodate a failing impleme
 - `relationship_ablation.py` — removes exactly two snapshot `IN_STORE` edges from owned disposable graphs. Nodes and raw files survive; connected reader–record obligation enumeration and witness paths disappear, and the unchanged checker fails closed. Restoration recovers the original results. SQL can independently reconstruct these pairs.
 - `comparison_evidence.py` — exports allowlisted portable evidence, including all fixture/expectation bytes needed for offline rescoring. Strict validation rejects missing, extra, tampered, duplicate and unsafe entries. Generated evidence is excluded from source hashes.
 
-Collect only after the offline suite passes. Use a dedicated FalkorDB on port 6382 (the standard test suite uses 6379); run database tests and live collection serially. Load keys from an ignored `.env`. Pick a new batch directory for every invocation, retaining incomplete attempts separately; never retry a whole conversation to improve its semantic outcome.
+Collect only after the offline suite passes. Use a dedicated FalkorDB on port 6382 (the standard test suite uses 6379); run database tests and live collection serially. Load keys from an ignored `.env` (`GEMINI_API_KEY` or `GROQ_API_KEY`). Gemini uses the same product HTTP retry/TLS helper with an evaluation observation hook; its completion cap is applied as `generationConfig.maxOutputTokens`. Pick a new batch directory for every invocation, retaining incomplete attempts separately; never retry a whole conversation to improve its semantic outcome.
 
 ```sh
 RW_GROUNDING_MAX_COMPLETION_TOKENS=1000 \
-  .venv/bin/python evals/run_comparison.py --runs 3 --model groq:qwen/qwen3.8-27b \
+  .venv/bin/python evals/run_comparison.py --runs 3 --model gemini:gemini-3.8-flash \
   --db-port 6382 --out artifacts/issue-22/BATCH
 .venv/bin/python evals/relationship_ablation.py --db-port 6382 --out artifacts/issue-22/BATCH/ablation
 .venv/bin/python evals/comparison_evidence.py export --input artifacts/issue-22/BATCH \

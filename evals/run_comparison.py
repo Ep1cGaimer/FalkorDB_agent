@@ -10,6 +10,7 @@ import argparse
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
 from pathlib import Path
 import platform
 import subprocess
@@ -25,7 +26,7 @@ from rw import config, grounding, graph as G
 from rw.contracts import ScopeConfirmation
 from rw.pipeline import Session, run_investigation
 from evals import flat_grounding, llm_control
-from evals.comparison_telemetry import MeasuredTransport, utc
+from evals.comparison_telemetry import MeasuredTransport, evaluation_transport, utc
 
 REQUEST = llm_control.REQUEST
 ARMS = ('graph_grounding_checker', 'flat_grounding_checker', 'flat_assessment')
@@ -75,7 +76,7 @@ def execute_arm(slot, model, out, db_port):
     check_s = 0.0
     ground_s = 0.0
     try:
-        measured = MeasuredTransport(grounding.make_transport(model), model)
+        measured = MeasuredTransport(evaluation_transport(model), model)
         if slot['arm'] == 'flat_assessment':
             transcript, _ = llm_control.run_control(REQUEST, transport=measured, save=False)
             ground_s = time.monotonic() - started
@@ -165,7 +166,7 @@ def collect(out, runs, model, db_port=6382, execute=execute_arm):
                 'git_dirty': subprocess.check_output(['git', 'status', '--porcelain'], cwd=ROOT, text=True).splitlines()}
     write_json(out / 'protocol.json', {'version': PROTOCOL_VERSION, 'arms': ARMS, 'request': REQUEST,
                'snapshot': 'snap-001', 'temperature': 0, 'max_turns': 8,
-               'completion_cap': getattr(grounding.make_transport(model), 'settings', {}).get('max_completion_tokens'),
+               'completion_cap': int(os.environ.get('RW_GROUNDING_MAX_COMPLETION_TOKENS', '2048')),
                'allow_alternative': False, 'clarification_answer': None,
                'tool_result_character_cap': grounding.MAX_RESULT_CHARS, 'context_cap': None,
                'prompts_tools': 'observations/*: calls[].request (hashed); exact delivered history per call',

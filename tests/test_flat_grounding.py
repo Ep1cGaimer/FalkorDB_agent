@@ -62,6 +62,11 @@ def test_flat_terminal_has_no_graph_or_probes(monkeypatch, tmp_path, provider, t
     for name in ('connect', 'current_fleet', 'release_history', 'get_excerpts', 'store_readers'):
         monkeypatch.setattr(G, name, forbidden)
     monkeypatch.setattr(legacy.FlatControlTools, 'run_reader_probe', forbidden)
+    original = g._handle_call
+    def terminal_validator(*args, **kwargs):
+        assert args[7]['request_text'] == 'that change'
+        return original(*args, **kwargs)
+    monkeypatch.setattr(g, '_handle_call', terminal_validator)
     args = proposal() if terminal == 'propose_fleet' else {'question': 'Which behavior?', 'unresolved': ['that change']}
     transport = Transport([call(terminal, args, provider)], provider)
     result, _ = flat.ground('that change', transport=transport, artifact_dir=tmp_path)

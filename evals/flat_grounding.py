@@ -83,7 +83,7 @@ def ground(request_text, tools=None, alternative_context=None, *, transport,
     excerpts, releases = {}, {}
     g._collect(catalog['releases'], excerpts, releases)
     messages = [{'role': 'user', 'text': f'Rollback request: {request_text}\n\n{context(fixture_root, snapshot)}'}]
-    audit, events, state = [], [], {'citation_correction_used': False}
+    audit, events, state = [], [], {'citation_correction_used': False, 'request_text': request_text}
     result, errors = None, []
     for turn in range(g.MAX_TURNS):
         response = g.model_response(transport, adapter, messages, events, turn)
