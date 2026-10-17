@@ -197,8 +197,14 @@ def test_operator_fleet_uses_fixture_origin_and_bypasses_agent(monkeypatch, caps
         report = saved[0]["attempts"][0]["report"]
         assert report["plan"]["origin"] == "fixture"
         assert report["scope_confirmation"]["confirmed_by"] == "tester"
+        # the CLI deletes the session graph in its finally block on every exit path; the factory
+        # injects this test's session, so cleanup has already happened by the time we get here
+        assert name not in graph.connect().list_graphs()
     finally:
-        session.g.delete()
+        try:
+            session.g.delete()
+        except Exception:
+            pass  # already deleted by the CLI's cleanup
 
 
 @pytest.mark.parametrize("name", ["", "   "], ids=["empty", "whitespace"])
@@ -232,5 +238,85 @@ def test_operator_fleet_without_a_named_operator_never_verifies(monkeypatch, cap
         assert attempt["outcome"] == "SCOPE_NOT_CONFIRMED"
         assert "report" not in attempt
         assert attempt["plan"]["origin"] == "fixture"
+        # the CLI deletes the session graph on every exit path (see test_cli_uses_and_deletes_its_own_graph)
+        assert graph_name not in graph.connect().list_graphs()
     finally:
-        session.g.delete()
+        try:
+            session.g.delete()
+        except Exception:
+            pass  # already deleted by the CLI's cleanup
+
+
+class FakeFleetEntry:
+    changed = True
+    service = "cart"
+    flags = {"basket_v2": False}
+    release_id = "release:cart:x"
+
+
+class FakePlan:
+    label = "stub plan"
+    fleet = [FakeFleetEntry()]
+
+    def plan_id(self):
+        return "plan-stub"
+
+    def plan_hash(self):
+        return "plan-hash-stub"
+
+    def model_dump(self, mode="python", **kwargs):
+        return {"label": self.label, "fleet": [], "origin": "stub"}
+
+
+def test_cli_uses_and_deletes_its_own_graph(monkeypatch, capsys, tmp_path):
+    """The CLI must create its own rw_cli_<hex8> graph instead of (re)importing the shared evidence
+    graph the UI reads, and must delete it in a finally block on every exit path: here the invalid
+    plan error path (return 2) and the normal SCOPE_NOT_CONFIRMED flow (return 0)."""
+
+    def run_cli(fail_plan, args, expect_code):
+        deletes = []
+        graph_names = []
+
+        class FakeGraph:
+            def delete(self):
+                deletes.append(True)
+
+        class StubSession:
+            snapshot_id = "snapshot:snap-001"
+            manifest_hash = "sha256:stub"
+
+            def __init__(self, **kwargs):
+                self.kwargs = kwargs
+                self.g = FakeGraph()
+
+            def plan_from_proposal(self, *args_, **kwargs_):
+                if fail_plan:
+                    raise ValueError("injected plan failure")
+                return FakePlan(), []
+
+            def verify(self, *args_, **kwargs_):
+                pytest.fail("stub session must not verify")
+
+        def factory(**kwargs):
+            graph_names.append(kwargs.get("graph_name"))
+            return StubSession(**kwargs)
+
+        monkeypatch.setattr(graph, "releases_for_service", release_rows)
+        monkeypatch.setattr(investigate, "Session", factory)
+        monkeypatch.setattr(investigate, "save_report",
+                            lambda result: tmp_path / f"cli-report-{expect_code}.json")
+        assert investigate.main(args) == expect_code
+        return graph_names, deletes
+
+    # exit path 1: plan materialization fails -> "Fleet error ... nothing verified", cleanup still runs
+    names_1, deletes_1 = run_cli(True, ["--fleet", "cart=1.5", "--confirm-as", "tester"], 2)
+    assert "Fleet error" in capsys.readouterr().err
+
+    # exit path 2: normal flow ending in SCOPE_NOT_CONFIRMED (return 0), cleanup still runs
+    names_2, deletes_2 = run_cli(False, ["--fleet", "cart=1.5", "--confirm-as", " "], 0)
+    assert "SCOPE_NOT_CONFIRMED" in capsys.readouterr().out
+
+    for names, deletes, label in ((names_1, deletes_1, "error path"), (names_2, deletes_2, "normal path")):
+        assert len(names) == 1 and names[0] is not None, label
+        assert re.fullmatch(r"rw_cli_[0-9a-f]{8}", names[0]), (label, names[0])
+        assert deletes == [True], f"the CLI graph was not deleted on the {label}"

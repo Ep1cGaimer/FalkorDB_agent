@@ -67,19 +67,27 @@ def harness_json(proc, nonce):
     return data
 
 
-def test_rebuild_is_byte_identical(tmp_path):
-    before = {p: p.read_bytes() for p in fixture_files()}
+def test_rebuild_matches_repo_copy_byte_for_byte(tmp_path):
+    """``--out`` builds a fresh tree; every generated file is byte-identical to the repo fixture,
+    and the repo itself is never touched (git status stays clean)."""
+    before = {p.relative_to(FIXTURES).as_posix(): p.read_bytes() for p in fixture_files()}
     assert before, "expected fixture payloads and manifests to exist"
 
     proc = subprocess.run(
-        [sys.executable, str(BUILDER)], cwd=ROOT, capture_output=True, text=True
+        [sys.executable, str(BUILDER), "--out", str(tmp_path)], cwd=ROOT,
+        capture_output=True, text=True,
     )
     assert proc.returncode == 0, proc.stderr
 
-    after = {p: p.read_bytes() for p in fixture_files()}
-    assert before.keys() == after.keys()
-    for path, data in before.items():
-        assert after[path] == data, f"rebuild changed {path}"
+    generated = {p.relative_to(tmp_path).as_posix(): p.read_bytes()
+                 for p in tmp_path.rglob("*") if p.is_file()}
+    assert generated, "expected payloads and manifests to be generated under --out"
+    assert generated.keys() == before.keys(), (sorted(generated), sorted(before))
+    for rel, data in before.items():
+        assert generated[rel] == data, f"rebuild differs from the repo copy: {rel}"
+
+    repo_after = {p.relative_to(FIXTURES).as_posix(): p.read_bytes() for p in fixture_files()}
+    assert repo_after == before, "running the builder with --out changed the repo fixture copy"
 
 
 def test_manifest_hashes_match_payload_bytes():
