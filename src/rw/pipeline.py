@@ -22,7 +22,6 @@ from .contracts import (
     ProbeReceipt,
     ProbeResult,
     ScopeConfirmation,
-    VerificationResult,
     h,
 )
 from .verification import (

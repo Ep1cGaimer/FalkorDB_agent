@@ -1,13 +1,15 @@
-"""Frozen shared contracts for RollbackWitness (owner: orchestrator).
+"""Frozen shared contracts for RollbackWitness.
 
 See docs/CONTRACTS.md. Workers must not edit this module; request changes instead.
 All payloads are immutable; hashes use canonical JSON so identical facts hash identically.
+The artifact/repo path helpers below are the single definition the importer and the checker share.
 """
 from __future__ import annotations
 
 import hashlib
 import json
 from enum import Enum
+from pathlib import Path
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -40,6 +42,44 @@ def bh(data: bytes) -> str:
 def short(hash_value: str) -> str:
     """16 hex chars after the 'sha256:' prefix, used inside IDs."""
     return hash_value[7:23]
+
+
+# --------------------------------------------------------------------------- repo & artifact identity
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def repo_rel(path: Path) -> str:
+    """A path as a posix path relative to the repository root (absolute posix when outside it)."""
+    resolved = Path(path).resolve()
+    try:
+        return resolved.relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        return resolved.as_posix()
+
+
+def release_dir_files(release_dir: Path) -> list[list[str]]:
+    """Every file of one release directory as ``[posix relpath, bh(bytes)]``, sorted by relpath.
+
+    ``__pycache__`` directories and ``*.pyc`` files are skipped, and entries are sorted by the posix
+    relative path string, so the same bytes give the same list (and therefore the same release id)
+    on every OS and no stray bytecode file can change an identity.
+    """
+    root = Path(release_dir)
+    files = [
+        path
+        for path in root.rglob("*")
+        if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc"
+    ]
+    return [
+        [path.relative_to(root).as_posix(), bh(path.read_bytes())]
+        for path in sorted(files, key=lambda path: path.relative_to(root).as_posix())
+    ]
+
+
+def artifact_hash(release_dir: Path) -> str:
+    """The content-addressed identity of one release directory: ``h(release_dir_files(...))``."""
+    return h(release_dir_files(release_dir))
 
 
 class Frozen(BaseModel):

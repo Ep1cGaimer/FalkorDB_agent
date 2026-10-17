@@ -17,6 +17,8 @@ MODEL = "groq:comparison-test"
 
 @pytest.fixture
 def comparison(monkeypatch, tmp_path):
+    # main() pins RW_GROUNDING_MODEL in os.environ; register it so teardown restores the original.
+    monkeypatch.setenv("RW_GROUNDING_MODEL", MODEL)
     monkeypatch.setattr(runner.config, "load_env", lambda: None)
     monkeypatch.setattr(runner.grounding, "has_credentials", lambda model: True)
     monkeypatch.setattr(runner.grounding, "make_transport", lambda model: SimpleNamespace(settings={}))

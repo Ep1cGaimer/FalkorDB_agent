@@ -6,11 +6,28 @@ from datetime import datetime, timezone
 from pathlib import Path
 import sqlite3
 
-from rw.contracts import (Approval, CandidatePlan, Disposition, FleetEntry,
+from rw.contracts import (REPO_ROOT, Approval, CandidatePlan, Disposition, FleetEntry,
                           SimulationReceipt, VerificationResult, canonical_json, h)
 
-DEFAULT_DB_PATH = Path("artifacts/sim.sqlite")
-DEFAULT_FORBIDDEN_IDENTITIES = frozenset({"gemini-3.8-flash", "agent", "model"})
+DEFAULT_DB_PATH = REPO_ROOT / "artifacts" / "sim.sqlite"
+
+
+def _configured_model_identities() -> set[str]:
+    """The model's own label plus every configured chain entry and its bare model name.
+
+    ``rw.grounding`` is imported inside this function rather than at module scope, so this module
+    never joins a grounding import cycle.
+    """
+    from rw import grounding
+    identities = {grounding.MODEL}
+    for spec in grounding.configured_models():
+        identities.add(spec)
+        identities.add(grounding.split_model(spec)[1])
+    return identities
+
+
+# A model can never approve its own proposal: the base non-human names plus every configured model.
+DEFAULT_FORBIDDEN_IDENTITIES = frozenset({"agent", "model"} | _configured_model_identities())
 
 
 class SimulationRefused(Exception):

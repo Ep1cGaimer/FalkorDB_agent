@@ -29,8 +29,10 @@ from .contracts import (
     ProbeResult,
     VerificationResult,
     WitnessHop,
+    artifact_hash as release_artifact_hash,
     bh,
     h,
+    repo_rel,
     short,
 )
 
@@ -48,10 +50,6 @@ def load_manifest(fixture_root: Path, snapshot: str) -> tuple[dict, str]:
     name = snapshot.removeprefix("snapshot:")
     raw = (Path(fixture_root) / "snapshots" / name / "manifest.json").read_bytes()
     return json.loads(raw), bh(raw)
-
-
-def snapshot_node_id(manifest: dict) -> str:
-    return "snapshot:" + manifest["snapshot"]
 
 
 def unreadable_manifest_evidence(plan: CandidatePlan, detail: str) -> GraphEvidence:
@@ -80,23 +78,6 @@ def duplicate_release_evidence(plan: CandidatePlan, exc: DuplicateReleaseId) -> 
 
 
 # --------------------------------------------------------------------------- release declarations
-
-def _release_dir_files(release_dir: Path) -> list[list[str]]:
-    """Every file of a release dir as ``[posix relpath, byte hash]``, sorted by relpath."""
-    return [
-        [path.relative_to(release_dir).as_posix(), bh(path.read_bytes())]
-        for path in sorted(release_dir.rglob("*"))
-        if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc"
-    ]
-
-
-def _repo_rel(path: Path) -> str:
-    resolved = path.resolve()
-    try:
-        return resolved.relative_to(REPO_ROOT).as_posix()
-    except ValueError:
-        return resolved.as_posix()
-
 
 class DuplicateReleaseId(ValueError):
     """Two release directories claim one content-addressed release id.
@@ -128,7 +109,7 @@ def load_release_declarations(fixture_root: Path) -> dict[str, dict]:
             continue
         declaration = json.loads(declaration_path.read_text(encoding="utf-8"))
         service = declaration["service"]
-        artifact_hash = h(_release_dir_files(release_dir))
+        artifact_hash = release_artifact_hash(release_dir)
         release_id = f"release:{service}:{short(artifact_hash)}"
         if release_id in declarations:
             # Two directories with identical declared bytes would make the release identity
@@ -141,7 +122,7 @@ def load_release_declarations(fixture_root: Path) -> dict[str, dict]:
             "service": service,
             "version": declaration["version"],
             "artifact_hash": artifact_hash,
-            "codec_path": _repo_rel(codec),
+            "codec_path": repo_rel(codec),
             "codec_hash": bh(codec.read_bytes()),
             "routes": {f"route:{release_id}:{route['name']}": route
                        for route in declaration.get("routes", [])},

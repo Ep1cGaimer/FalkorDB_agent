@@ -32,11 +32,6 @@ def environment_hash() -> str:
               "harness_hash": bh(harness_path().read_bytes())})
 
 
-def receipt_applicable(receipt: ProbeReceipt, obligation: Obligation) -> bool:
-    return (receipt.obligation_hash == obligation.obligation_hash
-            == obligation.tuple.obligation_hash() and receipt.tuple == obligation.tuple)
-
-
 def run_harness(codec_path: Path, entry: str, payload: bytes, timeout_s: float = 5) -> dict:
     """Run the trusted harness once on ``payload`` and return its verdict.
 

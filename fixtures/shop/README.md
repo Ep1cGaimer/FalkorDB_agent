@@ -20,7 +20,7 @@ Services: `cart`, `checkout`. One store: `cart-cache` (kind `kv-cache`).
 ## Rebuild
 
 ```text
-.venv\Scripts\python.exe scripts\build_fixture.py
+.venv/bin/python scripts/build_fixture.py     # Windows: .venv\Scripts\python.exe
 ```
 
 The generator loads the release writer codecs by path, regenerates every payload,

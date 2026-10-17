@@ -27,7 +27,7 @@ Commands actually executed from the repository root:
 .venv\Scripts\python.exe -B -m pytest tests/test_verification.py tests/test_probes.py tests/test_simulation.py -q -p no:cacheprovider --basetemp=evals/reviews/scratch/astra_pytest_20261015_1
 ```
 
-The primary script was rerun after concurrent API edits were observed. Final primary output is in [scratch/astra_run_199fd0b1/results.jsonl](scratch/astra_run_199fd0b1/results.jsonl); supplemental output is in [scratch/astra_extra_c91735cc/results.jsonl](scratch/astra_extra_c91735cc/results.jsonl). Both exited 0. Earlier primary output is retained in `scratch/astra_run_8d6d86bc/results.jsonl`. JSON excerpts below are actual output, not expected results. Focused test output:
+The primary script was rerun after concurrent API edits were observed. Final primary output is in `scratch/astra_run_199fd0b1/results.jsonl` (local review scratch, not kept in the repo); supplemental output is in `scratch/astra_extra_c91735cc/results.jsonl` (local review scratch, not kept in the repo). Both exited 0. Earlier primary output is retained in `scratch/astra_run_8d6d86bc/results.jsonl`. JSON excerpts below are actual output, not expected results. Focused test output:
 
 ```text
 .........................................................                [100%]
@@ -150,7 +150,7 @@ Command: `.venv\Scripts\python.exe -B evals\reviews\scratch\astra_01_repro.py` (
 
 Fix: propagate `grounding.validation_errors` into the attempt and reject before scope confirmation, as the HTTP path already does. Also validate the returned request binding in this shared entrypoint. Keep a compatibility pass distinguishable from accepted request grounding. This does not prove a byte-reader incompatibility; it proves an ungrounded/rejected proposal is allowed through the advertised end-to-end loop.
 
-During finalization, another writer added clarification handling to `pipeline.py`, shifting this location to line 178 without fixing the finding. Re-executed only this affected reproduction on the new source; it produced the same output above. Log: [scratch/astra_run_3bf1bff3/results.jsonl](scratch/astra_run_3bf1bff3/results.jsonl). Exact targeted command:
+During finalization, another writer added clarification handling to `pipeline.py`, shifting this location to line 178 without fixing the finding. Re-executed only this affected reproduction on the new source; it produced the same output above. Log: `scratch/astra_run_3bf1bff3/results.jsonl` (local review scratch, not kept in the repo). Exact targeted command:
 
 ```powershell
 .venv\Scripts\python.exe -B -c "import ast,pathlib; p=pathlib.Path('evals/reviews/scratch/astra_01_repro.py').resolve(); tree=ast.parse(p.read_text()); first=next(i for i,n in enumerate(tree.body) if isinstance(n,ast.With)); chosen=tree.body[:first]+[n for n in tree.body if isinstance(n,ast.With) and 'F6_grounding_errors_ignored' in ast.unparse(n)]; scope={'__file__':str(p),'__name__':'__main__'}; exec(compile(ast.Module(body=chosen,type_ignores=[]),str(p),'exec'),scope); scope['emit']('complete',results=str(scope['LOG']))"

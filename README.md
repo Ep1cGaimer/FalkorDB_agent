@@ -76,7 +76,7 @@ for host configuration, strict inputs, size/time limits and restart/retry behavi
 
 - **Independent oracle:** 8 hand-derived cases (`evals/expected/`) — the real pipeline on real FalkorDB matches all 8 (disposition, exact obligations, probe results, gaps).
 - **Relational control:** SQL joins over the same raw facts reproduce the same obligation sets in 8/8 cases — a **tie**. The graph's contribution here is the connected query that drives what the agent checks and the inspectable evidence path, not exclusivity.
-- **Live grounding:** a historical 10-run eval matched the expected outcome kind in **6/10** runs (case-level detail in [docs/STATUS.md](docs/STATUS.md)). The subsequent live control/product comparison, code fixes and remaining limits are recorded in the [issue #3 implementation report](docs/ISSUE_3_FIX_REPORT.md).
+- **Live grounding:** the full live eval for issue #2 matched the expected outcome kind in **11/15** observations (case-level detail in [docs/STATUS.md](docs/STATUS.md)); the vague "from last week" request still guesses instead of clarifying (issue #17). The equal-information LLM control comparison has only author-reported live results so far — see the [issue #3 implementation report](docs/ISSUE_3_FIX_REPORT.md).
 - **Scope:** synthetic fixture; BOUNDED_PASS is byte/shape readability of modeled records only; readers are trusted, reviewed fixture code (the probe harness is failure containment, not a sandbox); local simulation only.
 
 ## Repository layout
@@ -87,7 +87,7 @@ tests/             unit, integration (live FalkorDB) and acceptance tests
 fixtures/shop/     synthetic releases (code + changelogs), snapshots, retained payloads, probe harness
 evals/             independent expected outcomes, SQL and LLM controls, grounding eval runner, reviews
 scripts/           setup, smoke, investigate (CLI), serve (UI), fixture builder
-docs/              QUICKSTART, CONTRACTS, STATUS, OPEN_ISSUES, architecture and plans
+docs/              QUICKSTART, CONTRACTS, ARCHITECTURE, STATUS, UI, MCP, PROJECT_GUIDE, issue #3/#4 reports
 ```
 
-Contributor setup and behavior: [QUICKSTART.md](docs/QUICKSTART.md) and [CONTRACTS.md](docs/CONTRACTS.md). Product brief: [PRODUCT.md](docs/PRODUCT.md). HiveMind is a separate project; this repository does not build it.
+Design questions and known gaps are tracked as repository issues (see GitHub Issues). HiveMind is a separate project; this repository does not build it.

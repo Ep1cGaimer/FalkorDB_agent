@@ -1,16 +1,18 @@
 # Evaluation assets
 
-Keep independent expectations and controls here, outside runtime application inputs. Do not import answer files into src/rw/ or tune holdouts to accommodate a failing implementation.
+Independent expectations and controls, kept outside runtime application inputs. Do not import answer
+files into `src/rw/`, and do not tune a holdout to accommodate a failing implementation.
 
-Product evaluations will cover grounded fleet/clarification, exact obligations and missingness, probe/receipt applicability, disposition and stale/idempotent approval. Give graph and appropriate selector/SQL controls the same relevant facts and probe access; no control is required to fail.
+- `expected/` — the independent oracle: `dispositions.json` (8 hand-derived cases A–H, 34 obligations) and its method write-up.
+- `grounding_cases/` — live grounding eval cases: `requests.json` in, `expected.json` (hand-written, documentation only) alongside.
+- `run_grounding_cases.py` — runs every request through the real grounding loop on a fresh temporary graph and prints the observed outcomes.
+- `relational_control.py` — SQL joins over the same raw facts, deriving the same obligation sets as a fair, un-handicapped control.
+- `llm_control.py` — equal-information flat-context control: the same model chain and transports, no graph and no Cypher.
+- `score_controls.py` — scores saved product reports and control transcripts against the oracle (fleet match, obligation recall, false passes).
+- `run_comparison.py` — same-model live comparison: runs the live control test once per pair, checks the product on disposable FalkorDB graphs, preserves pytest/JUnit evidence and saves the scorer output; stops at the first failed pair. A passing live test checks usable execution, not perfect interpretation or complete probe coverage. See [the change and verification report](../docs/ISSUE_3_FIX_REPORT.md).
 
-Run the same-model live comparison (Linux/WSL):
-
-```bash
-RW_GROUNDING_MAX_COMPLETION_TOKENS=1000 \
-  .venv/bin/python evals/run_comparison.py --runs 3 --model groq:qwen/qwen3.8-27b
-```
-
-It runs the actual live control test once per pair, preserves pytest/JUnit evidence, checks the product on disposable FalkorDB graphs, and saves the existing scorer's output. It stops at a failed pair and preserves that outcome. A passing live test checks usable execution, not perfect interpretation or complete probe coverage. See [the change and verification report](../docs/ISSUE_3_FIX_REPORT.md).
-
-model-checks/ contains the existing small DeepSeek Zen smoke-check records and their limits. These are not product graph/query tests, model rankings or clean throughput measurements. See [model-checks/README.md](model-checks/README.md).
+  ```bash
+  RW_GROUNDING_MAX_COMPLETION_TOKENS=1000 \
+    .venv/bin/python evals/run_comparison.py --runs 3 --model groq:qwen/qwen3.8-27b
+  ```
+- `reviews/astra-01.md` — independent review of the pipeline, and the source of the F1–F8 tags used in test names.

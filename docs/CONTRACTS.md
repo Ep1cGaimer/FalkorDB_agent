@@ -1,11 +1,9 @@
-# Frozen contracts — slice 1 (updated in slice 2)
+# Contracts
 
-Owner: Opus (orchestrator). Workers may not change this file or `src/rw/contracts.py`; request changes in their handoff. Everything here is synthetic fixture data.
-
-Slice-2 updates (Task 9, documentation only — no contract or code change): probe protocol and result
-channel, the `GapKind` list, `GraphEvidence` fields, `build_evidence` / `revalidate` signatures,
-grounding providers, API endpoints, and the artifact-hash input rules (including one documented
-difference between the loader and the importer). Everything below describes the code as it is now.
+The field-level reference for the current code: hashing and identity rules, fixture layout, the graph
+schema and probe protocol, the gap kinds and disposition precedence, and the frozen module signatures.
+Everything here is synthetic fixture data; the runnable instructions are in
+[QUICKSTART.md](QUICKSTART.md) and the observed results in [STATUS.md](STATUS.md).
 
 ## Verified runtime (2026-10-15)
 
@@ -44,22 +42,15 @@ Consequence of the null behavior: unknowns can never be recorded as graph nulls.
 
 ### Artifact hash inputs (what the code actually does)
 
-`artifact_hash` is computed in two places: the importer (`graph._release_dir_files`) and the checker's
-independent loader (`verification._release_dir_files`). Both hash
+`artifact_hash` comes from one shared helper used by both the importer and the checker:
+`rw.contracts.release_dir_files()` / `rw.contracts.artifact_hash()`. Both hash
 `[[relpath, bh(bytes)] for every file in the release dir]` with posix relative paths, so a release id
-is a function of the shipped bytes only. Two implementation details are worth stating exactly:
+is a function of the shipped bytes only. Two details are part of the helper's contract:
 
-- **Exclusions.** `verification._release_dir_files` skips a file if any path part is `__pycache__`
-  **or** its suffix is `.pyc` (anywhere). `graph._release_dir_files` skips only files whose path
-  contains a `__pycache__` part. A `.pyc` file outside a `__pycache__` directory would therefore
-  enter the importer's hash and not the loader's. The committed fixture contains none (the probe
-  harness sets `sys.dont_write_bytecode = True`), and a test asserts that both sides produce the
-  exact same four release ids, so the two agree today. This is a documented difference, not a code
-  change.
-- **Sort order.** The file list is built from `sorted(release_dir.rglob("*"))`, i.e. sorted by
-  `pathlib.Path` order, not by the posix relpath string. `Path` ordering is case-insensitive on
-  Windows and case-sensitive on POSIX; the fixture's release directories use one case, so both orders
-  coincide here. "Sorted by relpath" above is the intent; `Path` order is what the code does.
+- **Exclusions.** Any path part equal to `__pycache__` is skipped, and so is any file whose suffix is
+  `.pyc` (anywhere in the tree), so a stray bytecode file can never change a release id.
+- **Sort order.** Entries are sorted by posix relative path, so the same bytes give the same hash on
+  every OS and case-insensitive filesystems cannot reorder the list.
 
 ## Fixture layout (`fixtures/shop/`)
 
@@ -192,11 +183,11 @@ the facts that raise them:
 
 Scope confirmation (human confirms the grounded fleet) permits checking. Action approval is a separate human call bound to `plan_hash`, `verification_hash`, `snapshot manifest_hash`; only allowed for `BOUNDED_PASS`; idempotency key = `h([plan_hash, verification_hash])`. The model can do neither.
 
-## Module API (frozen signatures; one owner per file)
+## Module API (frozen signatures)
 
 Every graph query function returns `(rows, log)` — except `store_inventory`, which returns the `(coverage_row, batch_rows, log)` triple below — where `rows` is a list of plain dicts with exactly the keys listed and `log = {"name": str, "params": dict, "rows": int, "truncated": bool}`. Unknown values are `None` in rows (never invented). Queries use `LIMIT $cap + 1` with `cap = QUERY_CAP`; if `cap+1` rows return, set `truncated=True` and return only `cap` rows. All reads use `ro_query`. No string-concatenated user/model input in Cypher; parameters only.
 
-### `src/rw/graph.py` (owner: DeepSeek graph worker)
+### `src/rw/graph.py`
 
 ```python
 connect(host="127.0.0.1", port=6379) -> falkordb.FalkorDB
@@ -225,7 +216,7 @@ receipts_for(g, obligation_hashes: list[str]) -> rows: probe_id, obligation_hash
 
 Release node properties: id, service, version, artifact_hash, codec_hash, codec_path (posix, relative to repo root), built_at, bundle_id (omitted if null), declared_flags_json, no_state_read. Excerpts: one per CHANGELOG bullet/paragraph (`kind="changelog"`) and one per top-level `def` in codec.py (`kind="code"`), with 1-based inclusive line spans.
 
-### `src/rw/verification.py` (owner: orchestrator)
+### `src/rw/verification.py`
 
 ```python
 load_manifest(fixture_root, snapshot) -> (manifest: dict, manifest_hash: str)   # independent of the graph
@@ -276,10 +267,12 @@ are in scope (the obligation store ids plus the read stores named by the still-d
 dependencies), so a manifest store no fleet route reads cannot invent drift. A missing or
 unreadable file is a drift line, not an exception. Both hash functions already include the harness
 hash, which is why they bind the harness too. Callers: `api.py` `/approve` and `/simulate`, which
-answer HTTP 409 `{"detail": {"reason", "drift"}, "reason": "<reason>"}` — no action may be taken on
-evidence that no longer exists as verified.
+answer HTTP 409. When `revalidate` reports drift the body is
+`{"detail": {"reason": "<reason>", "drift": ["<line>", ...]}, "reason": "<reason>"}`; every other
+refusal answers `{"detail": "<reason>", "reason": "<reason>"}`. No action may be taken on evidence that
+no longer exists as verified.
 
-### `src/rw/probes.py` (owner: Sol)
+### `src/rw/probes.py`
 
 ```python
 harness_path() -> Path
@@ -295,7 +288,7 @@ one-line/nonce/schema parsing; it returns
 See "Probe protocol" above for the exit-code table. `run_probe` returns an UNKNOWN receipt on any
 identity mismatch and never FAILs from its own checks.
 
-### `src/rw/grounding.py` (owner: Sonnet)
+### `src/rw/grounding.py`
 
 A provider-neutral bounded tool loop (≤ 8 model turns) over the read-only tools `current_fleet`, `release_history`, `store_readers`, `get_excerpts` and the terminal tools `propose_fleet(changes, citations, rationale)` / `ask_clarification(question, unresolved, citations)`. Returns `GroundingResult`. Read tools, argument validation, citation hashing, the audit trail and terminal validation are written once and shared; only conversation rendering and response parsing differ per provider. A terminal call whose only failures are citation-check errors (`CITATION_*`) earns one correction round: the loop stays open and that model gets the exact failures plus the quoting rule so it can resend verbatim quotes. A second invalid terminal call ends the loop as before, and the round is recorded as a `citation_correction` event in the transcript/audit.
 
@@ -314,11 +307,11 @@ Repeated excerpt text is replaced by `text_already_returned: true` only for an `
 
 The standalone flat-context CLI now loads `.env`. Its version-4 protocol uses `submit_assessment` as the terminal function and retains aborted provider failures, explicitly marking partial history unavailable. The live control test runs one conversation per execution and selects its credential gate from the configured provider. `evals/run_comparison.py` pins one model, preserves test evidence and product reports, and invokes the scorer. Its inventory covers all fixture/evidence file types, including changelogs and retained payload bytes. A pair requires both matching models and operational product completion; provider errors stop collection and return exit 1 even after a successful prefix. BLOCKED/NEEDS_EVIDENCE outcomes remain valid completed checks. See [ISSUE_3_FIX_REPORT.md](ISSUE_3_FIX_REPORT.md).
 
-### `src/rw/simulation.py` (owner: Sol)
+### `src/rw/simulation.py`
 
 SQLite ledger under `artifacts/sim.sqlite` (git-ignored). `record_approval(db_path=DEFAULT_DB_PATH, approval=None, verification=None, forbidden_identities=DEFAULT_FORBIDDEN_IDENTITIES)` refuses a verification that is not `BOUNDED_PASS`, a mismatched `verification_hash`/`plan_hash`/`snapshot_manifest_hash`, and a missing or forbidden approver identity (the model can never be the approver). `simulate(db_path=DEFAULT_DB_PATH, approval=None, verification=None, current_manifest_hash=None, current_fleet=None, plan=None) -> SimulationReceipt` (raises `SimulationRefused`) additionally requires the recorded approval, a current manifest hash equal to the approval's, matching plan/verification identities, and a current fleet, and applies each idempotency key (`h([plan_hash, verification_hash])`) exactly once — a duplicate returns the stored receipt with `applied=False`.
 
-### API (`src/rw/api.py`, owner: Sol)
+### API (`src/rw/api.py`)
 
 `create_app(...)` builds the FastAPI app; `scripts/serve.py` binds `127.0.0.1:8000`. No endpoint lets
 the model approve, apply or deploy anything.
@@ -331,7 +324,7 @@ the model approve, apply or deploy anything.
 | POST | `/api/investigations/{identifier}/plans/{plan_hash}/confirm-scope` | human scope confirmation for one plan |
 | POST | `/api/investigations/{identifier}/answer` | one clarification round: body `{"answer": str, "replay_path": str \| null}`; the answer is folded into the request text via `pipeline.with_answer` and the session re-grounds against it. Blank answer → 422; a second round is refused; in replay mode `replay_path` is required, in live mode it is rejected (422) |
 | POST | `/api/investigations/{identifier}/alternative` | at most one alternative, only after `BLOCKED` / `NEEDS_EVIDENCE` |
-| POST | `/api/investigations/{identifier}/plans/{plan_hash}/approve` | human approval: only for `BOUNDED_PASS` and only on current bytes (409 with `{"detail": {"reason", "drift"}, "reason": "<reason>"}` when `revalidate` reports drift) |
+| POST | `/api/investigations/{identifier}/plans/{plan_hash}/approve` | human approval: only for `BOUNDED_PASS` and only on current bytes (409 `{"detail": {"reason", "drift"}, "reason"}` when `revalidate` reports drift) |
 | POST | `/api/investigations/{identifier}/plans/{plan_hash}/simulate` | local idempotent simulation (409 on drift); never a deployment |
 | GET | `/api/snapshots` | read-only fixture manifests, their hashes and explicit `data_origin: "synthetic_fixture"` for initial workspace context; does not initialize a graph or call a model |
 | GET | `/` | the investigation workspace (visible synthetic-fixture and live/replay context; humanized disposition labels: Blocked, Needs evidence, Bounded pass; API disposition values are unchanged) |
