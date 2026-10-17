@@ -664,7 +664,9 @@ def _available_chain() -> list[str]:
 
 
 @pytest.mark.live
-@pytest.mark.parametrize("case_id", ["main", "ambiguous", "named-old-build"])
+@pytest.mark.parametrize("case_id", ["main", "ambiguous", "named-old-build",
+                                  "ambiguous-yesterday", "ambiguous-single-candidate",
+                                  "answered-ambiguity"])
 def test_live_request(case_id):
     config.load_env()  # GROQ_API_KEY from the git-ignored .env; never printed
     chain = _available_chain()
@@ -676,7 +678,14 @@ def test_live_request(case_id):
     name = f"rw_test_grounding_{uuid.uuid4().hex[:8]}"
     try:
         graph.reset_and_import(db, name, ROOT / "fixtures" / "shop", ["snap-001"])
-        tools = grounding.GroundingTools(db.select_graph(name))
+        class SingleCandidateTools(grounding.GroundingTools):
+            """Expose one genuine release candidate, still with its real flag and build date."""
+            def release_history(self, service):
+                rows, log = super().release_history(service)
+                return rows[:1], {**log, "rows": len(rows[:1])}
+
+        tools_class = SingleCandidateTools if case_id == "ambiguous-single-candidate" else grounding.GroundingTools
+        tools = tools_class(db.select_graph(name))
         baseline = {r["service"]: r for r in tools.current_fleet()[0]}
         releases = {}
         for svc in ("cart", "checkout"):
@@ -684,7 +693,16 @@ def test_live_request(case_id):
         known = {r["release_id"] for r in baseline.values()}
         known |= {r["release_id"] for history in releases.values() for r in history.values()}
         cases = json.loads((ROOT / "evals/grounding_cases/requests.json").read_text())
-        request = next(c["text"] for c in cases if c["id"] == case_id)
+        clarify = case_id.startswith("ambiguous")
+        source_case = "ambiguous" if clarify or case_id == "answered-ambiguity" else case_id
+        request = next(c["text"] for c in cases if c["id"] == source_case)
+        if case_id == "ambiguous-yesterday":
+            request = request.replace("last week", "yesterday")
+        elif case_id == "answered-ambiguity":
+            from rw.pipeline import with_answer
+            request = with_answer(request, "Which change or release do you mean?",
+                                  "I mean the basket rollout in cart 1.5. Roll cart back to version 1.4 "
+                                  "and keep checkout at version 2.1.")
         for attempt in range(4):  # provider is flaky (503, TLS resets); outer retry on top of transport's
             try:
                 gr, path = grounding.ground(request, tools, models=chain)
@@ -699,7 +717,7 @@ def test_live_request(case_id):
         assert gr.live and not grounding.is_aborted(gr) and not gr.validation_errors
         events = json.loads(path.read_text())["events"]
         assert [e["name"] for e in events if e["type"] == "terminal"] == [
-            "ask_clarification" if case_id == "ambiguous" else "propose_fleet"]
+            "ask_clarification" if clarify else "propose_fleet"]
         excerpts = {}
         for event in events:
             if event["type"] != "tool":
@@ -714,11 +732,14 @@ def test_live_request(case_id):
             assert citation.quote and citation.quote in ex["text"]
             assert citation.content_hash == ex["content_hash"]
             assert citation.content_hash == "sha256:" + hashlib.sha256(ex["text"].encode()).hexdigest()
-        if case_id == "ambiguous":
+        if clarify:
             assert isinstance(gr.result, GroundingClarification)
             assert gr.result.question.strip() and gr.result.unresolved
             assert all(phrase.strip() and phrase in request for phrase in gr.result.unresolved)
             assert not hasattr(gr.result, "changes")
+            assert not any(e.get("name") == "propose_fleet" for e in events)
+            if case_id == "ambiguous-single-candidate":
+                assert len(releases["cart"]) == 1
         else:
             assert isinstance(gr.result, GroundingProposal)
             assert all(c.release_id in known for c in gr.result.changes)
