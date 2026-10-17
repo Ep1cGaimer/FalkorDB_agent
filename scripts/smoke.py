@@ -19,7 +19,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 from rw import config, graph  # noqa: E402
 from rw.api import create_app  # noqa: E402
-from rw.contracts import FleetEntry, GroundingProposal, GroundingResult  # noqa: E402
+from rw.contracts import Citation, FleetEntry, GroundingProposal, GroundingResult  # noqa: E402
 from rw.pipeline import Session  # noqa: E402
 
 MODEL = "deterministic-smoke"
@@ -130,8 +130,18 @@ def main() -> int:
             require(not log["truncated"], "release inventory truncated")
             matches = [r for r in rows if r["version"] == version]
             require(len(matches) == 1, f"cart {version} did not resolve to exactly one graph artifact")
-            proposal = GroundingProposal(changes=[FleetEntry(service="cart", release_id=matches[0]["release_id"],
-                flags={"basket_v2": False} if version == "1.5" else {})], citations=[],
+            release_id = matches[0]["release_id"]
+            # Agent proposals must cite a changelog excerpt of each changed release; the fixed fleet
+            # cites the one the graph returns for the chosen release, like a grounded proposal would.
+            history, hlog = tools.release_history("cart")
+            require(not hlog["truncated"], "release history truncated")
+            changelog = [ex for row in history if row["release_id"] == release_id
+                         for ex in row["excerpts"] if ex["kind"] == "changelog"]
+            require(bool(changelog), f"cart {version} has no changelog excerpt in the graph")
+            citation = Citation(excerpt_id=changelog[0]["excerpt_id"],
+                                content_hash=changelog[0]["content_hash"], quote=changelog[0]["text"])
+            proposal = GroundingProposal(changes=[FleetEntry(service="cart", release_id=release_id,
+                flags={"basket_v2": False} if version == "1.5" else {})], citations=[citation],
                 rationale="deterministic-smoke fixed fleet; no agent involved")
             return GroundingResult(request_text=request, result=proposal, model=MODEL, live=False), None
 

@@ -6,7 +6,7 @@ from threading import Barrier
 import pytest
 
 from rw.contracts import (Approval, CandidatePlan, Disposition, FleetEntry, REPO_ROOT,
-                          VerificationResult, canonical_json, h)
+                          VerificationResult, canonical_json, fleet_hash, h)
 from rw.simulation import (DEFAULT_DB_PATH, DEFAULT_FORBIDDEN_IDENTITIES, SimulationRefused,
                            record_approval, simulate)
 
@@ -16,7 +16,7 @@ def case(tmp_path):
     fleet = [FleetEntry(service="cart", release_id="release:cart:old")]
     plan = CandidatePlan(snapshot_id="snapshot:test", snapshot_manifest_hash=h("manifest"),
         request_text_hash=h("rollback"), fleet=[FleetEntry(service="cart", release_id="release:cart:new", changed=True)],
-        source_hashes=[h("source")], origin="fixture")
+        source_hashes=[h("source")], origin="fixture", baseline_fleet_hash=fleet_hash(fleet))
     verification = VerificationResult(plan_hash=plan.plan_hash(), snapshot_id=plan.snapshot_id,
         snapshot_manifest_hash=plan.snapshot_manifest_hash, disposition=Disposition.BOUNDED_PASS,
         obligations=[], receipts=[], gaps=[], blocking_receipts=[], computed_at="2026-10-15T10:00:00Z")
@@ -123,7 +123,7 @@ def test_duplicate_applies_once(case):
     assert first.applied is True
     assert second.applied is False
     assert second == first.model_copy(update={"applied": False})
-    assert first.previous_fleet_hash == h(sorted([x.model_dump(mode="json") for x in case["current_fleet"]], key=canonical_json))
+    assert first.previous_fleet_hash == fleet_hash(case["current_fleet"])
     assert first.new_fleet_hash == h(sorted([x.model_dump(mode="json") for x in case["plan"].fleet], key=canonical_json))
     assert_one_state(case)
     # A duplicate must still pass freshness checks.
@@ -159,3 +159,35 @@ def test_recorded_approval_is_exact(case):
     altered = case["approval"].model_copy(update={"approved_by": "different-human"})
     with pytest.raises(SimulationRefused, match="not recorded"):
         simulate(**(case | {"approval": altered}))
+
+
+def test_changed_current_fleet_refuses_first_application(case):
+    """Approval binds the plan to the fleet it was built against, not just the manifest bytes."""
+    approve(case)
+    changed = [FleetEntry(service="cart", release_id="release:cart:old", flags={"v2": True})]
+    with pytest.raises(SimulationRefused, match="current fleet changed since the plan was built"):
+        simulate(**(case | {"current_fleet": changed}))
+    with sqlite3.connect(case["db_path"]) as connection:
+        assert connection.execute("SELECT COUNT(*) FROM simulation_receipts").fetchone()[0] == 0
+
+
+def test_plan_without_bound_baseline_refuses_closed(case):
+    """A plan no longer carries observations: the default of "" never matches a real fleet."""
+    plan = case["plan"].model_copy(update={"baseline_fleet_hash": ""})
+    verification = case["verification"].model_copy(update={"plan_hash": plan.plan_hash()})
+    approval = case["approval"].model_copy(update={
+        "plan_hash": plan.plan_hash(), "verification_hash": verification.verification_hash()})
+    approve(case | {"approval": approval, "verification": verification})
+    with pytest.raises(SimulationRefused, match="current fleet changed since the plan was built"):
+        simulate(**(case | {"approval": approval, "verification": verification, "plan": plan}))
+
+
+def test_fleet_drift_after_first_apply_returns_stored_receipt(case):
+    """The idempotency lookup precedes the fleet-freshness check: a repeat remains a no-op."""
+    approve(case)
+    first = simulate(**case)
+    drifted = [FleetEntry(service="cart", release_id="release:cart:new")]
+    second = simulate(**(case | {"current_fleet": drifted}))
+    assert second.applied is False
+    assert second == first.model_copy(update={"applied": False})
+    assert_one_state(case)

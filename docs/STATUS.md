@@ -11,6 +11,44 @@ their raw artifacts are not committed. They are separate from the issue #2 evalu
 Every row below is a command that was actually run, with its observed output. Nothing here is a plan
 or an estimate.
 
+## Review-finding fixes — 2026-10-17
+
+Fixes for defects an independent repository review reproduced on `main` at `793d7b1`:
+
+- **Uncited agent proposals:** these used to reach BOUNDED_PASS. Every changed release now needs a verbatim changelog citation of that release, enforced in the grounding loop and again in `plan_from_proposal`.
+- **Malformed provider replies and non-object tool arguments:** these used to crash the run. They now fail closed and fall through to the next configured model.
+- **Flags given as the string `"false"`:** these used to become true. They are now invalid calls.
+- **Fresh probe receipts past the 200-row cap:** history could hide them. Verification now reads back the exact ProbeRun ids it wrote.
+- **Fleet drift after approval:** simulation still applied. Approval and first simulation now refuse a fleet that differs from the plan's `baseline_fleet_hash`.
+- **Scorer:** it used to count UNKNOWN probes as a supported pass; a claim now needs its own PASS or FAIL evidence.
+- **Fixture rebuild test:** it used to rewrite tracked fixture files; it now builds into a temporary directory.
+- **CLI:** `investigate.py` used to reset the UI's graph; it now uses its own `rw_cli_<hex8>` graph and deletes it, even when setup fails partway.
+- **Second review round:**
+  - a truncated current-fleet or release-inventory read now refuses to build a plan; it used to allow BOUNDED_PASS;
+  - incomplete current-fleet rows refuse `/approve` and `/simulate` with 409 instead of 500;
+  - provider envelopes are type-checked before defaults, non-JSON 200 bodies and non-string tool names fail closed, and saved `usage` is limited to numeric token/time fields;
+  - the scorer counts a receipt only when its tuple equals the obligation's, and FAIL dominates repeated results;
+  - fixture copies inside the repo no longer report false codec drift.
+- **Third review round:**
+  - non-boolean or undecodable stored deployment flags refuse `/approve` and `/simulate` with 409;
+  - HTTP 200 error envelopes or responses without `choices`/`candidates` are malformed and fall through to the next model;
+  - the control loop has the same malformed-call guards as the product;
+  - the scorer rejects obligations whose hash is not the canonical hash of their tuple, and treats a BOUNDED_PASS from a report that lists evidence gaps as unsupported.
+
+Observed on Windows 11, Python 3.12, FalkorDB 6.0.2, with the MCP extra installed:
+
+| Check | Observed result |
+|---|---|
+| Non-live suite | `.venv\Scripts\python.exe -m pytest -q -m "not live" -p no:cacheprovider`: **653 passed, 3 deselected**, 0 skipped (after the third review round). |
+| Deterministic smoke | `scripts\smoke.py`: all checks PASS, cleanup PASS. |
+| Operator fleet CLI | `scripts\investigate.py --fleet cart=1.4 --confirm-as you`: **BLOCKED**, cart 1.4 × saved-cart-2002 FAIL with the witness path; no `rw_cli_*` graph left. |
+| Relational control | `evals
+elational_control.py`: SQL = FalkorDB = oracle in **8/8** cases. |
+| Browser acceptance | `tests/ui/serve_fixture.py` + `node tests/ui/check.mjs` (Edge 155): all checks PASS; one existing SKIP (no recorded replay clarification answer). |
+| JS unit tests | `node --test tests/js/*.test.mjs`: **16 passed**. |
+
+No live model calls were made for these fixes; live grounding behavior (issue #17, PR #19) is unchanged by them except that uncited proposals are now rejected.
+
 ## MCP exposure — 2026-10-17
 
 Implemented six optional stdio tools through the existing single-worker HTTP API, strict transport

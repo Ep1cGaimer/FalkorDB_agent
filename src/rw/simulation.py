@@ -7,7 +7,7 @@ from pathlib import Path
 import sqlite3
 
 from rw.contracts import (REPO_ROOT, Approval, CandidatePlan, Disposition, FleetEntry,
-                          SimulationReceipt, VerificationResult, canonical_json, h)
+                          SimulationReceipt, VerificationResult, canonical_json, fleet_hash, h)
 
 DEFAULT_DB_PATH = REPO_ROOT / "artifacts" / "sim.sqlite"
 
@@ -103,10 +103,15 @@ def simulate(db_path=DEFAULT_DB_PATH, approval: Approval | None = None,
         existing = connection.execute("SELECT receipt_json FROM simulation_receipts WHERE idempotency_key = ?", (key,)).fetchone()
         if existing:
             return SimulationReceipt.model_validate_json(existing[0]).model_copy(update={"applied": False})
+        # after the idempotency lookup, before the first application: the applied plan must still be
+        # the plan for the fleet it was built against (a repeat above stays a no-op instead)
+        observed = fleet_hash(current_fleet)
+        if plan.baseline_fleet_hash != observed:
+            raise SimulationRefused("current fleet changed since the plan was built")
         fleet_dump = _fleet_dump(plan.fleet)
         receipt = SimulationReceipt(
             idempotency_key=key, plan_hash=approval.plan_hash, applied=True,
-            previous_fleet_hash=h(_fleet_dump(current_fleet)), new_fleet_hash=h(fleet_dump),
+            previous_fleet_hash=observed, new_fleet_hash=h(fleet_dump),
             applied_at=datetime.now(timezone.utc).isoformat())
         connection.execute("INSERT INTO simulated_fleet VALUES (?, ?)", (key, canonical_json(fleet_dump).decode("utf-8")))
         connection.execute("INSERT INTO simulation_receipts VALUES (?, ?)", (key, receipt.model_dump_json()))

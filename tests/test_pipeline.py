@@ -15,10 +15,12 @@ import pytest
 from rw import graph as G
 from rw.contracts import (
     CandidatePlan,
+    Citation,
     FleetEntry,
     GroundingClarification,
     GroundingProposal,
     GroundingResult,
+    ProbeReceipt,
     ScopeConfirmation,
     h,
 )
@@ -98,10 +100,11 @@ def test_grounding_without_validation_errors_still_reaches_confirmation():
 # --------------------------------------------------------------------------- I4: replay request binding
 
 def _replay_transcript(path: Path, request_text: str) -> Path:
-    """A gemini-shaped transcript that reads the fleet, then proposes a valid cart-1.4 fleet.
-
-    Valid on purpose: without the request-binding guard the loop would materialize and confirm
-    this proposal under whatever request text the caller passed.
+    """A gemini-shaped transcript that reads the fleet, reads the release's excerpts, then proposes a
+    cart-1.4 fleet cited from that release's changelog. Valid on purpose at the adapter's
+    citation gate and the pipeline's alike. Without the request-binding guard the
+    loop would materialize and confirm this proposal under whatever request text the caller
+    passed.
     """
     path.write_text(json.dumps({
         "request_text": request_text, "provider": "gemini", "alternative_context": None,
@@ -111,9 +114,21 @@ def _replay_transcript(path: Path, request_text: str) -> Path:
             {"type": "tool", "name": "current_fleet", "log": "read-only",
              "rows": [{"release_id": "release:cart:1.4", "service": "cart", "declared_flags": []}]},
             {"type": "model", "response": {"candidates": [{"content": {"parts": [
+                {"functionCall": {"name": "release_history", "args": {"service": "cart"}}}]}}]}},
+            {"type": "tool", "name": "release_history", "log": "read-only",
+             "rows": [{"release_id": "release:cart:1.4", "service": "cart", "version": "1.4",
+                       "excerpts": [{"excerpt_id": "excerpt:cart-1.4:changelog-saved-carts",
+                                     "kind": "changelog",
+                                     "content_hash": "sha256:synthetic-cart-1-4-changelog",
+                                     "text": "- Saved carts are persisted to cart-cache "
+                                             "as cart/v1."}]}]},
+            {"type": "model", "response": {"candidates": [{"content": {"parts": [
                 {"functionCall": {"name": "propose_fleet", "args": {
                     "changes": [{"service": "cart", "release_id": "release:cart:1.4"}],
-                    "citations": [], "rationale": "replayed proposal"}}}]}}]}},
+                    "citations": [{"excerpt_id": "excerpt:cart-1.4:changelog-saved-carts",
+                                   "quote": "- Saved carts are persisted to cart-cache "
+                                            "as cart/v1."}],
+                    "rationale": "replayed proposal"}}}]}}]}},
         ]}, indent=2), encoding="utf-8")
     return path
 
@@ -204,6 +219,150 @@ def test_verify_reads_the_manifest_from_disk_not_from_the_session_cache(copied_f
             session.g.delete()
         except Exception:
             pass
+
+
+# --------------------------------------------------------------------------- fresh receipts vs history
+
+def test_verify_survives_a_full_history_of_prior_receipts(copied_fixture):
+    """~205 historical ProbeRun copies of the same obligation hashes must not push this
+    verification's fresh receipts past the read-back cap: an unchanged plan that passed before
+    the backlog was written must still be BOUNDED_PASS.
+
+    The old read path (receipts_for over obligation hashes, cap 200, then a filter to the fresh
+    ids) hid the fresh receipts once a single hash's history alone filled the cap; this test
+    fills exactly that scenario.
+    """
+    name = "rw_test_" + uuid.uuid4().hex[:8]
+    session = Session(snapshot="snap-001", graph_name=name, fixture_root=copied_fixture)
+    try:
+        rows, _ = G.releases_for_service(session.g, "cart")
+        release = next(r for r in rows if r["version"] == "1.5")
+        proposal = GroundingProposal(
+            changes=[FleetEntry(service="cart", release_id=release["release_id"], flags={"basket_v2": False})],
+            citations=[], rationale="keep 1.5 with the basket rollout off")
+        plan, errors = session.plan_from_proposal(proposal, "undo the basket rollout", origin="fixture")
+        assert not errors and plan is not None
+        confirmation = ScopeConfirmation(plan_hash=plan.plan_hash(), confirmed_by="oncall:alice",
+                                         confirmed_at="2026-10-16T00:00:00Z")
+        first = session.verify(plan, confirmation)
+        assert first["verification"]["disposition"] == "BOUNDED_PASS"
+
+        hashes = [o["obligation_hash"] for o in first["verification"]["obligations"]]
+        stored, _ = G.receipts_for(session.g, hashes)
+        assert len(stored) == len(hashes)
+
+        # Copy every receipt written above 205 times with distinct executed_at: same obligation
+        # hashes, distinct ProbeRun ids — the kind of historical receipt backlog a busy graph
+        # accumulates.
+        for i in range(205):
+            for row in stored:
+                old_receipt = ProbeReceipt.model_validate_json(row["receipt_json"])
+                G.write_receipt(session.g, old_receipt.model_copy(
+                    update={"executed_at": f"2020-01-01T00:{i // 60:02d}:{i % 60:02d}Z"}))
+
+        again = session.verify(plan, confirmation)
+        v = again["verification"]
+        assert v["disposition"] == "BOUNDED_PASS"
+        assert not [g for g in v["gaps"] if g["kind"] == "RECEIPT_MISSING"], v["gaps"]
+        assert len(v["receipts"]) == len(hashes)
+        receipt_logs = [q for q in again["queries"] if q["name"] == "receipts_by_id"]
+        assert len(receipt_logs) == 1
+        assert receipt_logs[0]["truncated"] is False and receipt_logs[0]["rows"] == len(hashes)
+    finally:
+        try:
+            session.g.delete()
+        except Exception:
+            pass
+
+
+# --------------------------------------------------------------------------- agent citation gate
+
+def _changelog_citation(session, service, version):
+    """A real changelog excerpt of one fixture release, built from the graph's rows."""
+    rows, _ = G.release_history(session.g, session.snapshot_id, service)
+    row = next(r for r in rows if r["version"] == version)
+    excerpt = next(e for e in row["excerpts"] if e["kind"] == "changelog")
+    citation = Citation(excerpt_id=excerpt["excerpt_id"], content_hash=excerpt["content_hash"],
+                        quote=excerpt["text"])
+    return row["release_id"], citation
+
+
+def _passing_cart_session():
+    name = "rw_test_" + uuid.uuid4().hex[:8]
+    session = Session(snapshot="snap-001", graph_name=name)
+    rows, _ = G.releases_for_service(session.g, "cart")
+    release = next(r for r in rows if r["version"] == "1.5")
+    return session, release
+
+
+def _delete_graph(session):
+    try:
+        session.g.delete()
+    except Exception:
+        pass
+
+
+def test_uncited_agent_proposal_makes_no_plan():
+    """Zero-citation agent proposals must not become verifiable plans (deep defense)."""
+    session, release = _passing_cart_session()
+    try:
+        proposal = GroundingProposal(
+            changes=[FleetEntry(service="cart", release_id=release["release_id"], flags={"basket_v2": False})],
+            citations=[], rationale="the agent just says so")
+        plan, errors = session.plan_from_proposal(proposal, "undo the basket rollout", origin="agent")
+        assert plan is None
+        assert any(e.startswith("CITATION_MISSING") for e in errors), errors
+
+        # Fixture/operator fleets are authored by trusted code, not an agent: they still plan
+        # without citations.
+        plan, errors = session.plan_from_proposal(proposal, "undo the basket rollout", origin="fixture")
+        assert not errors and plan is not None
+        assert plan.origin == "fixture"
+    finally:
+        _delete_graph(session)
+
+
+def test_agent_proposal_citing_the_wrong_or_wrongly_typed_source_makes_no_plan():
+    """A changelog of another release, or a code excerpt of the right one, grounds nothing."""
+    session, target = _passing_cart_session()
+    try:
+        other_release, other_citation = _changelog_citation(session, "cart", "1.4")
+        assert other_release != target["release_id"]
+        proposal = GroundingProposal(
+            changes=[FleetEntry(service="cart", release_id=target["release_id"], flags={"basket_v2": False})],
+            citations=[other_citation], rationale="cites the wrong release")
+        plan, errors = session.plan_from_proposal(proposal, "undo the basket rollout", origin="agent")
+        assert plan is None  # the citation itself is valid; only the binding is missing
+        assert any(e.startswith("CITATION_MISSING: change 'cart'") for e in errors), errors
+
+        history, _ = G.release_history(session.g, session.snapshot_id, "cart")
+        row = next(r for r in history if r["release_id"] == target["release_id"])
+        code_excerpt = next(e for e in row["excerpts"] if e["kind"] == "code")
+        proposal = proposal.model_copy(update={"citations": [Citation(
+            excerpt_id=code_excerpt["excerpt_id"], content_hash=code_excerpt["content_hash"],
+            quote=code_excerpt["text"])]})
+        plan, errors = session.plan_from_proposal(proposal, "undo the basket rollout", origin="agent")
+        assert plan is None
+        assert any(e.startswith("CITATION_MISSING") for e in errors), errors
+    finally:
+        _delete_graph(session)
+
+
+def test_properly_cited_agent_proposal_makes_a_plan():
+    """A changelog excerpt of exactly the chosen release completes the proposal."""
+    session, release = _passing_cart_session()
+    try:
+        release_id, citation = _changelog_citation(session, "cart", "1.5")
+        assert release_id == release["release_id"]
+        proposal = GroundingProposal(
+            changes=[FleetEntry(service="cart", release_id=release_id, flags={"basket_v2": False})],
+            citations=[citation], rationale="grounded in the 1.5 changelog")
+        plan, errors = session.plan_from_proposal(proposal, "undo the basket rollout", origin="agent")
+        assert not errors and plan is not None
+        assert plan.origin == "agent"
+        assert plan.source_hashes == sorted({citation.content_hash})
+    finally:
+        _delete_graph(session)
 
 
 # --------------------------------------------------------------------------- I8/minors: verify edge cases
@@ -349,3 +508,62 @@ def test_summary_caps_the_gap_section_too():
     assert len(gap_lines) == 20
     assert more == ["... and 5 more"]
     assert text.splitlines()[-1] == "PASS: 1 obligations"
+
+
+# --------------------------------------------------------------------------- completeness: truncated observations
+
+def test_truncated_current_fleet_or_release_inventory_makes_no_plan(copied_fixture):
+    """A fleet observation or a release inventory past the fixed query cap is incomplete evidence.
+
+    With cap+1 deployments the current_fleet query returns `cap` rows and truncated=True; trusting
+    those rows anyway materialized a plan from an unseen fleet, and verification could then
+    BOUNDED_PASS while whole deployments were missing from the observation. A truncated
+    observation must refuse planning with a clear error instead (completeness: caps/truncation
+    are incomplete, never passed).
+    """
+    name = "rw_test_" + uuid.uuid4().hex[:8]
+    session = Session(snapshot="snap-001", graph_name=name, fixture_root=copied_fixture)
+    try:
+        rows, _ = G.releases_for_service(session.g, "cart")
+        release = next(r for r in rows if r["version"] == "1.5")
+        proposal = GroundingProposal(
+            changes=[FleetEntry(service="cart", release_id=release["release_id"], flags={"basket_v2": False})],
+            citations=[], rationale="keep 1.5 with the basket rollout off")
+        # control: the complete observation plans normally
+        plan, errors = session.plan_from_proposal(proposal, "undo the basket rollout", origin="fixture")
+        assert not errors and plan is not None
+
+        # push the current fleet past the cap: 2 real deployments + 199 extra = cap + 1
+        session.g.query(
+            "UNWIND $rows AS row "
+            "MATCH (s:Snapshot {id: $snapshot_id}) "
+            "CREATE (d:Deployment {id: row.id, scope_id: $scope_id, service: row.service, "
+            "snapshot_id: $snapshot_id}) CREATE (s)-[:HAS_DEPLOYMENT]->(d)",
+            params={"rows": [{"id": f"deployment:snap-001:extra-{i}", "service": f"extra-{i}"}
+                             for i in range(199)],
+                    "snapshot_id": session.snapshot_id, "scope_id": "fixture-shop"})
+
+        plan, errors = session.plan_from_proposal(proposal, "undo the basket rollout", origin="fixture")
+        assert plan is None
+        assert "current fleet observation is truncated; cannot build a complete plan" in errors, errors
+
+        # the same refusal closes the release inventory of any fleet service:
+        # 2 real cart builds + 199 unlisted ones = cap + 1 rows for releases_for_service("cart")
+        session.g.query("MATCH (d:Deployment) WHERE d.service STARTS WITH $prefix DETACH DELETE d",
+                        params={"prefix": "extra-"})
+        session.g.query(
+            "UNWIND $rows AS row "
+            "CREATE (r:Release {id: row.id, scope_id: $scope_id, service: 'cart', "
+            "version: row.version, codec_hash: 'sha256:unlisted'})",
+            params={"rows": [{"id": f"release:cart:unlisted-{i}", "version": f"9.{i}"}
+                             for i in range(199)],
+                    "scope_id": "fixture-shop"})
+        plan, errors = session.plan_from_proposal(proposal, "undo the basket rollout", origin="fixture")
+        assert plan is None
+        assert ("release inventory for service 'cart' is truncated; cannot build a complete plan"
+                in errors), errors
+    finally:
+        try:
+            session.g.delete()
+        except Exception:
+            pass

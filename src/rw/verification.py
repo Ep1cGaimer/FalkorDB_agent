@@ -31,6 +31,7 @@ from .contracts import (
     WitnessHop,
     artifact_hash as release_artifact_hash,
     bh,
+    fleet_hash,
     h,
     repo_rel,
     short,
@@ -270,12 +271,18 @@ def materialize_plan(
         fleet.append(FleetEntry(service=service, release_id=release_id, flags=flags, changed=changed))
 
     source_hashes = sorted({c.content_hash for c in proposal.citations})
+    # the baseline the plan was built against: the fleet exactly as it was observed, so approve and
+    # simulate can refuse if those deployments changed between materialization and approval
+    baseline_fleet_hash = fleet_hash([
+        FleetEntry(service=r["service"], release_id=r["release_id"], flags=dict(r.get("flags") or {}))
+        for r in current_fleet_rows])
     plan = CandidatePlan(
         scope_id=SCOPE_ID,
         snapshot_id=snapshot_id,
         snapshot_manifest_hash=manifest_hash,
         request_text_hash=h(request_text),
         fleet=fleet,
+        baseline_fleet_hash=baseline_fleet_hash,
         source_hashes=source_hashes,
         origin=origin,  # type: ignore[arg-type]
         label=label,
@@ -623,17 +630,29 @@ _NO_WRITER = object()  # sentinel: this (store, record) had no obligation, so no
 def fixture_file(path: str, fixture_root: Path) -> Path:
     """Resolve a stored artifact path against one fixture root.
 
-    Obligation payload/codec paths are posix paths relative to the repository root
-    (``fixtures/shop/...``) while manifest record paths are fixture-relative; re-rooting the
-    fixture-relative part under ``fixture_root`` therefore resolves the real fixture and any copy of
-    it identically. An already-absolute path is returned unchanged, and a path that does not exist is
-    the caller's drift problem, never an exception here.
+    Two forms are stored. Obligation codec paths (and graph batch payload paths) are posix paths
+    relative to the *repository* root — ``fixtures/shop/...`` for the shipped fixture, and
+    ``artifacts/<copy>/shop/...`` when a fixture copy lives inside the repo. Manifest record
+    paths are fixture-relative. Resolution: a repo-relative path is re-rooted at the repository
+    root only when (and only when) that file resolves inside ``fixture_root``, so a fixture copy
+    under the repo reads its own codecs without re-rooting the stored path a second time; every
+    other relative path joins the fixture-relative part (after stripping the shipped-fixture
+    prefix) under ``fixture_root``. No relative path may resolve outside the fixture root, an
+    already-absolute path is returned unchanged, and a path that does not exist is the caller's
+    drift problem, never an exception here.
     """
     candidate = Path(path)
     if candidate.is_absolute() or candidate.as_posix().startswith("/"):
         return candidate
     posix = candidate.as_posix()
     relative = posix[len(FIXTURE_PREFIX):] if posix.startswith(FIXTURE_PREFIX) else posix
+    if not posix.startswith(FIXTURE_PREFIX):
+        try:
+            repo_file = REPO_ROOT / posix
+            if repo_file.resolve().is_relative_to(Path(fixture_root).resolve()):
+                return repo_file
+        except OSError:  # pathological paths fall back to the plain join, i.e. a drift line
+            pass
     return Path(fixture_root) / relative
 
 

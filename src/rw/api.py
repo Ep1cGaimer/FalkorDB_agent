@@ -23,7 +23,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .contracts import (Approval, CandidatePlan, Disposition, FleetEntry,
                         GroundingClarification, GroundingResult, MAX_PLANS_PER_SESSION,
-                        ScopeConfirmation, SimulationReceipt, VerificationResult)
+                        ScopeConfirmation, SimulationReceipt, VerificationResult, fleet_hash)
 from .api_contracts import (ERROR_RESPONSES, PAGE_RESPONSES, InvestigationView,
                             InvestigationSummary, TranscriptSummary, ReportView)
 from .simulation import DEFAULT_FORBIDDEN_IDENTITIES, SimulationRefused
@@ -58,6 +58,25 @@ ROOT = Path(__file__).resolve().parents[2]
 GROUNDING_DIR = ROOT / "artifacts/grounding"
 
 EVIDENCE_DRIFT_REASON = "evidence changed since verification; re-verify and re-approve"
+
+
+def fleet_row_problem(row: dict) -> str | None:
+    """Why one current-fleet row cannot bind a plan (None when the row is complete).
+
+    approve/simulate construct FleetEntry values from these rows, so an incomplete observation
+    (no service, no RUNS release, malformed flags) must be refused with a clear reason — never a
+    raised validation error that surfaces as HTTP 500.
+    """
+    deployment = repr(row.get("deployment_id"))
+    if not (isinstance(row.get("service"), str) and row["service"].strip()):
+        return f"current fleet observation is incomplete: deployment {deployment} has no service"
+    if not (isinstance(row.get("release_id"), str) and row["release_id"].strip()):
+        return f"current fleet observation is incomplete: deployment {deployment} runs no release (no RUNS edge)"
+    flags = row.get("flags")
+    if not isinstance(flags, dict) or not all(isinstance(k, str) and isinstance(v, bool)
+                                              for k, v in flags.items()):
+        return f"current fleet observation is incomplete: deployment {deployment} has malformed flags"
+    return None
 
 
 class EvidenceDrift(SimulationRefused):
@@ -147,9 +166,16 @@ class Investigation:
         from . import graph
 
         attempts = [attempt.public() for attempt in self.attempts]
-        current_rows, current_log = graph.current_fleet(self.session.g, self.session.snapshot_id)
+        try:
+            current_rows, current_log = graph.current_fleet(self.session.g, self.session.snapshot_id)
+        except ValueError as exc:  # undecodable stored flags_json/declared_flags_json
+            raise SimulationRefused("current fleet observation is unreadable") from exc
         if current_log["truncated"]:
             raise SimulationRefused("current fleet query is truncated")
+        for row in current_rows:
+            problem = fleet_row_problem(row)
+            if problem:
+                raise SimulationRefused(problem)
         current = {row["service"]: row for row in current_rows}
         release_ids = {row["release_id"] for row in current_rows}
 
@@ -547,6 +573,31 @@ def create_app(*, session_factory: Callable | None = None,
             inv.answered = True
             return inv.public()
 
+    FLEET_DRIFT_REASON = "current fleet changed since the plan was built"
+
+    def current_fleet_entries(inv):
+        """Read the fleet the graph records right now, refusing on truncation like any observer.
+
+        Used by both /approve and /simulate so both bind to the same observed fleet the plan was
+        materialized against. Incomplete rows are a clear 409 refusal, never a validation error.
+        """
+        from . import graph
+
+        try:
+            rows, log = graph.current_fleet(inv.session.g, inv.session.snapshot_id)
+        except ValueError as exc:  # undecodable stored flags_json/declared_flags_json
+            raise SimulationRefused("current fleet observation is unreadable") from exc
+        if log["truncated"]:
+            raise SimulationRefused("current fleet query is truncated")
+        entries = []
+        for row in rows:
+            problem = fleet_row_problem(row)
+            if problem:
+                raise SimulationRefused(problem)
+            entries.append(FleetEntry(service=row["service"], release_id=row["release_id"],
+                                      flags=row["flags"]))
+        return entries
+
     def verified(attempt):
         if not attempt.report:
             raise SimulationRefused("plan scope has not been confirmed and verified")
@@ -579,6 +630,9 @@ def create_app(*, session_factory: Callable | None = None,
             verification = verified(attempt)
             revalidated(inv, verification)
             forbidden = human(inv, body.approved_by)
+            # approval binds the plan to the fleet it was built against, exactly like simulation
+            if fleet_hash(current_fleet_entries(inv)) != attempt.plan.baseline_fleet_hash:
+                raise SimulationRefused(FLEET_DRIFT_REASON)
             approval = Approval(plan_hash=attempt.plan.plan_hash(),
                 verification_hash=verification.verification_hash(),
                 snapshot_manifest_hash=verification.snapshot_manifest_hash,
@@ -589,7 +643,7 @@ def create_app(*, session_factory: Callable | None = None,
 
     @app.post("/api/investigations/{identifier}/plans/{plan_hash}/simulate", response_model=SimulationReceipt, responses=ERROR_RESPONSES, response_model_exclude_unset=True)
     def simulate_plan(identifier: str, plan_hash: str):
-        from . import graph, simulation, verification
+        from . import simulation, verification
         inv = get_investigation(identifier)
         with inv.lock:
             attempt = get_attempt(inv, plan_hash)
@@ -601,10 +655,7 @@ def create_app(*, session_factory: Callable | None = None,
                 _, manifest_hash = verification.load_manifest(inv.session.fixture_root, inv.session.snapshot)
             except (OSError, ValueError) as exc:
                 raise SimulationRefused("current manifest is unavailable") from exc
-            rows, log = graph.current_fleet(inv.session.g, inv.session.snapshot_id)
-            if log["truncated"]:
-                raise SimulationRefused("current fleet query is truncated")
-            fleet = [FleetEntry(service=r["service"], release_id=r["release_id"], flags=r["flags"]) for r in rows]
+            fleet = current_fleet_entries(inv)
             receipt = simulation.simulate(db_path, attempt.approval, result, manifest_hash, fleet, attempt.plan)
             attempt.simulation = receipt.model_dump(mode="json")
             return receipt

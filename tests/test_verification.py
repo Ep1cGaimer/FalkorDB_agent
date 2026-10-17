@@ -25,6 +25,7 @@ from rw.contracts import (
     VerificationResult,
     artifact_hash,
     bh,
+    fleet_hash,
     h,
     release_dir_files,
     short,
@@ -106,6 +107,35 @@ def plan_for(cart_release="release:cart:old", flags=None):
     plan, errors = materialize_plan(prop, CURRENT, RELEASES, SNAP, MHASH, "req", "agent")
     assert not errors, errors
     return plan
+
+
+def observed_fleet(rows):
+    """The FleetEntry list a caller passes the checker from one `current_fleet` read."""
+    return [FleetEntry(service=r["service"], release_id=r["release_id"], flags=dict(r["flags"]))
+            for r in rows]
+
+
+def test_materialized_plan_binds_the_observed_fleet():
+    """materialize_plan hashes the fleet rows the plan was built against, before any proposal."""
+    assert plan_for().baseline_fleet_hash == fleet_hash(observed_fleet(CURRENT))
+
+
+def test_plan_hash_distinguishes_the_same_proposal_against_two_baselines():
+    """The proposal and candidate fleet are identical; only the observed baseline differs, and the
+    plan hash moves with it because approve/simulate must bind that fleet exactly."""
+    first = plan_for()
+    drifted = [dict(row) for row in CURRENT]
+    drifted[0] = drifted[0] | {"flags": {"v2": False}}
+    prop = GroundingProposal(
+        changes=[FleetEntry(service="cart", release_id="release:cart:old", flags={})],
+        citations=[], rationale="t")
+    second, errors = materialize_plan(prop, drifted, RELEASES, SNAP, MHASH, "req", "agent")
+    assert not errors, errors
+    assert [f.model_dump(mode="json") for f in first.fleet] == [f.model_dump(mode="json") for f in second.fleet]
+    assert first.baseline_fleet_hash != second.baseline_fleet_hash
+    assert first.plan_hash() != second.plan_hash()
+    # reproducing against the same observed fleet reproduces the same plan identity
+    assert plan_for().plan_hash() == first.plan_hash()
 
 
 def route_rows(plan, checkout_routes=True, decls=None):
@@ -1020,3 +1050,80 @@ def test_revalidate_ignores_a_store_the_fleet_does_not_read(unread_store_pass):
                          if (d["service"], d["version"]) == ("checkout", "2.0"))
     assert unread_writer not in verification.dependencies  # it only wrote the store nothing reads
     assert revalidate(verification, root, P.environment_hash, P.probe_spec_hash) == []
+
+
+# --------------------------------------------------------------------------- fixture roots inside the repo
+
+def test_fixture_file_re_roots_repo_relative_paths_of_an_in_repo_copy():
+    """fixture_file must resolve stored repository-relative paths of a fixture copy that lives
+    inside the repo, and never resolve a path outside the given fixture root.
+
+    A copy under ``artifacts/`` stores codec paths like ``artifacts/<copy>/shop/releases/...``;
+    those are repo-relative, not ``fixtures/shop/``-prefixed. Re-rooting the whole string under
+    the fixture root resolved a file that does not exist and made an unchanged codec look
+    unreadable (false drift, which blocks a valid approval).
+    """
+    mark = "rw-unit-" + uuid.uuid4().hex[:8]
+    copy_root = REPO_ROOT / "artifacts" / mark / "shop"
+    stored = f"artifacts/{mark}/shop/releases/cart-1.5/codec.py"
+    assert fixture_file(stored, copy_root) == copy_root / "releases" / "cart-1.5" / "codec.py"
+
+    # containment is not loosened: a repo-relative path outside the fixture root does not
+    # re-root to the repo, it stays under the fixture root (and so is a drift line when absent)
+    assert fixture_file("docs/CONTRACTS.md", copy_root) == copy_root / "docs" / "CONTRACTS.md"
+    # absolute paths pass through unchanged, fixture-relative paths join the root as before
+    assert fixture_file(str(REPO_ROOT / "x.bin"), copy_root) == REPO_ROOT / "x.bin"
+    assert fixture_file("payloads/saved-cart-1001.bin", copy_root) == (
+        copy_root / "payloads" / "saved-cart-1001.bin")
+
+
+def test_revalidate_does_not_false_drift_when_the_fixture_copy_is_inside_the_repo():
+    """A fixture root under the repo's git-ignored artifacts/ must revalidate without false drift.
+
+    Such a copy records repository-relative codec paths
+    (``artifacts/<unique>/shop/releases/.../codec.py``); verifying on it and revalidating against
+    it used to report every unchanged codec as ``unreadable`` because the stored path was
+    re-rooted under the fixture root a second time. The same verification must still flag a
+    changed codec, so the check is not merely weaker.
+    """
+    from rw import graph as G
+
+    mark = "rw-falsedrift-" + uuid.uuid4().hex[:8]
+    owner = REPO_ROOT / "artifacts" / mark
+    root = owner / "shop"
+    shutil.copytree(FIXTURE_ROOT, root)
+    name = "rw_test_" + uuid.uuid4().hex[:8]
+    session = Session(snapshot="snap-001", graph_name=name, fixture_root=root)
+    try:
+        rows, _ = G.releases_for_service(session.g, "cart")
+        release = next(r for r in rows if r["version"] == "1.5")
+        plan, errors = session.plan_from_proposal(
+            GroundingProposal(changes=[FleetEntry(service="cart", release_id=release["release_id"],
+                                                  flags={"basket_v2": False})],
+                              citations=[], rationale="in-repo copy control"),
+            "undo the basket rollout", origin="fixture")
+        assert not errors and plan is not None
+        report = session.verify(plan, ScopeConfirmation(plan_hash=plan.plan_hash(),
+                                                        confirmed_by="test-operator",
+                                                        confirmed_at="2026-10-16T00:00:00Z"))
+        verification = VerificationResult.model_validate(report["verification"])
+        assert verification.disposition == Disposition.BOUNDED_PASS and not verification.gaps
+        # the in-repo form is what was actually stored: repo-relative, not fixtures/shop/-prefixed
+        assert {o.reader_codec_path.startswith("artifacts/") for o in verification.obligations} == {True}
+
+        changed = revalidate(verification, root, P.environment_hash, P.probe_spec_hash)
+        assert changed == [], changed  # unchanged codecs used to be reported as unreadable here
+
+        # the check still detects real drift of one of those codecs
+        codec = next((fixture_file(o.reader_codec_path, root) for o in verification.obligations
+                      if "cart-1.5" in o.reader_codec_path))
+        release_id = release_id_for(verification, "cart-1.5")
+        codec.write_bytes(codec.read_bytes() + b"\n# drift\n")
+        errors = revalidate(verification, root, P.environment_hash, P.probe_spec_hash)
+        assert any("codec.py" in e and release_id in e and "changed" in e for e in errors), errors
+    finally:
+        try:
+            session.g.delete()
+        except Exception:
+            pass
+        shutil.rmtree(owner, ignore_errors=True)

@@ -106,7 +106,31 @@ _PROVIDER_ERROR_MESSAGES = {
     "transport_error": "Provider connection failed.",
     "timeout": "Provider request timed out.",
     "tool_use_failed": "Provider rejected a generated tool call.",
+    "malformed_response": "Provider returned a malformed response.",
 }
+
+
+def _malformed_response() -> GroundingError:
+    """Fixed, sanitized error for a provider envelope whose shape does not validate."""
+    return GroundingError(_PROVIDER_ERROR_MESSAGES["malformed_response"], status=None,
+                          code="malformed_response")
+
+
+def _field(container: dict, key: str, kind: type | tuple[type, ...], absent: Any) -> Any:
+    """One present/absent envelope rule, shared by both provider parses.
+
+    A missing key falls back to `absent` (exactly the previously tolerated behavior). A PRESENT
+    value that is not of `kind` is malformed_response — including None, {}, 0, '' and False, which
+    truthiness shortcuts such as `value or []` used to silently turn into an empty envelope, so a
+    garbage response looked like a no-call turn instead of killing its chain entry with a
+    sanitized error.
+    """
+    if key not in container:
+        return absent
+    value = container[key]
+    if not isinstance(value, kind):
+        raise _malformed_response()
+    return value
 
 
 def provider_error_details(error: GroundingError) -> dict:
@@ -306,11 +330,28 @@ class GeminiProvider(Provider):
                 "generationConfig": {"temperature": 0}}
 
     def parse(self, resp: dict) -> tuple[str, list[ToolCall], Any]:
-        cand = ((resp or {}).get("candidates") or [{}])[0]
-        parts = (cand.get("content") or {}).get("parts") or []
-        calls = [ToolCall(id=None, name=p["functionCall"].get("name"),
-                          args=dict(p["functionCall"].get("args") or {}))
-                 for p in parts if "functionCall" in p]
+        # An error envelope, or a response without its required "candidates" list, is malformed even
+        # on HTTP 200: treating it as a no-call turn would burn the turn budget on one model.
+        if not isinstance(resp, dict) or "error" in resp or "candidates" not in resp:
+            raise _malformed_response()
+        candidates = _field(resp, "candidates", list, [])
+        cand = candidates[0] if candidates else {}
+        if not isinstance(cand, dict):
+            raise _malformed_response()
+        content = _field(cand, "content", dict, {})
+        parts = _field(content, "parts", list, [])
+        if not all(isinstance(p, dict) for p in parts):
+            raise _malformed_response()
+        calls = []
+        for p in parts:
+            call = _field(p, "functionCall", dict, None)
+            if call is not None:
+                args = call.get("args")
+                if args is None:
+                    args = {}
+                elif isinstance(args, dict):
+                    args = dict(args)  # non-mapping args stay raw; _handle_call rejects them
+                calls.append(ToolCall(id=None, name=call.get("name"), args=args))
         text = " ".join(p["text"] for p in parts if isinstance(p.get("text"), str))
         return text, calls, {"role": "model", "parts": parts}
 
@@ -339,16 +380,32 @@ class GroqProvider(Provider):
                 "parallel_tool_calls": False}
 
     def parse(self, resp: dict) -> tuple[str, list[ToolCall], Any]:
-        message = dict((((resp or {}).get("choices") or [{}])[0].get("message")) or {})
+        # An error envelope, or a response without its required "choices" list, is malformed even
+        # on HTTP 200: treating it as a no-call turn would burn the turn budget on one model.
+        if not isinstance(resp, dict) or "error" in resp or "choices" not in resp:
+            raise _malformed_response()
+        choices = _field(resp, "choices", list, [])
+        first = choices[0] if choices else {}
+        if not isinstance(first, dict):
+            raise _malformed_response()
+        message = _field(first, "message", dict, {})
+        tool_calls = _field(message, "tool_calls", list, [])
+        if not all(isinstance(tc, dict) for tc in tool_calls):
+            raise _malformed_response()
         calls: list[ToolCall] = []
-        for tc in message.get("tool_calls") or []:
-            fn = (tc or {}).get("function") or {}
-            try:
-                args = json.loads(fn.get("arguments") or "{}")
-            except (TypeError, ValueError):
-                args = {}
-            calls.append(ToolCall(id=tc.get("id"), name=fn.get("name"),
-                                  args=args if isinstance(args, dict) else {}))
+        for tc in tool_calls:
+            fn = _field(tc, "function", dict, {})
+            raw = fn.get("arguments")
+            if raw is None:
+                args: Any = {}
+            elif isinstance(raw, str):
+                try:
+                    args = json.loads(raw)
+                except ValueError:
+                    args = raw  # unparseable/non-object; _handle_call rejects it, the loop continues
+            else:
+                args = raw
+            calls.append(ToolCall(id=tc.get("id"), name=fn.get("name"), args=args))
         text = message.get("content") if isinstance(message.get("content"), str) else ""
         return text, calls, message
 
@@ -446,7 +503,10 @@ def _retrying_post(url: str, body: dict, headers: dict,
             if on_response is not None:
                 on_response(r)
             if r.status_code == 200:
-                return r.json()
+                try:
+                    return r.json()
+                except ValueError:  # JSONDecodeError: a 200 with a non-JSON body, no body text shown
+                    raise _malformed_response() from None
             status = r.status_code
             code = "rate_limited" if status == 429 else "quota_refused" if status == 413 else "http_error"
             last = f"HTTP {status}: {_PROVIDER_ERROR_MESSAGES[code]}"
@@ -507,6 +567,22 @@ def make_gemini_transport(api_key: str | None = None, sleep: Callable[[float], N
     return transport
 
 
+_USAGE_FIELDS = ("prompt_tokens", "completion_tokens", "total_tokens",
+                 "queue_time", "prompt_time", "completion_time", "total_time")
+
+
+def _allowlisted_usage(usage: Any) -> dict:
+    """The only parts of a provider `usage` object (or Gemini usageMetadata, if a Gemini transport
+    ever records one) safe to persist into transport_trace: known token/time keys whose values are
+    real numbers — not bools, not strings, not nested provider content. Everything else inside
+    `usage` is arbitrary provider content and is dropped here, never saved."""
+    if not isinstance(usage, dict):
+        return {}
+    return {key: value for key, value in usage.items()
+            if (isinstance(key, str) and key in _USAGE_FIELDS
+                and isinstance(value, (int, float)) and not isinstance(value, bool))}
+
+
 def make_groq_transport(api_key: str | None = None, sleep: Callable[[float], None] = time.sleep,
                         timeout_s: float = 90.0, model: str | None = None,
                         retries: int | None = None) -> Callable[[dict], dict]:
@@ -550,7 +626,8 @@ def make_groq_transport(api_key: str | None = None, sleep: Callable[[float], Non
         if not isinstance(data, dict):
             data = {}
         trace.append({"status": response.status_code, "rate_limits": rate,
-                      "usage": data.get("usage") if response.status_code == 200 else None})
+                      "usage": _allowlisted_usage(data.get("usage"))
+                      if response.status_code == 200 else None})
         budget.update(remaining=None, reset_at=0.0)
         try:
             remaining = int(rate["x-ratelimit-remaining-tokens"])
@@ -658,19 +735,36 @@ def _reference_repeated_text(value: Any, delivered: set[tuple[str, str]]) -> Any
 
 
 def _flags_dict(flags: Any) -> dict[str, bool]:
+    """Only real booleans pass: `"false"`, 0 or None must fail loudly, never become True."""
     if flags is None:
         return {}
     if isinstance(flags, dict):
-        return {str(k): bool(v) for k, v in flags.items()}
+        bad = [k for k, v in flags.items() if not isinstance(v, bool)]
+        if bad:
+            raise ValueError("flag values must be booleans, got: "
+                             + ", ".join(f"{k!r}={flags[k]!r}" for k in bad))
+        return {str(k): v for k, v in flags.items()}
     if isinstance(flags, list):
-        return {str(f["name"]): bool(f["enabled"]) for f in flags}
+        out: dict[str, bool] = {}
+        for f in flags:
+            if (not isinstance(f, dict) or not isinstance(f.get("name"), str)
+                    or not isinstance(f.get("enabled"), bool)):
+                raise ValueError("flags must be a list of {name: str, enabled: bool}")
+            out[f["name"]] = f["enabled"]
+        return out
     raise ValueError("flags must be a list of {name, enabled}")
 
 
 def _citations(raw: Any, excerpts: dict, errors: list[str]) -> list[Citation]:
     out: list[Citation] = []
-    for c in raw or []:
-        eid, quote = (c or {}).get("excerpt_id"), (c or {}).get("quote")
+    if raw is None:
+        return out
+    if not isinstance(raw, list):
+        raise ValueError("citations must be a list of {excerpt_id, quote} objects")
+    for c in raw:
+        if not isinstance(c, dict):
+            raise ValueError("each citation must be an object with excerpt_id and quote")
+        eid, quote = c.get("excerpt_id"), c.get("quote")
         row = excerpts.get(eid)
         if row is None:
             errors.append(f"CITATION_UNKNOWN_EXCERPT: {eid!r} was never returned by a tool; dropped")
@@ -682,10 +776,26 @@ def _citations(raw: Any, excerpts: dict, errors: list[str]) -> list[Citation]:
     return out
 
 
+def _changelog_covered(release_id: str, citations: list[Citation], excerpts: dict) -> bool:
+    """Whether one citation quotes (verbatim) a `changelog` excerpt of exactly this release.
+
+    Rows collected by `_collect` carry `kind` (from the graph excerpt) and `release_id` (the row's
+    own, or the release whose history returned it). A quote that is not a verbatim substring of the
+    trusted row text never counts as coverage.
+    """
+    for cit in citations:
+        row = excerpts.get(cit.excerpt_id) or {}
+        if (row.get("kind") == "changelog" and row.get("release_id") == release_id
+                and isinstance(cit.quote, str) and cit.quote and cit.quote in (row.get("text") or "")):
+            return True
+    return False
+
+
 def _finish(name: str, args: dict, excerpts: dict, releases: dict) -> tuple[Any, list[str]]:
     """Validate a terminal call into a GroundingProposal/Clarification. Raises ValueError if malformed."""
     errors: list[str] = []
     if name == "propose_fleet":
+        citations = _citations(args.get("citations"), excerpts, errors)
         changes = []
         for ch in args.get("changes") or []:
             rid, svc = ch["release_id"], ch["service"]
@@ -699,15 +809,23 @@ def _finish(name: str, args: dict, excerpts: dict, releases: dict) -> tuple[Any,
                 for f in flags:
                     if f not in info["flags"]:
                         errors.append(f"UNDECLARED_FLAG: {f!r} not declared by {rid}")
+            if not _changelog_covered(rid, citations, excerpts):
+                errors.append(f"CITATION_MISSING: {rid} has no verbatim changelog citation from "
+                              "that release")
             changes.append(FleetEntry(service=svc, release_id=rid, flags=flags))
         if not changes:
             raise ValueError("propose_fleet requires at least one change; use ask_clarification otherwise")
-        return GroundingProposal(changes=changes, citations=_citations(args.get("citations"), excerpts, errors),
+        return GroundingProposal(changes=changes, citations=citations,
                                  rationale=str(args.get("rationale", ""))), errors
     question = args.get("question")
     if not isinstance(question, str) or not question.strip():
         raise ValueError("ask_clarification requires a question")
-    return GroundingClarification(question=question, unresolved=[str(u) for u in args.get("unresolved") or []],
+    unresolved = args.get("unresolved")
+    if unresolved is None:
+        unresolved = []
+    elif not isinstance(unresolved, list) or not all(isinstance(u, str) for u in unresolved):
+        raise ValueError("unresolved must be a list of strings")
+    return GroundingClarification(question=question, unresolved=list(unresolved),
                                   citations=_citations(args.get("citations"), excerpts, errors)), errors
 
 
@@ -744,10 +862,24 @@ def _handle_call(name: Any, args: dict, tools: Any, excerpts: dict, releases: di
     call, ends the loop as before.
     """
     state = state if state is not None else {}
+    if not isinstance(name, str):
+        # A non-string tool name would crash the dict dispatch below (TypeError: unhashable type);
+        # that is an invalid model call, reported back, and the loop continues.
+        msg = "tool name must be a string"
+        audit.append({"name": str(name)[:60], "args": _jsonable(args), "rows": 0, "error": msg})
+        events.append({"type": "tool", "name": str(name)[:60], "args": _jsonable(args), "error": msg})
+        return {"error": msg}, None
+    if not isinstance(args, dict):
+        msg = "arguments must be a JSON object"
+        audit.append({"name": str(name)[:60], "args": _jsonable(args), "rows": 0, "error": msg})
+        events.append({"type": "tool", "name": str(name)[:60], "args": _jsonable(args), "error": msg})
+        return {"error": msg}, None
     if name in TERMINAL_TOOLS:
         try:
             res, errs = _finish(name, args, excerpts, releases)
-        except (ValueError, KeyError, TypeError) as e:
+        except (ValueError, KeyError, TypeError, AttributeError) as e:
+            # Any malformed terminal field is an invalid call reported back to the model —
+            # never an uncaught crash that would bypass the provider chain fallback.
             msg = f"invalid {name} call: {e}"
             events.append({"type": "tool", "name": name, "args": _jsonable(args), "error": msg})
             return {"error": msg}, None
@@ -836,8 +968,12 @@ def _run_loop(request_text: str, tools: Any, transport: Callable[[dict], dict],
         resp = model_response(transport, adapter, messages, events, turn)
         if resp is None:
             continue
+        try:
+            text, calls, native = adapter.parse(resp)
+        except GroundingError as exc:
+            exc.events = list(events)  # the sanitized successful prefix, never the raw response
+            raise
         events.append({"type": "model", "turn": turn, "response": _jsonable(resp)})
-        text, calls, native = adapter.parse(resp)
         if not calls:
             messages.append({"role": "user", "text": "Respond only by calling a tool."})
             continue
@@ -845,7 +981,7 @@ def _run_loop(request_text: str, tools: Any, transport: Callable[[dict], dict],
         # Gemini retains raw parts and their thought signatures.
         messages.append({"role": "assistant", "native": native, "text": text})
         for call in calls:
-            payload, terminal = _handle_call(call.name, call.args or {}, tools, excerpts, releases,
+            payload, terminal = _handle_call(call.name, call.args, tools, excerpts, releases,
                                              audit, events, state)
             if terminal is not None:
                 res, errs = terminal

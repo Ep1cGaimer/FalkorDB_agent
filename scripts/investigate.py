@@ -6,6 +6,10 @@
   ... --fleet cart=1.5:basket_v2=false --fleet checkout=2.1 --confirm-as alice
       # no model key needed; omitted services retain their current release
 
+The CLI session gets its own disposable graph (rw_cli_<hex8>), never the shared rw_fixture_shop
+graph a running UI may be reading; the graph is deleted on every exit path, including a failure
+during Session construction.
+
 Scope confirmation is a human step; this script never approves or simulates an action.
 """
 from __future__ import annotations
@@ -16,6 +20,7 @@ import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from uuid import uuid4
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
@@ -98,7 +103,40 @@ def main(argv=None) -> int:
             ap.error("request is required unless --fleet is supplied")
         args.request = "Verify the operator-specified fleet"
 
-    session = Session(snapshot=args.snapshot)
+    # A disposable graph of this run's own: Session(snapshot=...) on the shared graph name would
+    # reimport fixture data over the evidence graph the running UI reads.
+    graph_name = "rw_cli_" + uuid4().hex[:8]
+    session = None  # set only once Session finished constructing; cleanup covers both cases
+    try:
+        session = Session(snapshot=args.snapshot, graph_name=graph_name)
+        return _investigate(session, args, graph_name)
+    finally:
+        if session is None:
+            # construction failed -- possibly after the fixture import already created the graph:
+            # drop it by name through a fresh connection so a crash never leaves a rw_cli_ graph.
+            _drop_graph_by_name(graph_name)
+        else:
+            try:
+                session.g.delete()
+            except Exception as exc:
+                print(f"warning: could not delete CLI graph {graph_name}: {exc}", file=sys.stderr)
+
+
+def _drop_graph_by_name(graph_name: str) -> None:
+    """Delete a named graph through a fresh connection, ignoring a missing graph.
+
+    FalkorDB errors on GRAPH.DELETE for a key that does not exist; that is the
+    no-graph-left-behind case where there is simply nothing to delete, so it is not reported.
+    """
+    from rw import graph as G
+
+    try:
+        G.connect().select_graph(graph_name).delete()
+    except Exception:
+        pass  # the graph was never created (or is already gone)
+
+
+def _investigate(session, args, graph_name: str) -> int:
     from rw import graph as G
     labels = {}
     for svc in ("cart", "checkout"):
@@ -194,7 +232,7 @@ def main(argv=None) -> int:
         for h_ in v["blocking_receipts"][:1]:
             ob = next(o for o in v["obligations"] if o["obligation_hash"] == h_)
             print("    witness: " + " ".join(f"({hop['label']} {hop['display'] or hop['id']}){hop['rel_to_next'] or ''}"
-                                         for hop in ob["witness_path"]))
+                                          for hop in ob["witness_path"]))
         print(f"  DISPOSITION: {v['disposition']}"
               + ("  (byte/shape readability of modeled records only)" if v["disposition"] == "BOUNDED_PASS" else ""))
     path = save_report(result)

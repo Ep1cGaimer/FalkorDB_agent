@@ -643,6 +643,8 @@ def test_product_report_with_a_plan_resolves_release_ids_and_receipts(fixtures, 
     cart_14 = fixtures["by_service_version"][("cart", "1.4")]["release_id"]
     checkout_21 = fixtures["by_service_version"][("checkout", "2.1")]["release_id"]
 
+    from rw.contracts import h
+
     obs, receipts = [], []
     for service, release_id, record_id, result in (
         ("cart", cart_14, "saved-cart-1001", "PASS"),
@@ -650,11 +652,13 @@ def test_product_report_with_a_plan_resolves_release_ids_and_receipts(fixtures, 
         ("checkout", checkout_21, "saved-cart-1001", "PASS"),
         ("checkout", checkout_21, "saved-cart-2002", "PASS"),
     ):
-        ob_hash = f"ob:{service}:{record_id}"
+        tup = {"service": service, "release_id": release_id, "record_id": record_id,
+               "format_id": "cart/v1" if record_id.endswith("1001") else "cart/v2"}
+        ob_hash = h(tup)  # a saved obligation's hash is the canonical hash of its tuple
         obs.append({"obligation_hash": ob_hash, "writer_release_id": None, "witness_path": [],
-                    "tuple": {"service": service, "release_id": release_id, "record_id": record_id,
-                              "format_id": "cart/v1" if record_id.endswith("1001") else "cart/v2"}})
-        receipts.append({"obligation_hash": ob_hash, "result": result,
+                    "tuple": tup})
+        # A saved ProbeReceipt carries the exact obligation tuple it was run on.
+        receipts.append({"obligation_hash": ob_hash, "tuple": dict(obs[-1]["tuple"]), "result": result,
                          "error_type": "ValueError" if result == "FAIL" else None})
 
     report = {
@@ -780,3 +784,44 @@ def test_live_control_runs_once(tmp_path):
     assert set(transcript["result"]["fleet"]) == {"cart", "checkout"}
     if transcript["result"]["disposition"] == "BOUNDED_PASS":
         assert transcript["probe_calls"], "claimed BOUNDED_PASS without probing anything"
+
+
+def _raw_groq(name, arguments, call_id="call_bad"):
+    """A Groq response whose tool call carries a raw (possibly malformed) name/arguments."""
+    return {"choices": [{"index": 0, "message": {"role": "assistant", "content": None, "tool_calls": [
+        {"id": call_id, "type": "function", "function": {"name": name, "arguments": arguments}}]}}]}
+
+
+@pytest.mark.parametrize("bad", [_raw_groq("run_reader_probe", "[1, 2]"), _raw_groq([], "{}")])
+def test_control_malformed_call_is_an_error_payload_and_the_loop_continues(tmp_path, bad):
+    transport = FakeGroqTransport([bad, groq_call("submit_assessment", call_id="ok",
+                                                  fleet=[{"service": "cart", "version": "1.4"}],
+                                                  disposition="BLOCKED", evidence=["observed"])])
+    transcript, _ = control.run_control(transport=transport, artifact_dir=tmp_path)
+    assert transcript["result"]["disposition"] == "BLOCKED"
+    errors = [e.get("error") for e in transcript["events"] if e.get("type") == "tool"]
+    assert any(e in ("arguments must be a JSON object", "tool name must be a string") for e in errors)
+
+
+def test_control_malformed_envelope_falls_through_and_is_not_saved(tmp_path, monkeypatch):
+    from rw import grounding
+
+    marker = "RAW-PROVIDER-MARKER-7f3a"
+    made = []
+
+    def make_transport(spec):
+        made.append(spec)
+
+        def tr(body):
+            if spec == "groq:m1":
+                return {"error": {"message": marker}}
+            return groq_call("submit_assessment", call_id="m2", fleet=[{"service": "cart", "version": "1.4"}],
+                             disposition="BLOCKED", evidence=["observed"])
+        tr.model_used, tr.provider = spec, "groq"
+        return tr
+
+    monkeypatch.setattr(grounding, "make_transport", make_transport)
+    transcript, path = control.run_control(artifact_dir=tmp_path, models=["groq:m1", "groq:m2"])
+    assert made == ["groq:m1", "groq:m2"] and transcript["model"] == "groq:m2"
+    assert transcript["abandoned"][0]["error"]["code"] == "malformed_response"
+    assert marker not in path.read_text(encoding="utf-8")

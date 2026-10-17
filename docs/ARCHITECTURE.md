@@ -55,7 +55,7 @@ Every product read query is fixed and parameterized — no APOC, no string-conca
 - `current_fleet`, `release_history` (bounded `PREVIOUS` chain, ≤ 5) and `releases_for_service`, plus `get_excerpts`: the artifact candidates with their declared flags, and the version-linked source excerpts the grounding agent may cite.
 - `store_readers`: which releases execute a reader route that reads a store. Impact context only — never an inferred decoder.
 - `plan_reader_routes`, `store_inventory` and `obligation_paths`: the multi-hop `Plan-HAS_DEPLOYMENT->Deployment-RUNS->Release-EXECUTES_ROUTE->ReaderRoute-READS_FROM->StateStore<-IN_STORE-Batch` query that yields one obligation per executing reader × retained record, with the optional `Batch-WRITTEN_BY->Release` writer hop that supplies the witness path.
-- `receipts_for`: probe receipts bound to exact obligation hashes.
+- `receipts_for` and `receipts_by_id`: probe receipts bound to exact obligation hashes; verification reads back exactly the ProbeRun ids it wrote, so stored history cannot push fresh receipts past the cap.
 - `write_plan` and `write_receipt`: the only writes after import, both `MERGE`-idempotent (`reset_and_import` re-imports the scope graph itself).
 
 ## Identity, provenance and time
