@@ -7,7 +7,7 @@ import pytest
 
 from rw import grounding
 from rw.contracts import GroundingClarification, GroundingProposal
-from test_grounding import EX_ID, FakeTools, ScriptedTransport, call, groq_call
+from test_grounding import EX_ID, EX_TEXT, GOOD_HASH, FakeTools, FakeGroqTransport, ScriptedTransport, call, groq_call
 
 
 @pytest.mark.parametrize("provider", ["gemini", "groq"])
@@ -247,6 +247,43 @@ def test_code_metadata_is_not_quotable_until_explicitly_fetched(code_tools, tmp_
     assert len(corrections) == 1 and "CITATION_UNKNOWN_EXCERPT" in corrections[0]["errors"][0]
     assert result.result.citations[0].content_hash == code["content_hash"] and not result.validation_errors
     assert grounding.replay(path).result == result.result
+
+
+@pytest.mark.parametrize("provider", ["gemini", "groq"])
+def test_model_view_omits_redundant_hashes_but_citations_keep_trusted_hashes(provider, tmp_path):
+    render = groq_call if provider == "groq" else call
+    transport_type = FakeGroqTransport if provider == "groq" else ScriptedTransport
+    transport = transport_type([render("release_history", service="cart"),
+        render("propose_fleet", changes=[{"service": "cart", "release_id": "release:cart:old"}],
+               citations=[{"excerpt_id": EX_ID, "quote": "Receipt correction"}], rationale="r")])
+    result, path = grounding.ground("Undo the named feature.", FakeTools(), transport=transport, artifact_dir=tmp_path)
+    body = transport.bodies[1]
+    payload = (json.loads(body["messages"][-1]["content"]) if provider == "groq" else
+               body["contents"][-1]["parts"][0]["functionResponse"]["response"])
+    excerpt = payload["rows"][0]["excerpts"][0]
+    assert "content_hash" not in excerpt and excerpt["text"] == EX_TEXT and excerpt["excerpt_id"] == EX_ID
+    assert result.result.citations[0].content_hash == GOOD_HASH
+    audit = json.loads(path.read_text())["events"]
+    assert next(e for e in audit if e["type"] == "tool")["rows"][0]["excerpts"][0]["content_hash"] == GOOD_HASH
+
+
+@pytest.mark.parametrize("provider", ["gemini", "groq"])
+def test_model_view_preserves_flags_named_like_metadata(provider, tmp_path):
+    class MetadataNamedFlags(FakeTools):
+        def current_fleet(self):
+            rows, log = super().current_fleet()
+            rows[0]["flags"] = {"content_hash": False, "params": True}
+            return rows, {**log, "params": {"snapshot_id": "server-bound"}}
+
+    render = groq_call if provider == "groq" else call
+    transport_type = FakeGroqTransport if provider == "groq" else ScriptedTransport
+    transport = transport_type([render("current_fleet"), render("ask_clarification", question="Which?", unresolved=[])])
+    grounding.ground("Undo the named feature.", MetadataNamedFlags(), transport=transport, artifact_dir=tmp_path)
+    body = transport.bodies[1]
+    payload = (json.loads(body["messages"][-1]["content"]) if provider == "groq" else
+               body["contents"][-1]["parts"][0]["functionResponse"]["response"])
+    assert payload["rows"][0]["flags"] == {"content_hash": False, "params": True}
+    assert "params" not in payload["log"]
 
 
 @pytest.mark.parametrize("filename", ["70a0b3fbd63b17a3.json", "4f5d394955ed1fda.json", "459f0e5b394a2f39.json"])

@@ -316,6 +316,9 @@ The grounding `release_history` wrapper returns changelog text and code-excerpt 
 code text fetched on demand through `get_excerpts`. This keeps repeated history reads within a
 smaller model context. Code metadata alone is not registered as quotable evidence; the complete
 excerpt must first be fetched. The underlying graph query and excerpt bytes/hashes are unchanged.
+Provider-facing results omit excerpt hashes and repeated bound-query parameters; the server's
+evidence registry and transcript retain them. Excerpt text/ids, release metadata, flags and
+truncation signals remain available to the model. Citation hashes still come only from trusted rows.
 
 New transcripts carry `intent_version: 2`, the intent prompt hash, and intent-phase model/decision
 events. Replay revalidates those decisions before replaying artifact calls. Legacy transcripts
