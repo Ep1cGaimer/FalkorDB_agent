@@ -16,7 +16,7 @@ handed to the model once, as plain text in a single prompt:
   with writer / format / payload_hash).
 
 The control gets the same probe access the product's checker gets, reduced to one tool:
-``run_reader_probe(service, version, record_id)``. The (service, version, record_id) triple is mapped
+``run_reader_probe(service, version, route_id, store_id, record_id)``. The full identity is mapped
 server-side, by allowlist only, to ``python -I fixtures/shop/harness/run_reader.py <codec> <entry>``
 with the retained payload bytes on stdin -- exactly the ``probes.run_probe`` subprocess protocol and
 bounds (64 KiB input, 5 s timeout, 8 KiB stdout cap, hash-checked payload). Payload bytes are never
@@ -48,8 +48,12 @@ from pathlib import Path
 from typing import Any, Callable
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 if str(REPO_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(REPO_ROOT / "src"))
+
+from evals.obligation_identity import release_identity
 
 from rw import grounding  # noqa: E402  the product's provider adapters, transports and model chain
 
@@ -81,8 +85,9 @@ Everything you have is in the first message: every release's release.json, CHANG
 store, and every retained record with its writer, format and payload_hash.
 
 Tools:
-- run_reader_probe(service, version, record_id): runs the trusted byte/shape reader probe. It loads
-  that release's declared reader route for the record's store and calls the reader on the retained
+- run_reader_probe(service, version, route_id, store_id, record_id): runs the trusted byte/shape reader
+  probe. Use the canonical identity mappings supplied with the files. It validates the selected route
+  belongs to the release and reads the selected store, then calls that reader on the retained
   payload bytes. It returns status PASS (the reader returned a dict for these bytes), FAIL (the
   reader raised while reading these bytes; error_type and message say why) or UNKNOWN (the harness
   could not load or call the reader; this is not an observed incompatibility). This is the only way
@@ -106,7 +111,7 @@ Rules:
   code text which release actually contains each requested behavior.
 - Retained records in a store were written by earlier builds. A reader that starts successfully may
   still be unable to read retained bytes, so retained records may need checking, and which
-  reader/record pairs matter depends on the fleet you propose.
+  route/store/record obligations matter depends on the fleet you propose.
 - Only a probe you actually ran counts as evidence about readability. Never report a result you did
   not observe; say plainly what you did not check.
 - Disposition, applied after you have gathered evidence: any reader that fails on a retained record
@@ -161,7 +166,7 @@ def _run_harness(codec_path: Path, entry: str, payload: bytes) -> dict[str, Any]
 
 
 class FlatControlTools:
-    """Fixed, server-side allowlist. The model supplies only a service, a version and a record id.
+    """Fixed allowlist for an explicit service/version/route/store/record selection.
 
     Nothing else is looked up by model-controlled strings: unknown service/version/record, or a
     release without a reader route for that record's store, is an error, never a subprocess.
@@ -171,7 +176,7 @@ class FlatControlTools:
         self.fixture_root = Path(fixture_root)
         self.snapshot = snapshot.removeprefix("snapshot:")
         self.releases: dict[tuple[str, str], dict[str, Any]] = {}
-        self.records: dict[str, dict[str, Any]] = {}
+        self.records: dict[tuple[str, str], dict[str, Any]] = {}
         self.deployments: dict[str, dict[str, Any]] = {}
         self._load()
 
@@ -182,12 +187,14 @@ class FlatControlTools:
                 continue
             decl = json.loads((rel_dir / "release.json").read_text(encoding="utf-8"))
             routes = [r for r in (decl.get("routes") or []) if isinstance(r, dict)]
+            release_id = release_identity(rel_dir)
             self.releases[(decl["service"], decl["version"])] = {
                 "service": decl["service"],
                 "version": decl["version"],
                 "declared_flags": {f["name"]: bool(f.get("default")) for f in (decl.get("flags") or [])},
                 "codec_path": rel_dir / "codec.py",
-                "routes": [{"store": str(r.get("reads_from") or "").removeprefix("store:"),
+                "routes": [{"store_id": "store:" + str(r.get("reads_from") or "").removeprefix("store:"),
+                            "route_id": f"route:{release_id}:{r['name']}",
                             "entry": r.get("entry"), "name": r.get("name")} for r in routes],
             }
         manifest = json.loads(
@@ -198,28 +205,27 @@ class FlatControlTools:
         for store in manifest.get("stores") or []:
             for rec in store.get("records") or []:
                 payload = rec.get("payload")
-                self.records[rec["record_id"]] = {
-                    "store": store["name"],
+                self.records[("store:" + store["name"].removeprefix("store:"), rec["record_id"])] = {
                     "payload_path": (self.fixture_root / payload) if payload else None,
                     "payload_hash": rec.get("payload_hash"),
                 }
 
     # ---- the only probe entry point; mirrors probes.run_probe's mapping and bounds
-    def run_reader_probe(self, service: Any, version: Any, record_id: Any) -> dict[str, Any]:
-        if not all(isinstance(v, str) for v in (service, version, record_id)):
-            raise ValueError("service, version and record_id must be strings")
+    def run_reader_probe(self, service: Any, version: Any, route_id: Any,
+                         store_id: Any, record_id: Any) -> dict[str, Any]:
+        if not all(isinstance(v, str) for v in (service, version, route_id, store_id, record_id)):
+            raise ValueError("service, version, route_id, store_id and record_id must be strings")
         rel = self.releases.get((service, version))
         if rel is None:
-            raise ValueError(
-                f"unknown release {service!r} {version!r}; use a service and version from the files given")
-        rec = self.records.get(record_id)
-        if rec is None:
-            raise ValueError(
-                f"unknown record_id {record_id!r}; use a record listed in the snapshot manifest")
-        route = next((r for r in rel["routes"] if r["store"] == rec["store"]), None)
+            raise ValueError(f"unknown release {service!r} {version!r}; use the files given")
+        route = next((r for r in rel["routes"] if r["route_id"] == route_id), None)
         if route is None or not route["entry"]:
-            raise ValueError(
-                f"{service} {version} declares no reader route for store {rec['store']!r}")
+            raise ValueError(f"unknown route_id {route_id!r} for {service} {version}")
+        if route["store_id"] != store_id:
+            raise ValueError(f"route/store mismatch: {route_id!r} does not read {store_id!r}")
+        rec = self.records.get((store_id, record_id))
+        if rec is None:
+            raise ValueError(f"unknown store_id/record_id {(store_id, record_id)!r} in the snapshot manifest")
         path = rec["payload_path"]
         if path is None or not Path(path).is_file():
             return {"status": "UNKNOWN", "error_type": "PayloadError", "message": "payload file unavailable"}
@@ -305,7 +311,8 @@ class FlatControlTools:
 
 
 _DISPATCH: dict[str, Callable[[FlatControlTools, dict], Any]] = {
-    PROBE_TOOL: lambda t, a: t.run_reader_probe(a.get("service"), a.get("version"), a.get("record_id")),
+    PROBE_TOOL: lambda t, a: t.run_reader_probe(a.get("service"), a.get("version"), a.get("route_id"),
+                                              a.get("store_id"), a.get("record_id")),
     # submit_assessment is terminal and handled by the loop, never dispatched as a plain tool call.
 }
 
@@ -326,8 +333,9 @@ CONTROL_TOOL_SPECS: list[dict] = [
      "description": "Run the trusted byte/shape reader probe for one release against one retained "
                     "record. status is PASS, FAIL (reader raised; see error_type/message) or UNKNOWN "
                     "(harness could not load/call the reader).",
-     "parameters": {"type": "object", "properties": {"service": _S, "version": _S, "record_id": _S},
-                    "required": ["service", "version", "record_id"]}},
+     "parameters": {"type": "object", "properties": {"service": _S, "version": _S, "route_id": _S,
+                                                                  "store_id": _S, "record_id": _S},
+                    "required": ["service", "version", "route_id", "store_id", "record_id"]}},
     {"name": TERMINAL_TOOL,
      "description": "TERMINAL. Give the proposed fleet, your disposition for it, and the evidence you gathered.",
      "parameters": {"type": "object", "properties": {
@@ -408,13 +416,30 @@ def context_files(fixture_root: Path | str = FIXTURE_ROOT, snapshot: str = DEFAU
     return files
 
 
+def source_path(path: Path) -> str:
+    return path.relative_to(REPO_ROOT).as_posix() if path.is_relative_to(REPO_ROOT) else path.as_posix()
+
+
 def flat_context(fixture_root: Path | str = FIXTURE_ROOT, snapshot: str = DEFAULT_SNAPSHOT) -> str:
     """All raw facts as plain text, each labelled with its repository-relative path."""
     parts = ["Raw release and retained-state facts, verbatim. SYNTHETIC FIXTURE — generated test data."]
     for path in context_files(fixture_root, snapshot):
-        rel = path.relative_to(REPO_ROOT).as_posix() if path.is_relative_to(REPO_ROOT) else path.as_posix()
+        rel = source_path(path)
         text = path.read_text(encoding="utf-8")
         parts.append(f"\n===== FILE: {rel} =====\n{text.rstrip()}\n")
+    parts.append("\nTrusted canonical identities (derived from the named source files, not probe outcomes):\n")
+    for declaration_path in sorted((Path(fixture_root) / "releases").glob("*/release.json")):
+        declaration = json.loads(declaration_path.read_text(encoding="utf-8"))
+        release_id = release_identity(declaration_path.parent)
+        for route in declaration.get("routes") or []:
+            parts.append(json.dumps({"service": declaration["service"], "version": declaration["version"],
+                                     "route_id": f"route:{release_id}:{route['name']}",
+                                     "store_id": "store:" + route["reads_from"].removeprefix("store:"),
+                                     "source": source_path(declaration_path),
+                                     "route_name": route["name"],
+                                     "release_identity_sources": [source_path(p) for p in
+                                         sorted(declaration_path.parent.rglob("*")) if p.is_file()]},
+                                    sort_keys=True) + "\n")
     return "".join(parts)
 
 
@@ -578,7 +603,7 @@ def run_control(request_text: str = REQUEST, *, transport: Callable[[dict], dict
         files = context_files(fixture_root, snapshot)
         transcript = {
             "control": "flat_context_no_graph",
-            "control_version": 4,
+            "control_version": 5,
             "request_text": request_text,
             "snapshot": snapshot.removeprefix("snapshot:"),
             "model": model_used,
@@ -587,7 +612,7 @@ def run_control(request_text: str = REQUEST, *, transport: Callable[[dict], dict
             "temperature": TEMPERATURE,
             "max_turns": MAX_TURNS,
             "system_prompt": SYSTEM_PROMPT,
-            "context_files": [{"path": p.relative_to(REPO_ROOT).as_posix(), "sha256": _sha256_bytes(p.read_bytes())}
+            "context_files": [{"path": source_path(p), "sha256": _sha256_bytes(p.read_bytes())}
                               for p in files],
             "events": events,
             "transport_settings": getattr(tr, "settings", {}),
@@ -596,6 +621,7 @@ def run_control(request_text: str = REQUEST, *, transport: Callable[[dict], dict
             "model_turns": turns,
             "tool_call_count": len(audit),
             "probe_calls": [_jsonable({"service": c["args"].get("service"), "version": c["args"].get("version"),
+                                       "route_id": c["args"].get("route_id"), "store_id": c["args"].get("store_id"),
                                        "record_id": c["args"].get("record_id"), "result": c.get("result"),
                                        "error": c.get("error")})
                             for c in audit if c["name"] == PROBE_TOOL],
@@ -611,7 +637,7 @@ def run_control(request_text: str = REQUEST, *, transport: Callable[[dict], dict
     if save:
         # Provider failures must not disappear from the dataset. Partial probe/event history is
         # unavailable when a transport raises; say so instead of fabricating zero observed work.
-        path = save_transcript({"control": "flat_context_no_graph", "control_version": 4,
+        path = save_transcript({"control": "flat_context_no_graph", "control_version": 5,
                                 "request_text": request_text, "snapshot": snapshot.removeprefix("snapshot:"),
                                 "model": abandoned[-1]["model"] if abandoned else "unknown", "live": True,
                                 "temperature": TEMPERATURE, "max_turns": MAX_TURNS, "system_prompt": SYSTEM_PROMPT,
@@ -662,7 +688,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"probes executed: {len(probes)}")
     for p in probes:
         res = p.get("result") or {"status": "ERROR", "message": p.get("error")}
-        print(f"  {p['service']} {p['version']} x {p['record_id']}: {res.get('status')}"
+        print(f"  {p['service']} {p['version']} {p['route_id']} x {p['store_id']}/{p['record_id']}: {res.get('status')}"
               + (f" ({res.get('error_type')}: {res.get('message')})" if res.get("error_type") else ""))
     print(f"transcript: {path}")
     return 0 if not transcript["aborted"] else 1

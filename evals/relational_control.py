@@ -23,7 +23,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from rw.verification import REPO_ROOT  # noqa: E402  (path set above)
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
+from evals.obligation_identity import obligation_key, oracle_obligations, release_identity
 
 FIXTURE_ROOT = REPO_ROOT / "fixtures" / "shop"
 ORACLE_PATH = REPO_ROOT / "evals" / "expected" / "dispositions.json"
@@ -134,7 +136,7 @@ def load_facts(fixture_root: Path | None = None) -> sqlite3.Connection:
 # --------------------------------------------------------------------------- obligations
 
 def obligations(conn: sqlite3.Connection, snapshot: str, fleet: dict[str, str]) -> list[tuple]:
-    """Every (service, version, route_name, store, record_id, writer_version_or_None) pair.
+    """Every (service, version, route_name, store, record_id, writer_version_or_None) row.
 
     The candidate fleet is passed as a temp table and resolved by one SQL join:
     fleet -> routes (service, version) -> records (store, snapshot).
@@ -247,12 +249,39 @@ def graph_obligations(session, fleet: dict[str, str], flags_by_service: dict | N
     return report["verification"]
 
 
-def main() -> int:
+def release_ids(fixture_root: Path = FIXTURE_ROOT) -> dict[tuple[str, str], str]:
+    ids = {}
+    for path in sorted(Path(fixture_root).glob("releases/*/release.json")):
+        declaration = json.loads(path.read_text(encoding="utf-8"))
+        ids[(declaration["service"], declaration["version"])] = release_identity(path.parent)
+    return ids
+
+
+def sql_keys(rows: list[tuple], ids: dict[tuple[str, str], str]) -> set[tuple]:
+    keys = {(service, version, f"route:{ids[(service, version)]}:{route}",
+             "store:" + store.removeprefix("store:"), record)
+            for service, version, route, store, record, _writer in rows}
+    if len(keys) != len(rows):
+        raise ValueError("duplicate full SQL obligation identity")
+    return keys
+
+
+def graph_keys(verification: dict, ids: dict[tuple[str, str], str]) -> set[tuple]:
+    versions = {release_id: version for (_service, version), release_id in ids.items()}
+    keys = [obligation_key({**ob["tuple"], "version": versions[ob["tuple"]["release_id"]]})
+            for ob in verification["obligations"]]
+    if len(set(keys)) != len(keys):
+        raise ValueError("duplicate full graph obligation identity")
+    return set(keys)
+
+
+def compare(fixture_root: Path = FIXTURE_ROOT, oracle_path: Path = ORACLE_PATH) -> int:
     from rw import graph as G
     from rw.pipeline import Session
 
-    conn = load_facts()
-    oracle = json.loads(ORACLE_PATH.read_text(encoding="utf-8"))
+    conn = load_facts(fixture_root)
+    ids = release_ids(fixture_root)
+    oracle = json.loads(Path(oracle_path).read_text(encoding="utf-8"))
     graph_name = f"rw_control_{uuid.uuid4().hex[:8]}"
     imported = False
     rows: list[tuple[str, int, int, str, str]] = []
@@ -266,16 +295,16 @@ def main() -> int:
             flags = {service: (spec.get("flags") or {}) for service, spec in case["fleet"].items()}
 
             sql_tuples = obligations(conn, snapshot, fleet)
-            sql_set = {(t[0], t[4]) for t in sql_tuples}
+            sql_set = sql_keys(sql_tuples, ids)
             sql_gaps = gaps(conn, snapshot, fleet)
 
-            session = Session(snapshot=snapshot, graph_name=graph_name, reimport=not imported)
+            session = Session(snapshot=snapshot, graph_name=graph_name, reimport=not imported,
+                              fixture_root=fixture_root)
             imported = True
             verification = graph_obligations(session, fleet, flags)
-            graph_set = {(o["tuple"]["service"], o["tuple"]["record_id"])
-                         for o in verification["obligations"]}
+            graph_set = graph_keys(verification, ids)
 
-            oracle_set = {(o["service"], o["record_id"]) for o in case["obligations"]}
+            oracle_set = set(oracle_obligations(case))
             equal = sql_set == graph_set
             if not equal:
                 mismatches.append(f"{case_id}: SQL-only={sorted(sql_set - graph_set)} "
@@ -290,6 +319,7 @@ def main() -> int:
             rows.append((case_id, len(sql_tuples), len(verification["obligations"]),
                          "yes" if equal else "NO", gap_cell))
     finally:
+        conn.close()
         try:
             G.connect().select_graph(graph_name).delete()
         except Exception as exc:  # pragma: no cover - teardown best effort
@@ -308,8 +338,12 @@ def main() -> int:
         print(f"graph mismatch: {line}")
     for line in oracle_mismatches:
         print(f"oracle mismatch: {line}")
-    print("Note: a tie is a valid outcome; obligation sets are compared as (service, record_id) pairs.")
+    print("Note: a tie is a valid outcome; obligation sets are compared as (service, version, route_id, store_id, record_id) keys.")
     return 1 if (mismatches or oracle_mismatches) else 0
+
+
+def main() -> int:
+    return compare()
 
 
 if __name__ == "__main__":

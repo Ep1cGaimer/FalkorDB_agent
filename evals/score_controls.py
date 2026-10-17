@@ -8,14 +8,14 @@ Inputs (all read-only):
 
 For every run the table reports: the proposed fleet and whether it matches an oracle case; whether
 the receipt correction is kept (from the oracle's ``request_fit`` for that fleet); exact obligation
-recall = probed (service, record_id) pairs / the oracle obligation pairs for the proposed fleet;
+recall = probed (service, version, route_id, store_id, record_id) keys / the oracle obligation keys for the proposed fleet;
 whether the cart reader x saved-cart-2002 pair was actually probed; whether a BOUNDED_PASS claim is
 false; whether the claimed disposition equals the oracle disposition for that fleet; and the number
 of model turns and tool calls.
 
 Independence: the oracle file is the only source of expected outcomes. When a fleet matches an
 oracle case exactly the case's own obligations and disposition are used. Otherwise the expected
-disposition is *derived* from the oracle's per-(service, version, record) probe predictions plus
+disposition is *derived* from the oracle's per-(snapshot, service, version, route_id, store_id, record_id) probe predictions plus
 gaps read straight from the fixture manifest, and the row says so. Nothing here imports the runtime
 pipeline, the graph, the probes or the control's own claims as an answer source; a fleet with no
 oracle case is never silently passed.
@@ -30,10 +30,16 @@ import argparse
 import hashlib
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from evals.obligation_identity import ObligationKey, obligation_key, oracle_obligations, release_identity
+
 FIXTURE_ROOT = REPO_ROOT / "fixtures" / "shop"
 ORACLE_PATH = REPO_ROOT / "evals" / "expected" / "dispositions.json"
 CONTROL_DIR = REPO_ROOT / "artifacts" / "controls"
@@ -47,15 +53,6 @@ CRITICAL_RECORD = "saved-cart-2002"   # retained cart/v2 bytes: the older cart r
 
 def _bh(data: bytes) -> str:
     return "sha256:" + hashlib.sha256(data).hexdigest()
-
-
-def _h(obj: Any) -> str:
-    return "sha256:" + hashlib.sha256(
-        json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")).hexdigest()
-
-
-def _short(hash_value: str) -> str:
-    return hash_value[7:23]
 
 
 def fixture_index(fixture_root: Path | str = FIXTURE_ROOT) -> dict[str, Any]:
@@ -73,15 +70,15 @@ def fixture_index(fixture_root: Path | str = FIXTURE_ROOT) -> dict[str, Any]:
         if not rel_dir.is_dir() or not (rel_dir / "release.json").is_file():
             continue
         decl = json.loads((rel_dir / "release.json").read_text(encoding="utf-8"))
-        files = [[p.relative_to(rel_dir).as_posix(), _bh(p.read_bytes())]
-                 for p in sorted(rel_dir.rglob("*")) if p.is_file()]
-        release_id = f"release:{decl['service']}:{_short(_h(files))}"
+        release_id = release_identity(rel_dir)
         info = {
             "release_id": release_id,
             "service": decl["service"],
             "version": decl["version"],
             "declared_flags": {f["name"]: bool(f.get("default")) for f in (decl.get("flags") or [])},
             "routes": [{"store": str(r.get("reads_from") or "").removeprefix("store:"),
+                        "route_id": f"route:{release_id}:{r['name']}",
+                        "store_id": "store:" + str(r.get("reads_from") or "").removeprefix("store:"),
                         "entry": r.get("entry"), "read_domain": r.get("read_domain")} for r in (decl.get("routes") or [])],
             "no_state_read": bool(decl.get("no_state_read")),
         }
@@ -112,19 +109,26 @@ def manifest_index(fixture_root: Path | str = FIXTURE_ROOT, snapshot: str = DEFA
 # --------------------------------------------------------------------------- oracle index
 
 def load_oracle(path: Path | str = ORACLE_PATH) -> dict[str, Any]:
-    return json.loads(Path(path).read_text(encoding="utf-8"))
+    oracle = json.loads(Path(path).read_text(encoding="utf-8"))
+    for case in oracle["cases"]:
+        oracle_obligations(case)
+    return oracle
 
 
 def oracle_index(oracle: dict, fixtures: dict, snapshots: dict[str, dict]) -> dict[str, Any]:
     """Cases by (snapshot, fleet key) plus every independent per-reader probe prediction."""
     cases: dict[str, dict] = {c["id"]: c for c in oracle["cases"]}
     by_fleet: dict[tuple, dict] = {}
-    predictions: dict[tuple[str, str, str], str] = {}
+    predictions: dict[tuple, str] = {}
     for case in oracle["cases"]:
-        fleet, _ = canonical_fleet(case["fleet"], fixtures, snapshots.get(case["snapshot"]))
-        by_fleet[(case["snapshot"], fleet_key(fleet))] = case
-        for ob in case["obligations"]:
-            predictions[(ob["service"], ob["version"], ob["record_id"])] = ob["expected_probe"]
+        snapshot = case["snapshot"].removeprefix("snapshot:")
+        fleet, _ = canonical_fleet(case["fleet"], fixtures, snapshots.get(snapshot))
+        by_fleet[(snapshot, fleet_key(fleet))] = case
+        for key, predicted in oracle_obligations(case).items():
+            prediction_key = (case["snapshot"].removeprefix("snapshot:"), *key)
+            if prediction_key in predictions and predictions[prediction_key] != predicted:
+                raise ValueError(f"conflicting oracle predictions: {prediction_key}")
+            predictions[prediction_key] = predicted
     return {"cases": cases, "by_fleet": by_fleet, "predictions": predictions}
 
 
@@ -184,14 +188,14 @@ def describe_fleet(fleet: dict[str, dict] | None) -> str:
 
 # --------------------------------------------------------------------------- obligations & gaps
 
-def reader_obligations(fixtures: dict, manifest: dict, fleet: dict[str, dict]) -> tuple[dict[tuple[str, str, str], bool], list[dict]]:
-    """``{(service, version, record_id): True}`` for every declared reader route x listed record.
+def reader_obligations(fixtures: dict, manifest: dict, fleet: dict[str, dict]) -> tuple[dict[ObligationKey, bool], list[dict]]:
+    """``{(service, version, route_id, store_id, record_id): True}`` for every declared reader route x listed record.
 
     The key is the exact reader identity -- a probe of a *different* version of the service is not the
     obligation the proposed fleet carries. Mirrors the oracle's enumeration rule (declared routes x
     listed records in the read store) and also surfaces the fixture-side gaps the rule talks about.
     """
-    pairs: dict[tuple[str, str, str], bool] = {}
+    pairs: dict[ObligationKey, bool] = {}
     gaps: list[dict] = []
     stores = manifest["stores"]
     for service, spec in sorted(fleet.items()):
@@ -215,7 +219,7 @@ def reader_obligations(fixtures: dict, manifest: dict, fleet: dict[str, dict]) -
             if store.get("coverage") != "COMPLETE":
                 gaps.append({"kind": "COVERAGE_INCOMPLETE", "subject": f"{manifest['snapshot']}/{route['store']}"})
             for record_id, rec in sorted(store["records"].items()):
-                pairs[(service, version, record_id)] = True
+                pairs[(service, version, route["route_id"], route["store_id"], record_id)] = True
                 if not rec.get("writer"):
                     gaps.append({"kind": "WRITER_UNKNOWN",
                                  "subject": f"{manifest['snapshot']}/{route['store']}/{record_id}"})
@@ -232,25 +236,27 @@ def reader_obligations(fixtures: dict, manifest: dict, fleet: dict[str, dict]) -
     return pairs, unique
 
 
-def derived_disposition(pairs: dict[tuple[str, str, str], bool], predictions: dict,
-                        gaps: list[dict]) -> tuple[str, str]:
+def derived_disposition(pairs: dict[ObligationKey, bool], predictions: dict,
+                        gaps: list[dict], snapshot: str = DEFAULT_SNAPSHOT) -> tuple[str, str]:
     """Apply the contract's precedence to oracle predictions + fixture gaps.
 
-    Returns (disposition, source note). A pair the oracle does not predict is treated as unresolved
+    Returns (disposition, source note). An obligation the oracle does not predict is treated as unresolved
     evidence, never as a pass.
     """
     unknown = 0
     fails = 0
-    for service, version, record_id in sorted(pairs):
-        predicted = predictions.get((service, version, record_id))
+    for key in sorted(pairs):
+        predicted = predictions.get((snapshot.removeprefix("snapshot:"), *key))
         if predicted is None:
             unknown += 1
         elif predicted == "FAIL":
             fails += 1
+        elif predicted != "PASS":
+            unknown += 1
     if fails:
         return "BLOCKED", f"derived: {fails} predicted FAIL(s) among {len(pairs)} obligations"
     if gaps or unknown:
-        return "NEEDS_EVIDENCE", (f"derived: {len(gaps)} gap(s), {unknown} unpredicted pair(s)")
+        return "NEEDS_EVIDENCE", (f"derived: {len(gaps)} gap(s), {unknown} unresolved obligation(s)")
     return "BOUNDED_PASS", f"derived: all {len(pairs)} predicted obligations PASS, no gaps"
 
 
@@ -259,19 +265,40 @@ def derived_disposition(pairs: dict[tuple[str, str, str], bool], predictions: di
 def run_from_control(transcript: dict, fixtures: dict, manifest: dict) -> dict:
     result = transcript.get("result")
     probes = transcript.get("probe_calls") or []
-    executed: dict[tuple[str, str, str], str] = {}
+    executed: dict[ObligationKey, str] = {}
+    fleet, notes = canonical_fleet((result or {}).get("fleet"), fixtures, manifest)
     for call in probes:
         res = call.get("result") or {}
         status = res.get("status")
-        if status and call.get("service") and call.get("version") and call.get("record_id"):
-            executed[(call["service"], call["version"], call["record_id"])] = status
-    fleet, notes = canonical_fleet((result or {}).get("fleet"), fixtures, manifest)
+        if call.get("error") or status not in {"PASS", "FAIL", "UNKNOWN"}:
+            continue
+        service, version, record_id = (call.get(f) for f in ("service", "version", "record_id"))
+        if not all(isinstance(value, str) and value for value in (service, version, record_id)):
+            continue
+        declared, _ = reader_obligations(fixtures, manifest, {service: {"version": version}})
+        try:
+            key = obligation_key(call)
+        except ValueError:
+            # Historical v1-v4 transcripts omitted both IDs. Infer only one exact obligation.
+            if transcript.get("control_version", 4) >= 5 or "route_id" in call or "store_id" in call:
+                notes.append(f"invalid probe identity: {service} {version}/{record_id}; no credit")
+                continue
+            matches = [key for key in declared if key[4] == record_id]
+            if len(matches) != 1:
+                notes.append(f"ambiguous or invalid legacy probe: {service} {version}/{record_id}; no credit")
+                continue
+            key = matches[0]
+            notes.append(f"inferred unique legacy probe identity: {key}")
+        if key not in declared:
+            notes.append(f"undeclared probe identity: {key}; no credit")
+            continue
+        executed[key] = status
     return {
         "label": _control_label(transcript),
         "origin": "control",
         "model": transcript.get("model", "?"),
         "live": bool(transcript.get("live")),
-        "snapshot": transcript.get("snapshot", DEFAULT_SNAPSHOT),
+        "snapshot": transcript.get("snapshot", DEFAULT_SNAPSHOT).removeprefix("snapshot:"),
         "fleet": fleet or None,
         "fleet_notes": notes,
         "disposition": (result or {}).get("disposition"),
@@ -334,7 +361,7 @@ def runs_from_report(report: dict, fixtures: dict, manifest: dict) -> list[dict]
         fleet, notes = canonical_fleet(raw_fleet, fixtures, manifest)
         verification = detail.get("verification") or {}
         by_hash = {r.get("obligation_hash"): r for r in verification.get("receipts") or []}
-        probed: dict[tuple[str, str, str], str] = {}
+        probed: dict[ObligationKey, str] = {}
         for ob in verification.get("obligations") or []:
             tup = ob.get("tuple") or {}
             receipt = by_hash.get(ob.get("obligation_hash"))
@@ -344,7 +371,16 @@ def runs_from_report(report: dict, fixtures: dict, manifest: dict) -> list[dict]
             if version is None:
                 info = fixtures["by_release_id"].get(tup.get("release_id")) or {}
                 version = info.get("version", "?")
-            probed[(tup.get("service"), version, tup.get("record_id"))] = receipt.get("result")
+            try:
+                key = obligation_key({**tup, "version": version})
+            except ValueError:
+                notes.append("product obligation lacks full route/store identity; no credit")
+                continue
+            declared, _ = reader_obligations(fixtures, manifest, {key[0]: {"version": version}})
+            if key not in declared or receipt.get("result") not in {"PASS", "FAIL", "UNKNOWN"}:
+                notes.append(f"invalid product obligation identity/result: {key}; no credit")
+                continue
+            probed[key] = receipt.get("result")
         runs.append({"label": label, "origin": "product", "model": grounding.get("model", "?"),
                      "live": bool(grounding.get("live")), "snapshot": (report.get("snapshot") or "").removeprefix("snapshot:"),
                      "fleet": fleet or None, "fleet_notes": notes, "disposition": verification.get("disposition"),
@@ -379,12 +415,12 @@ def score_run(run: dict, oi: dict, fixtures: dict, manifests: dict[str, dict]) -
     if case is not None:
         row["case"] = case["id"]
         row["receipt_kept"] = case["request_fit"]["receipt_correction_kept"]
-        required = {(ob["service"], ob["version"], ob["record_id"]): True for ob in case["obligations"]}
+        required = {key: True for key in oracle_obligations(case)}
         gaps = list(case["gaps"])
         expected, source = case["disposition"], f"oracle case {case['id']}"
     else:
         required, gaps = reader_obligations(fixtures, manifest, fleet)
-        expected, source = derived_disposition(required, oi["predictions"], gaps)
+        expected, source = derived_disposition(required, oi["predictions"], gaps, manifest["snapshot"])
         row["notes"].append("no oracle case for this fleet; expected disposition derived from the oracle's "
                             "per-reader predictions and the fixture manifest")
     row["expected_disposition"], row["expected_source"] = expected, source
@@ -396,17 +432,22 @@ def score_run(run: dict, oi: dict, fixtures: dict, manifests: dict[str, dict]) -
     row["recall"] = f"{len(hit)}/{len(required)}" if required else "n/a"
     row["observed_fails"] = sum(1 for pair in hit if probed[pair] == "FAIL")
     row["other_fails"] = sum(1 for pair, status in probed.items() if pair not in required and status == "FAIL")
-    cart_version = (fleet.get("cart") or {}).get("version")
-    checkout_version = (fleet.get("checkout") or {}).get("version")
-    critical = ("cart", cart_version, CRITICAL_RECORD)
-    if critical in required:
-        row["critical_probed"] = critical in probed
-        row["cards"] = "yes" if row["critical_probed"] else "no"
-    else:
-        row["cards"] = "not required"
-    if ("checkout", checkout_version, CRITICAL_RECORD) in required \
-            and ("checkout", checkout_version, CRITICAL_RECORD) not in probed:
-        row["notes"].append(f"checkout {checkout_version} reader x {CRITICAL_RECORD} was never probed")
+    for service in ("cart", "checkout"):
+        version = (fleet.get(service) or {}).get("version")
+        critical = {key for key in required if key[0] == service and key[1] == version
+                    and key[4] == CRITICAL_RECORD}
+        hits = critical & hit
+        if service == "cart":
+            row["critical_required"] = len(critical)
+            row["critical_probed_count"] = len(hits)
+            row["critical_probed"] = critical <= hit if critical else None
+            row["cards"] = ("yes" if critical <= hit else "no") if critical else "not required"
+            if len(critical) > 1:
+                row["cards"] += f" ({len(hits)}/{len(critical)} route/store obligations)"
+        if critical - hit:
+            row["notes"].append(f"{service} {version} x {CRITICAL_RECORD}: "
+                                f"{len(critical - hit)}/{len(critical)} route/store obligations were never probed: "
+                                f"{sorted(critical - hit)}")
 
     claimed = run.get("disposition")
     row["false_pass"] = claimed == "BOUNDED_PASS" and expected != "BOUNDED_PASS"
@@ -418,7 +459,7 @@ def score_run(run: dict, oi: dict, fixtures: dict, manifests: dict[str, dict]) -
 
 def consistent(row: dict) -> bool:
     """Oracle-consistent *with evidence*: a real fleet, an oracle case, the oracle's disposition for
-    that fleet, no false pass, and every oracle obligation pair for that fleet actually probed.
+    that fleet, no false pass, and every oracle obligation key for that fleet actually probed.
     A right answer without the evidence is not counted here (its recall is reported in the table).
     """
     return bool(row.get("case") != "—" and row.get("disp_match") and not row.get("false_pass")
@@ -457,7 +498,7 @@ def verdict(control_rows: list[dict], product_rows: list[dict]) -> str:
 # --------------------------------------------------------------------------- reporting
 
 HEADER = ("| run | model (live) | proposed fleet | oracle case | receipt correction kept | probe recall "
-          "| proposed cart reader x 2002 probed | false BOUNDED_PASS | disposition = oracle | model turns | tool calls |")
+          "| proposed cart route/store x 2002 probes | false BOUNDED_PASS | disposition = oracle | model turns | tool calls |")
 SEPARATOR = "|---|---|---|---|---|---|---|---|---|---|---|"
 
 
@@ -475,7 +516,7 @@ def markdown_row(row: dict) -> str:
     if row.get("other_fails"):
         recall += f" [{row['other_fails']} FAIL on other readers]"
     cells = [row["run"], model, row["fleet"], row["case"], _yes_no(row["receipt_kept"]), recall,
-             _yes_no(row["critical_probed"]), _yes_no(row["false_pass"]), _yes_no(row["disp_match"]),
+             row.get("cards") or _yes_no(row["critical_probed"]), _yes_no(row["false_pass"]), _yes_no(row["disp_match"]),
              str(row["turns"] if row["turns"] is not None else "—"),
              str(row["tool_calls"] if row["tool_calls"] is not None else "—")]
     return "| " + " | ".join(cells) + " |"
@@ -517,9 +558,10 @@ def load_reports(directory: Path | str = REPORT_DIR) -> list[dict]:
 
 
 def collect(control_dir: Path | str = CONTROL_DIR, report_dir: Path | str = REPORT_DIR,
-            oracle_path: Path | str = ORACLE_PATH) -> tuple[list[dict], list[dict]]:
-    fixtures = fixture_index()
-    manifests = {name: manifest_index(FIXTURE_ROOT, name)
+            oracle_path: Path | str = ORACLE_PATH,
+            fixture_root: Path | str = FIXTURE_ROOT) -> tuple[list[dict], list[dict]]:
+    fixtures = fixture_index(fixture_root)
+    manifests = {name: manifest_index(fixture_root, name)
                  for name in ("snap-001", "snap-002-partial", "snap-003-orphan")}
     oracle = load_oracle(oracle_path)
     oi = oracle_index(oracle, fixtures, manifests)
@@ -539,16 +581,17 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--controls", default=str(CONTROL_DIR))
     ap.add_argument("--reports", default=str(REPORT_DIR))
     ap.add_argument("--oracle", default=str(ORACLE_PATH))
+    ap.add_argument("--fixture-root", default=str(FIXTURE_ROOT))
     ap.add_argument("--json", help="also write the scored rows to this path")
     args = ap.parse_args(argv)
 
-    control_rows, product_rows = collect(args.controls, args.reports, args.oracle)
+    control_rows, product_rows = collect(args.controls, args.reports, args.oracle, args.fixture_root)
     rows = product_rows + control_rows
     print("## Product vs flat-context control — scored against evals/expected/dispositions.json "
           "(synthetic fixture)\n")
     if not rows:
         print("No scored runs found: no `artifacts/reports/*.json` and no `artifacts/controls/llm_flat_*.json`.")
-        print("\nScoring rules: probe recall = probed (service, record_id) pairs / oracle obligation pairs "
+        print("\nScoring rules: probe recall = probed (service, version, route_id, store_id, record_id) keys / oracle obligation keys "
               "for the proposed fleet; false BOUNDED_PASS = claimed BOUNDED_PASS while the oracle (case "
               "match, or derived from the oracle's predictions plus fixture gaps) is not BOUNDED_PASS.")
         return 0
@@ -567,10 +610,10 @@ def main(argv: list[str] | None = None) -> int:
     print()
     print("Notes:")
     print("- probe recall counts only probes that actually ran and compares exact reader identity "
-          "(service, version, record_id); a probe of another version of the same service is not the "
+          "(service, version, route_id, store_id, record_id); a probe of another version of the same service is not the "
           "obligation the proposed fleet carries, and a call rejected by the allowlist does not count.")
-    print("- `proposed cart reader x 2002 probed` is the cart reader of the proposed version on the "
-          "retained cart/v2 bytes (saved-cart-2002).")
+    print("- `proposed cart route/store x 2002 probes` requires every applicable route/store of the proposed cart version "
+          "on saved-cart-2002; multiple applicable keys report their individual coverage.")
     print("- disposition for a fleet with no oracle case is derived from the oracle's per-reader predictions "
           "plus manifest gaps, and the row says so.")
     for row in rows:

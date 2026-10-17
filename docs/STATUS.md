@@ -11,6 +11,34 @@ their raw artifacts are not committed. They are separate from the issue #2 evalu
 Every row below is a command that was actually run, with its observed output. Nothing here is a plan
 or an estimate.
 
+## Full evaluation obligation identity — issue #24, 2026-10-17
+
+The oracle, SQL control, flat-control probe API and scorer now retain
+`(service, version, route_id, store_id, record_id)` within each fixture/snapshot. Baseline cases A–H
+preserve all 34 predictions, dispositions, gaps and request-fit labels. Authored overlay cases I/J
+exercise seven obligations each, with two routes over cart-cache and a third over cart-archive,
+including the same record ID with different bytes in both stores. Real graph reports and offline
+scripted Gemini/Groq transcripts score `7/7`; removing any one observation scores `6/7`. Historical
+calls receive an explicit inference note only when one exact obligation is identifiable.
+
+Observed locally on macOS arm64, Python 3.12.13, using the existing local FalkorDB and isolated graph
+names. No live provider calls were made. The existing CI workflow was unchanged.
+
+| Check | Observed result |
+|---|---|
+| Focused oracle/SQL/control/scorer suite | **79 passed, 1 deselected**, before two additional direct-harness/retry regressions; subsequent control/scorer subset **49 passed, 1 deselected**. |
+| Final base-only suite | `artifacts/issue-24/base-venv/bin/python -m pytest -q -m 'not live' --tb=short`: **472 passed, 3 skipped, 3 deselected**. Base environment installed offline from pinned cached dependencies; skips are the three optional MCP SDK modules. |
+| Final MCP-enabled suite | `.venv/bin/python -m pytest -q -m 'not live' --tb=short --junitxml=/tmp/rw-issue24-mcp-suite.xml`: **511 passed, 3 deselected**, zero skips. |
+| Explicit MCP SDK leg | `.venv/bin/python -m pytest tests/test_mcp.py tests/test_mcp_integration.py tests/test_mcp_stdio.py -q --junitxml=/tmp/rw-issue24-mcp-sdk.xml`: **39 passed**, zero skips. |
+| Baseline SQL CLI | `.venv/bin/python evals/relational_control.py`: SQL = graph = authored oracle for **8/8 cases**, comparing full identity and cardinality. Variant CLI comparison also passed for **2/2 cases** inside the relational suite. |
+| Direct fixture harness | All **14/14** authored variant predictions confirmed with isolated Python subprocesses and manifest-checked payload bytes; covered by both final suites. |
+| Deterministic smoke | `.venv/bin/python scripts/smoke.py`: **8/8 PASS**, exit 0; isolated graph cleanup confirmed. |
+| Browser acceptance | `UI_BROWSER_BINARY=/Applications/Helium.app/Contents/MacOS/Helium node tests/ui/check.mjs`: all available checks PASS, Chrome 155.0.8059.39; zero browser exceptions/failed resource requests. Existing replay-clarification case skipped because no saved question was available. QA server stopped and temporary graph cleaned up. |
+| Static/source checks | `git diff --check`: pass. Removing only the added route/store fields makes the baseline oracle structurally identical to `origin/main`. |
+
+Linux/Windows hosted CI and remote PR mergeability remain unobserved for this branch. See
+[the implementation plan](ISSUE_24_IMPLEMENTATION_PLAN.md) and [oracle method](../evals/expected/README.md).
+
 ## MCP exposure — 2026-10-17
 
 Implemented six optional stdio tools through the existing single-worker HTTP API, strict transport
