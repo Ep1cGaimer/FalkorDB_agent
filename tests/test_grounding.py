@@ -1,6 +1,7 @@
-"""Unit tests (fake transport + fake tools) and one live test for the grounding agent."""
+"""Unit tests (fake transport + fake tools) and live regressions for the grounding agent."""
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import os
@@ -274,10 +275,14 @@ def test_text_only_turn_is_nudged(tmp_path):
 
 
 def test_system_prompt_has_a_generic_ambiguity_rule_without_fixture_names():
-    """A time/vague reference that could match several artifacts must be clarified, not guessed."""
+    """Missing intent evidence requires clarification; resolved references can still be proposed."""
     prompt = grounding.SYSTEM_PROMPT
-    assert '"last week"' in prompt and '"the change"' in prompt and '"that release"' in prompt
     assert "ask_clarification" in prompt
+    assert "only one plausible candidate" in prompt and "missing evidence is enough" in prompt
+    assert "Build timestamps, recency, history order, or an assumed calendar anchor" in prompt
+    assert "actual unresolved request" in prompt
+    assert "explicit artifact or an evidence-supported behavioral relationship" in prompt
+    assert "without an unnecessary time question" in prompt and "operator answer" in prompt
     lowered = prompt.lower()
     for fixture_word in ("cart", "checkout", "basket", "saved-cart", "receipt correction",
                          "1.4", "1.5", "snap-001"):
@@ -655,8 +660,8 @@ def _available_chain() -> list[str]:
 
 
 @pytest.mark.live
-@pytest.mark.parametrize("case_index", [0, 1])  # main request, ambiguous request
-def test_live_request(case_index):
+@pytest.mark.parametrize("case_id", ["main", "ambiguous", "named-old-build"])
+def test_live_request(case_id):
     config.load_env()  # GROQ_API_KEY from the git-ignored .env; never printed
     chain = _available_chain()
     if not chain:
@@ -668,10 +673,14 @@ def test_live_request(case_index):
     try:
         graph.reset_and_import(db, name, ROOT / "fixtures" / "shop", ["snap-001"])
         tools = grounding.GroundingTools(db.select_graph(name))
-        known = {r["release_id"] for r in tools.current_fleet()[0]}
+        baseline = {r["service"]: r for r in tools.current_fleet()[0]}
+        releases = {}
         for svc in ("cart", "checkout"):
-            known |= {r["release_id"] for r in tools.release_history(svc)[0]}
-        request = json.loads((ROOT / "evals/grounding_cases/requests.json").read_text())[case_index]["text"]
+            releases[svc] = {r["version"]: r for r in tools.release_history(svc)[0]}
+        known = {r["release_id"] for r in baseline.values()}
+        known |= {r["release_id"] for history in releases.values() for r in history.values()}
+        cases = json.loads((ROOT / "evals/grounding_cases/requests.json").read_text())
+        request = next(c["text"] for c in cases if c["id"] == case_id)
         for attempt in range(4):  # provider is flaky (503, TLS resets); outer retry on top of transport's
             try:
                 gr, path = grounding.ground(request, tools, models=chain)
@@ -683,11 +692,47 @@ def test_live_request(case_index):
         print(f"LIVE RESULT: model={gr.model} kind={gr.result.kind} aborted={grounding.is_aborted(gr)} "
               f"validation_errors={gr.validation_errors} transcript={path}")
         print("LIVE RESULT JSON:", gr.model_dump_json(indent=2))
-        assert gr.live and not grounding.is_aborted(gr)
-        if isinstance(gr.result, GroundingProposal):
-            assert all(c.release_id in known for c in gr.result.changes)
-        else:
+        assert gr.live and not grounding.is_aborted(gr) and not gr.validation_errors
+        events = json.loads(path.read_text())["events"]
+        assert [e["name"] for e in events if e["type"] == "terminal"] == [
+            "ask_clarification" if case_id == "ambiguous" else "propose_fleet"]
+        excerpts = {}
+        for event in events:
+            if event["type"] != "tool":
+                continue
+            for row in event.get("rows", []):
+                if row.get("excerpt_id"):
+                    excerpts[row["excerpt_id"]] = row
+                for ex in row.get("excerpts", []):
+                    excerpts[ex["excerpt_id"]] = {**ex, "release_id": row["release_id"]}
+        for citation in gr.result.citations:
+            ex = excerpts[citation.excerpt_id]
+            assert citation.quote and citation.quote in ex["text"]
+            assert citation.content_hash == ex["content_hash"]
+            assert citation.content_hash == "sha256:" + hashlib.sha256(ex["text"].encode()).hexdigest()
+        if case_id == "ambiguous":
             assert isinstance(gr.result, GroundingClarification)
+            assert gr.result.question.strip() and gr.result.unresolved
+            assert all(phrase.strip() and phrase in request for phrase in gr.result.unresolved)
+            assert not hasattr(gr.result, "changes")
+        else:
+            assert isinstance(gr.result, GroundingProposal)
+            assert all(c.release_id in known for c in gr.result.changes)
+            fleet = {svc: {"release_id": row["release_id"], "flags": row["flags"]}
+                     for svc, row in baseline.items()}
+            for change in gr.result.changes:
+                fleet[change.service] = {"release_id": change.release_id, "flags": change.flags}
+            assert set(fleet) == set(baseline)
+            assert fleet["checkout"]["release_id"] == releases["checkout"]["2.1"]["release_id"]
+            old_cart = fleet["cart"]["release_id"] == releases["cart"]["1.4"]["release_id"]
+            flag_off = (fleet["cart"]["release_id"] == releases["cart"]["1.5"]["release_id"]
+                        and fleet["cart"]["flags"].get("basket_v2") is False)
+            assert old_cart or (case_id == "main" and flag_off)
+            cited_changelogs = {excerpts[c.excerpt_id]["release_id"] for c in gr.result.citations
+                                if excerpts[c.excerpt_id]["kind"] == "changelog"}
+            assert {row["release_id"] for row in fleet.values()} <= cited_changelogs
+            if case_id == "named-old-build":
+                assert releases["cart"]["1.5"]["release_id"] in cited_changelogs
     finally:
         try:
             db.select_graph(name).delete()
