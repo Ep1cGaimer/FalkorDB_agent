@@ -134,7 +134,9 @@ def test_fallback_reassesses_intent_without_old_evidence_or_checker_context(tmp_
     assert result.model == "second" and not tools.calls
     assert len(requests) == 2
     assert all("private old candidate" not in json.dumps(body) for _, body in requests)
-    assert json.loads(path.read_text())["abandoned_attempts"] == [{"model": "first", "error": "provider unavailable"}]
+    abandoned = json.loads(path.read_text())["abandoned_attempts"]
+    assert len(abandoned) == 1 and abandoned[0]["model"] == "first"
+    assert abandoned[0]["error"] == {"status": None, "code": "provider_error", "message": "Provider request failed."}
 
 
 @pytest.mark.parametrize("provider", ["gemini", "groq"])
@@ -150,6 +152,33 @@ def test_malformed_intent_response_aborts_without_a_crash(provider, tmp_path):
     tools = FakeTools()
     result, _ = grounding.ground("Undo that change.", tools, transport=transport, artifact_dir=tmp_path)
     assert grounding.is_aborted(result) and not tools.calls
+
+
+@pytest.mark.parametrize("provider", ["gemini", "groq"])
+@pytest.mark.parametrize("recovers", [True, False])
+def test_provider_rejection_correction_stays_in_the_intent_phase(provider, recovers, tmp_path):
+    render = groq_call if provider == "groq" else call
+    bodies = []
+
+    def transport(body):
+        bodies.append(body)
+        if len(bodies) == 1 or not recovers:
+            raise grounding.ToolCallRejected({"failed_generation": "SECRET choose release:invented"})
+        return render("assess_intent", references=[
+            {"phrase": "that change", "basis": "UNRESOLVED", "relation": "AT"}], question="Which change?")
+
+    transport.provider = provider
+    tools = FakeTools()
+    result, path = grounding.ground("Undo that change.", tools, transport=transport, artifact_dir=tmp_path)
+    assert len(bodies) == 2 and not tools.calls
+    assert grounding.is_aborted(result) is not recovers
+    correction = (bodies[1]["messages"][-1]["content"] if provider == "groq" else
+                  bodies[1]["contents"][-1]["parts"][0]["text"])
+    assert "assess_intent" in correction and "propose_fleet" not in correction
+    assert "SECRET" not in correction and "SECRET" not in path.read_text()
+    if recovers:
+        assert result.result.unresolved == ["that change"] and not result.validation_errors
+    assert grounding.replay(path).result == result.result
 
 
 @pytest.mark.parametrize("provider", ["gemini", "groq"])

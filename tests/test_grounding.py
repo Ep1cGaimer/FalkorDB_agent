@@ -363,7 +363,8 @@ def test_transport_error_text_is_redacted_too(monkeypatch):
     monkeypatch.setattr(grounding.httpx, "post", fake_post)
     with pytest.raises(grounding.GroundingError) as ei:
         grounding.make_groq_transport(api_key="SECRET-KEY", sleep=lambda s: None, retries=2)({})
-    assert "SECRET-KEY" not in str(ei.value) and "***" in str(ei.value)
+    assert "SECRET-KEY" not in str(ei.value) and "connection reset" not in str(ei.value)
+    assert grounding.provider_error_details(ei.value)["code"] == "transport_error"
     assert "after 2 attempts" in str(ei.value)
 
 
@@ -382,7 +383,7 @@ def test_a_key_that_starts_past_the_truncation_point_is_still_redacted(monkeypat
     with pytest.raises(grounding.GroundingError) as ei:
         grounding.make_groq_transport(api_key=key, sleep=lambda s: None, retries=1)({})
     message = str(ei.value)
-    assert key not in message and key[:12] not in message and "***" in message
+    assert key not in message and key[:12] not in message and "x" * 185 not in message
 
 
 @pytest.mark.parametrize("body", [
@@ -404,7 +405,8 @@ def test_quota_429_fails_the_entry_at_once_and_stays_redacted(monkeypatch, body)
     with pytest.raises(grounding.GroundingError, match="not retryable") as ei:
         grounding.make_groq_transport(api_key="SECRET-KEY", sleep=sleeps.append, retries=6)({})
     assert len(posts) == 1 and sleeps == []           # no retry, no backoff sleep
-    assert "SECRET-KEY" not in str(ei.value) and "***" in str(ei.value)
+    assert "SECRET-KEY" not in str(ei.value) and "org_x" not in str(ei.value)
+    assert grounding.provider_error_details(ei.value)["code"] == "quota_refused"
     assert grounding._quota_refused(httpx.Response(429, text=body))
     assert not grounding._quota_refused(httpx.Response(429, text='{"error":{"message":"rate limit"}}'))
 
@@ -468,7 +470,7 @@ def test_groq_tool_call_round_trip_to_proposal(tmp_path):
     assert [c["name"] for c in gr.tool_calls] == ["release_history"] and gr.tool_calls[0]["rows"] == 1
     assert gr.result.citations[0].content_hash == GOOD_HASH  # trusted hash, not the model's
     first = t.bodies[0]
-    assert first["tool_choice"] == "auto" and first["temperature"] == 0
+    assert first["tool_choice"] == "required" and first["temperature"] == 0
     assert [m["role"] for m in first["messages"]] == ["system", "user"]
     assert all(tool["type"] == "function" for tool in first["tools"])
     assert [tool["function"]["name"] for tool in first["tools"]] == list(
@@ -558,7 +560,7 @@ def test_groq_chain_fallback_restarts_whole_conversation(tmp_path):
     saved = json.loads(path.read_text())
     assert saved["model"] == "groq:m2" and saved["provider"] == "groq"
     assert saved["abandoned_attempts"][0]["model"] == "groq:m1"
-    assert "503" in saved["abandoned_attempts"][0]["error"]
+    assert saved["abandoned_attempts"][0]["error"]["status"] == 503
 
 
 def test_groq_transport_pins_tls_and_never_leaks_the_key(tmp_path, monkeypatch):
@@ -584,7 +586,7 @@ def test_groq_transport_pins_tls_and_never_leaks_the_key(tmp_path, monkeypatch):
     assert seen["headers"]["authorization"] == f"Bearer {fake_key}"
     assert seen["verify"].maximum_version == ssl.TLSVersion.TLSv1_2
     assert seen["json"]["model"] == "openai/gpt-oss-120b"
-    assert seen["json"]["tool_choice"] == "auto" and seen["json"]["temperature"] == 0
+    assert seen["json"]["tool_choice"] == "required" and seen["json"]["temperature"] == 0
     assert seen["json"]["messages"][0] == {"role": "system", "content": grounding.SYSTEM_PROMPT}
     saved = path.read_text(encoding="utf-8")
     assert fake_key not in saved and "Bearer" not in saved
@@ -605,7 +607,8 @@ def test_groq_transport_retry_after_not_retryable_and_missing_key(monkeypatch):
     monkeypatch.setattr(grounding.httpx, "post", lambda *a, **kw: httpx.Response(401, text="bad key SECRET"))
     with pytest.raises(grounding.GroundingError, match="not retryable") as ei:
         grounding.make_groq_transport(api_key="SECRET", sleep=lambda s: None, retries=2)({})
-    assert "SECRET" not in str(ei.value) and "***" in str(ei.value)
+    assert "SECRET" not in str(ei.value) and "bad key" not in str(ei.value)
+    assert grounding.provider_error_details(ei.value)["status"] == 401
     monkeypatch.delenv("GROQ_API_KEY", raising=False)
     with pytest.raises(grounding.GroundingError, match="GROQ_API_KEY is not set"):
         grounding.make_groq_transport()
@@ -637,7 +640,7 @@ def test_groq_replay_replays_in_openai_format(tmp_path, monkeypatch):
     assert rp.validation_errors == gr.validation_errors
     assert [m["role"] for m in replayed[1]["messages"]] == ["system", "user", "assistant", "tool"]
     assert replayed[1]["messages"][-1]["tool_call_id"] == "call_a"
-    assert replayed[1]["tool_choice"] == "auto"
+    assert replayed[1]["tool_choice"] == "required"
 
 
 # --------------------------------------------------------------------------- live
@@ -834,7 +837,7 @@ def test_restart_whole_conversation_with_next_model(tmp_path):
     assert bodies["m2"][0] == 1
     t = json.loads(path.read_text())
     assert t["model"] == "m2" and t["abandoned_attempts"][0]["model"] == "m1"
-    assert "503" in t["abandoned_attempts"][0]["error"]
+    assert t["abandoned_attempts"][0]["error"]["status"] == 503
     assert [c["name"] for c in gr.tool_calls] == ["current_fleet"]  # m1's calls are not mixed in
 
 
@@ -843,7 +846,7 @@ def test_all_models_failing_raises(tmp_path):
         def tr(body):
             raise grounding.GroundingError(f"{model} down")
         return tr
-    with pytest.raises(grounding.GroundingError, match="m1 down.*m2 down"):
+    with pytest.raises(grounding.GroundingError, match="m1.*m2"):
         grounding.ground("r", FakeTools(), artifact_dir=tmp_path, transport_factory=factory, models=["m1", "m2"])
 
 
@@ -945,3 +948,216 @@ def test_retry_after_header_and_env_retries(monkeypatch):
     with pytest.raises(grounding.GroundingError, match="after 3 attempts"):
         grounding.make_gemini_transport(api_key="k", sleep=sleeps.append, model="m")({})
     assert len(sleeps) == 2
+
+
+def test_rejected_generation_is_corrected_without_execution_and_replays(tmp_path):
+    bodies = []
+
+    def transport(body):
+        synthetic = scripted_intent(body, "groq")
+        if synthetic:
+            return synthetic
+        bodies.append(body)
+        if len(bodies) == 1:
+            raise grounding.ToolCallRejected({"code": "tool_use_failed", "failed_generation": INJECTION})
+        return groq_call("ask_clarification", question="Which release?", unresolved=["release"])
+
+    transport.provider = "groq"
+    transport.model_used = GROQ_MODEL
+    tools = FakeTools()
+    result, path = grounding.ground("undo a release", tools, transport=transport, artifact_dir=tmp_path)
+    assert result.validation_errors == [] and tools.calls == []
+    assert bodies[0]["tool_choice"] == "required" and bodies[0]["parallel_tool_calls"] is False
+    correction = bodies[1]["messages"][-1]["content"]
+    assert "propose_fleet" in correction and "ask_clarification" in correction
+    assert INJECTION not in correction
+    assert next(e for e in json.loads(path.read_text())["events"] if e.get("phase") != "intent")["type"] == "model_error"
+    assert grounding.replay(path).result == result.result
+
+
+def test_rejected_generations_cannot_escape_the_turn_budget(tmp_path):
+    attempts = []
+
+    def transport(body):
+        synthetic = scripted_intent(body, "groq")
+        if synthetic:
+            return synthetic
+        attempts.append(body)
+        raise grounding.ToolCallRejected({"code": "tool_use_failed"})
+
+    transport.provider = "groq"
+    tools = FakeTools()
+    result, path = grounding.ground("undo a release", tools, transport=transport, artifact_dir=tmp_path)
+    assert grounding.is_aborted(result) and len(attempts) == grounding.MAX_TURNS - 1
+    assert tools.calls == []
+    assert sum(e["type"] == "model_error" for e in json.loads(path.read_text())["events"]) == grounding.MAX_TURNS - 1
+
+
+def test_tool_rejection_is_structured_and_redacted_but_other_400s_still_fail(monkeypatch):
+    response = httpx.Response(400, json={"error": {"code": "tool_use_failed", "message": "bad tool SECRET",
+                                                "failed_generation": "SECRET delete_everything"}})
+    monkeypatch.setattr(grounding.httpx, "post", lambda *a, **kw: response)
+    with pytest.raises(grounding.ToolCallRejected) as error:
+        grounding.make_groq_transport(api_key="SECRET", retries=1)({})
+    assert "SECRET" not in json.dumps(error.value.details)
+    assert error.value.details == {"status": 400, "code": "tool_use_failed",
+                                    "message": "Provider rejected a generated tool call."}
+    response = httpx.Response(400, json={"error": {"code": "invalid_request_error"}})
+    with pytest.raises(grounding.GroundingError, match="not retryable") as error:
+        grounding.make_groq_transport(api_key="SECRET", retries=1)({})
+    assert not isinstance(error.value, grounding.ToolCallRejected)
+
+
+def test_groq_waits_for_reported_budget_and_records_usage_without_credentials(monkeypatch):
+    bodies, sleeps = [], []
+
+    def post(*args, **kwargs):
+        bodies.append(kwargs["json"])
+        headers = {"x-ratelimit-remaining-tokens": "10", "x-ratelimit-reset-tokens": "1m2.5s"} \
+            if len(bodies) == 1 else {}
+        return httpx.Response(200, headers=headers, json={"usage": {"prompt_tokens": 4000}})
+
+    monkeypatch.setattr(grounding.httpx, "post", post)
+    monkeypatch.setattr(grounding.time, "monotonic", lambda: 100)
+    monkeypatch.delenv("RW_GROUNDING_MAX_COMPLETION_TOKENS", raising=False)
+    monkeypatch.delenv("RW_GROUNDING_REASONING_EFFORT", raising=False)
+    transport = grounding.make_groq_transport(api_key="SECRET", sleep=sleeps.append)
+    transport({"messages": []})
+    transport({"messages": []})
+    transport({"messages": []})  # Missing headers do not invent zero remaining tokens.
+    assert sleeps == [62.5]
+    assert bodies[0]["max_completion_tokens"] == 2048 and bodies[0]["reasoning_effort"] == "medium"
+    assert transport.trace[0]["usage"]["prompt_tokens"] == 4000
+    assert "SECRET" not in json.dumps(transport.trace) and "authorization" not in json.dumps(transport.trace)
+
+
+def test_credentials_follow_the_selected_provider(monkeypatch):
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    monkeypatch.setenv("GEMINI_API_KEY", "fake-key")
+    assert grounding.has_credentials("gemini:example")
+    assert not grounding.has_credentials("groq:example")
+    assert not grounding.has_credentials("unsupported:example")
+
+
+@pytest.mark.parametrize("name,value", [("RW_GROUNDING_MAX_COMPLETION_TOKENS", "0"),
+                                       ("RW_GROUNDING_MAX_COMPLETION_TOKENS", "invalid"),
+                                       ("RW_GROUNDING_REASONING_EFFORT", "invalid")])
+def test_invalid_generation_settings_fail_before_a_request(monkeypatch, name, value):
+    monkeypatch.setenv(name, value)
+    with pytest.raises(grounding.GroundingError, match=name):
+        grounding.make_groq_transport(api_key="fake-key")
+
+
+def test_wire_history_keeps_call_identity_and_exact_source_without_reasoning_metadata():
+    native = groq_call("current_fleet")["choices"][0]["message"]
+    native["reasoning"] = "provider-only reasoning that does not belong in request history"
+    payload = {"text": 'Basket — a "quoted" source', "nested": [1, True]}
+    body = grounding.GroqProvider().body([
+        {"role": "assistant", "native": native},
+        {"role": "tool", "name": "current_fleet", "call_id": "call_1", "payload": payload}])
+    assert "reasoning" not in body["messages"][1]
+    assert body["messages"][1]["tool_calls"] == native["tool_calls"]
+    assert body["messages"][2]["tool_call_id"] == "call_1"
+    assert json.loads(body["messages"][2]["content"]) == payload
+    assert "\\u2014" not in body["messages"][2]["content"]
+
+
+def test_repeated_excerpt_references_preserve_capped_and_changed_evidence(monkeypatch):
+    row = {"excerpt_id": EX_ID, "content_hash": GOOD_HASH, "text": EX_TEXT,
+           "release_id": "release:cart:old", "service": "cart"}
+
+    class Tools:
+        def get_excerpts(self, ids):
+            return [row], {"truncated": False}
+
+    excerpts, releases, audit, events, state = {}, {}, [], [], {}
+
+    def fetch():
+        payload, terminal = grounding._handle_call("get_excerpts", {"excerpt_ids": [EX_ID]}, Tools(),
+                                                   excerpts, releases, audit, events, state)
+        assert terminal is None
+        return payload
+
+    monkeypatch.setattr(grounding, "MAX_RESULT_CHARS", 1)
+    assert fetch()["rows"] == []  # A capped-away excerpt was never delivered.
+    monkeypatch.setattr(grounding, "MAX_RESULT_CHARS", 20000)
+    assert fetch()["rows"][0]["text"] == EX_TEXT
+    repeated = fetch()["rows"][0]
+    assert "text" not in repeated and repeated["text_already_returned"] is True
+    assert excerpts[EX_ID]["text"] == EX_TEXT  # Trusted citation validation retains the actual text.
+    row["content_hash"] = "sha256:" + "cd" * 32
+    assert fetch()["rows"][0]["text"] == EX_TEXT  # A different content identity is not deduplicated.
+
+
+def test_provider_failure_preserves_partial_grounding_evidence(tmp_path):
+    calls = []
+
+    def transport(body):
+        synthetic = scripted_intent(body, "groq")
+        if synthetic:
+            return synthetic
+        calls.append(body)
+        if len(calls) == 1:
+            return groq_call("current_fleet")
+        raise grounding.GroundingError("request exceeded provider capacity")
+
+    transport.provider, transport.model_used = "groq", GROQ_MODEL
+    with pytest.raises(grounding.GroundingError) as error:
+        grounding.ground("rollback", FakeTools(), transport=transport, artifact_dir=tmp_path)
+    saved = json.loads(error.value.transcript_path.read_text())
+    assert error.value.transcript_path.parent.name == "failures"
+    assert saved["provider_failed"] and saved["result"] is None
+    assert [event["type"] for event in saved["events"] if event.get("phase") != "intent"] == ["model", "tool"]
+
+
+@pytest.mark.parametrize("fallback", [False, True])
+def test_saved_provider_errors_discard_account_details_in_failure_and_fallback(tmp_path, fallback):
+    private = "org_FAKE000 SECRET-KEY raw_provider_body"
+
+    def factory(model):
+        calls = []
+
+        def transport(body):
+            synthetic = scripted_intent(body, "groq")
+            if synthetic:
+                return synthetic
+            calls.append(body)
+            if model == "groq:good":
+                return groq_call("ask_clarification", question="Which release?", unresolved=[])
+            if len(calls) == 1:
+                return groq_call("current_fleet")
+            if len(calls) == 2:
+                raise grounding.ToolCallRejected({"message": private, "failed_generation": private})
+            raise grounding.GroundingError("HTTP 429: " + private)
+
+        transport.provider, transport.model_used = "groq", model
+        return transport
+
+    models = ["groq:bad", "groq:good"] if fallback else ["groq:bad"]
+    if fallback:
+        _, path = grounding.ground("rollback", FakeTools(), models=models,
+                                   transport_factory=factory, artifact_dir=tmp_path)
+    else:
+        with pytest.raises(grounding.GroundingError) as error:
+            grounding.ground("rollback", FakeTools(), models=models,
+                             transport_factory=factory, artifact_dir=tmp_path)
+        path = error.value.transcript_path
+        assert "org_FAKE" not in str(error.value) and "SECRET-KEY" not in str(error.value)
+    raw = path.read_text()
+    assert all(marker not in raw for marker in ("org_FAKE", "SECRET-KEY", "raw_provider_body", "failed_generation"))
+    failed = json.loads(raw)["abandoned_attempts"][0]
+    assert failed["error"] == {"status": 429, "code": "rate_limited", "message": "Provider rate limit reached."}
+    rejection = next(e for e in failed["events"] if e["type"] == "model_error")
+    assert rejection["error"]["code"] == "tool_use_failed"
+
+
+def test_error_response_usage_cannot_smuggle_raw_provider_text_into_trace(monkeypatch):
+    private = "org_FAKE000 SECRET-KEY raw_provider_body"
+    response = httpx.Response(400, json={"error": {"code": "tool_use_failed", "message": private,
+                                                 "failed_generation": private}, "usage": private})
+    monkeypatch.setattr(grounding.httpx, "post", lambda *a, **kw: response)
+    transport = grounding.make_groq_transport(api_key="SECRET-KEY", retries=1)
+    with pytest.raises(grounding.ToolCallRejected) as error:
+        transport({})
+    assert transport.trace[0]["usage"] is None
+    assert private not in json.dumps({"error": error.value.details, "trace": transport.trace})

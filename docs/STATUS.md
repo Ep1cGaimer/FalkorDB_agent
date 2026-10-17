@@ -2,9 +2,12 @@
 
 Updated 2026-10-17 (issue #17 intent validation; earlier dated evidence is preserved below).
 Product: **RollbackWitness**, build mode. Current implementation branch: `plan/issue-17-ambiguity`,
-synced with `main` at `bdeaaf6`, including PR #16. The issue #2 evaluation and historical MCP
+synced with `main` at `bc4bcf0`, including PRs #13 and #16. The issue #2 evaluation and historical MCP
 review status are preserved below. Synthetic fixture only — no production data or product deployment.
 
+For issue #3 and #4 work, see [the implementation report](ISSUE_3_FIX_REPORT.md) and
+[the quota plan](ISSUE_4_QUOTA.md). The historical comparison numbers are author-reported;
+their raw artifacts are not committed. They are separate from the issue #2 evaluation below.
 
 Every row below is a command that was actually run, with its observed output. Nothing here is a plan
 or an estimate.
@@ -398,15 +401,12 @@ rule still guessed in 3/3 runs and needs a separate behavioral follow-up.
 
 Remaining open work is tracked in [GitHub issues](https://github.com/Ep1cGaimer/FalkorDB_agent/issues):
 
-- **[#3](https://github.com/Ep1cGaimer/FalkorDB_agent/issues/3) — live LLM control not run.**
-  The earlier equal-information flat-context control attempt was blocked by provider
-  limits (its prompt exceeded `qwen3.8-27b`'s per-minute cap). This grounding batch does
-  not evaluate the control; no control score is claimed.
-- **[#4](https://github.com/Ep1cGaimer/FalkorDB_agent/issues/4) — Groq free-tier limits.**
-  Earlier observations exhausted `gpt-oss-120b`'s daily allowance (198,269/200,000) and
-  hit HTTP 413 on longer `qwen3.8-27b` turns. The full #2 batch above completed without
-  provider changes, but a documented longer-term quota strategy and browser validation
-  remain separate work under #4.
+- **[#3](https://github.com/Ep1cGaimer/FalkorDB_agent/issues/3) — PR #13 under review.**
+  The separate three-pair comparison is recorded in [ISSUE_3_COMPARISON.md](ISSUE_3_COMPARISON.md)
+  as author-reported observations, not independently verifiable acceptance evidence.
+- **[#4](https://github.com/Ep1cGaimer/FalkorDB_agent/issues/4) — PR #13 under review.**
+  The smaller-budget choice and simulated browser quota-message check are documented in
+  [ISSUE_4_QUOTA.md](ISSUE_4_QUOTA.md). Finite quota and future rate-limit errors remain possible.
 
 The UI revamp ([#11](https://github.com/Ep1cGaimer/FalkorDB_agent/issues/11)) and startup
 instructions ([#12](https://github.com/Ep1cGaimer/FalkorDB_agent/issues/12)) remain separate work.

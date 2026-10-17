@@ -14,6 +14,12 @@ Only a `BOUNDED_PASS` can be approved, by a human, for an idempotent **local sim
 
 > All data is a **synthetic fixture** (Cart and Checkout services, two releases each, one cache, retained saved carts). Replayed agent runs are labeled as replays.
 
+New to the codebase? Read the [project guide with examples and Mermaid diagrams](docs/PROJECT_GUIDE.md). The [initial issue #3 analysis](docs/ISSUE_3_ANALYSIS.md) preserves the investigation and solution options before implementation.
+
+The [issue #3 implementation report](docs/ISSUE_3_FIX_REPORT.md) explains the tool-call and rate-limit changes, why each was needed, and their verification results. The [historical live comparison](docs/ISSUE_3_COMPARISON.md) contains author-reported results; its raw artifacts are not committed and those numbers are not independently verifiable acceptance evidence.
+
+For the free-tier operating choice and the browser check of the sanitized quota message, see the [issue #4 quota plan](docs/ISSUE_4_QUOTA.md).
+
 ## The thirty-second story
 
 1. The agent grounds the request in release notes and code, cites exact quotes, and asks when the fix to keep and the change to undo live in the same artifact.
@@ -70,7 +76,7 @@ for host configuration, strict inputs, size/time limits and restart/retry behavi
 
 - **Independent oracle:** 8 hand-derived cases (`evals/expected/`) — the real pipeline on real FalkorDB matches all 8 (disposition, exact obligations, probe results, gaps).
 - **Relational control:** SQL joins over the same raw facts reproduce the same obligation sets in 8/8 cases — a **tie**. The graph's contribution here is the connected query that drives what the agent checks and the inspectable evidence path, not exclusivity.
-- **Live grounding:** a recorded 10-run eval matched the expected outcome kind in **6/10** runs (case-level detail in [docs/STATUS.md](docs/STATUS.md)); the equal-information LLM control has not yet completed a live run. See [docs/OPEN_ISSUES.md](docs/OPEN_ISSUES.md).
+- **Live grounding:** a historical 10-run eval matched the expected outcome kind in **6/10** runs (case-level detail in [docs/STATUS.md](docs/STATUS.md)). The subsequent live control/product comparison, code fixes and remaining limits are recorded in the [issue #3 implementation report](docs/ISSUE_3_FIX_REPORT.md).
 - **Scope:** synthetic fixture; BOUNDED_PASS is byte/shape readability of modeled records only; readers are trusted, reviewed fixture code (the probe harness is failure containment, not a sandbox); local simulation only.
 
 ## Repository layout
@@ -84,4 +90,4 @@ scripts/           setup, smoke, investigate (CLI), serve (UI), fixture builder
 docs/              QUICKSTART, CONTRACTS, STATUS, OPEN_ISSUES, architecture and plans
 ```
 
-Build rules and model routing for contributors: [AGENTS.md](AGENTS.md). Product brief: [ROLLBACKWITNESS_IDEA.md](ROLLBACKWITNESS_IDEA.md). HiveMind is a separate project; this repository does not build it.
+Contributor setup and behavior: [QUICKSTART.md](docs/QUICKSTART.md) and [CONTRACTS.md](docs/CONTRACTS.md). Product brief: [PRODUCT.md](docs/PRODUCT.md). HiveMind is a separate project; this repository does not build it.
