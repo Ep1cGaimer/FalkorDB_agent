@@ -120,12 +120,16 @@ def test_cleanup_failure_does_not_hide_original_provider_failure(monkeypatch, tm
     class Session:
         def __init__(self, **kwargs):
             self.g = None
-            self.db = SimpleNamespace(list_graphs=lambda: (_ for _ in ()).throw(RuntimeError('cleanup error')))
+            connection = SimpleNamespace(info=lambda section: {'redis_version': 'test'},
+                                         execute_command=lambda *args: [['name', 'graph', 'ver', 60002]])
+            self.db = SimpleNamespace(connection=connection,
+                list_graphs=lambda: (_ for _ in ()).throw(RuntimeError('cleanup error')))
         def verify(self): pass
     monkeypatch.setattr(runner, 'Session', Session)
     monkeypatch.setattr(runner, 'run_investigation', lambda *a, **kw: (_ for _ in ()).throw(g.GroundingError('gsk_SECRET')))
     result = runner.execute_arm(runner.schedule(1)[0], MODEL, tmp_path, 6382)
     assert result['status'] == 'failed' and 'cleanup' in result and 'error' in result
+    assert result['error']['code'] == 'provider_error'
     assert 'gsk_SECRET' not in json.dumps(result)
 
 

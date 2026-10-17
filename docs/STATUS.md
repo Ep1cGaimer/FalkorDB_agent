@@ -129,6 +129,7 @@ Validation on macOS arm64, Python 3.12.13, pinned FalkorDB 6.0.2:
 | JavaScript unit tests | **16 passed**. |
 | SQL / graph / independent oracle | Equal obligation sets in **8/8** baseline cases; inherited seven-obligation overlay regressions pass. |
 | Portable evidence | Moved bundle verified/rescored with credentials removed and sockets denied; all prior bundles also verify. |
+| Final runner harness checks | **4 passed**: server metadata by module name, and provider error retained when cleanup also fails. |
 | Portability regressions | **12 passed**, including a normal filesystem alias outside the bundle and rejection of an internal artifact symlink. |
 | Whitespace | `git diff --check` passes. |
 

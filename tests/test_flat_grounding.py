@@ -156,4 +156,4 @@ def test_runner_executes_real_checker_protocol_and_cleanup(monkeypatch, tmp_path
     assert observation['checker_elapsed_s'] == 0
     if arm != 'flat_assessment':
         assert observation['cleanup'] == 'verified_absent'
-        assert observation['server']['modules'][0]['version'] == 60002
+        assert {m['name']: m['version'] for m in observation['server']['modules']}['graph'] == 60002
