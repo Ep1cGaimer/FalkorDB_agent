@@ -1,5 +1,8 @@
 # Slice 2 UI design (agreed with the owner)
 
+Historical design. Superseded by the owner's October 16 reference-led workspace refactor;
+see [../UI.md](../UI.md) for the current interface and verification workflow.
+
 One calm, single-column incident-console screen (~1100px content width) that reads top to bottom in investigation order. No animation for its own sake; the wow is the green-startup vs red-reader contrast and the evidence path. Avoid the generic-admin look: no card on every section, no numbered wizard headers, no stock outlined badges, no hash noise.
 
 ```

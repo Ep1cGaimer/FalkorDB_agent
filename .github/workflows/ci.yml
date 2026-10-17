@@ -1,5 +1,5 @@
 # Offline checks for RollbackWitness: unit/integration tests against a real FalkorDB and the
-# deterministic end-to-end smoke. Read-only: no secrets, no live model calls, no deploy step.
+# deterministic end-to-end smoke and browser acceptance. No secrets, live model calls or deploy step.
 name: CI
 
 on:
@@ -47,3 +47,25 @@ jobs:
 
       - name: Deterministic end-to-end smoke (no model key)
         run: .venv/bin/python scripts/smoke.py
+
+      - name: Browser acceptance (synthetic grounding, real reader checks)
+        shell: bash
+        run: |
+          UI_BROWSER_BINARY="$(command -v google-chrome)"
+          export UI_BROWSER_BINARY
+          mkdir -p artifacts
+          .venv/bin/python tests/ui/serve_fixture.py > artifacts/ui-server.log 2>&1 &
+          ui_server_pid=$!
+          trap 'kill -TERM "$ui_server_pid" 2>/dev/null || true; wait "$ui_server_pid" || true' EXIT
+          curl --fail --silent --show-error --retry 20 --retry-delay 1 --retry-connrefused \
+            http://127.0.0.1:8002/api/snapshots > /dev/null
+          timeout 180s node tests/ui/check.mjs
+
+      - name: Upload browser diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-diagnostics
+          path: |
+            artifacts/ui-server.log
+            artifacts/screens/decision-review/
