@@ -264,12 +264,14 @@ def derived_disposition(pairs: dict[tuple[str, str, str], bool], predictions: di
 def run_from_control(transcript: dict, fixtures: dict, manifest: dict) -> dict:
     result = transcript.get("result")
     probes = transcript.get("probe_calls") or []
-    executed: dict[tuple[str, str, str], str] = {}
+    executed: dict[tuple[str, str, str], list[str]] = {}
     for call in probes:
         res = call.get("result") or {}
         status = res.get("status")
         if status and call.get("service") and call.get("version") and call.get("record_id"):
-            executed[(call["service"], call["version"], call["record_id"])] = status
+            # a pair may be probed more than once (a retry): fold FAIL > unresolved > PASS
+            executed.setdefault((call["service"], call["version"], call["record_id"]), []).append(status)
+    probed = {pair: _dominant_result(statuses) for pair, statuses in executed.items()}
     fleet, notes = canonical_fleet((result or {}).get("fleet"), fixtures, manifest)
     return {
         "label": _control_label(transcript),
@@ -281,7 +283,7 @@ def run_from_control(transcript: dict, fixtures: dict, manifest: dict) -> dict:
         "fleet_notes": notes,
         "disposition": (result or {}).get("disposition"),
         "alternative": (result or {}).get("alternative"),
-        "probed": executed,
+        "probed": probed,
         "model_turns": transcript.get("model_turns"),
         "tool_calls": transcript.get("tool_call_count", len(transcript.get("tool_calls") or [])),
         "aborted": bool(transcript.get("aborted") or result is None),
@@ -309,8 +311,33 @@ def _turns_from_grounding_transcript(path: str | None) -> int | None:
     return sum(1 for e in events if e.get("type") in {"model", "model_error"}) or None
 
 
+# --------------------------------------------------------------------------- receipt binding
+
+def _dominant_result(statuses: list[str]) -> str:
+    """Fold observable probe results for one pair: FAIL dominates, then any unresolved status over
+    PASS — a pair probed PASS and UNKNOWN (or retried) on different runs was never established."""
+    if "FAIL" in statuses:
+        return "FAIL"
+    non_pass = [s for s in statuses if s != "PASS"]
+    return non_pass[0] if non_pass else statuses[0]
+
+
+def _receipt_applies(receipt: dict, ob_tuple: dict) -> bool:
+    """A product receipt is evidence for an obligation only when the tuple it binds equals the
+    obligation's tuple exactly, the same rule the pipeline applies. Matching by obligation hash
+    alone lets a stale or foreign receipt under the same hash discharge a pair its probe never
+    ran on; a receipt with no bound tuple cannot be checked and is not evidence."""
+    tup = receipt.get("tuple")
+    return isinstance(tup, dict) and isinstance(ob_tuple, dict) and tup == ob_tuple
+
+
 def runs_from_report(report: dict, fixtures: dict, manifest: dict) -> list[dict]:
-    """One scored entry per product attempt that reached a plan (or one CLARIFICATION entry)."""
+    """One scored entry per product attempt that reached a plan (or one CLARIFICATION entry).
+
+    Receipts are evidence for an obligation only when the tuple they bind matches that
+    obligation's tuple on every field the report carries; a pair probed more than once folds
+    FAIL > unresolved > PASS, so a last-passed retry can no longer hide an earlier FAIL.
+    """
     runs: list[dict] = []
     name = Path(str(report.get("_path") or "report")).name
     for index, attempt in enumerate(report.get("attempts") or [], 1):
@@ -338,18 +365,27 @@ def runs_from_report(report: dict, fixtures: dict, manifest: dict) -> list[dict]
             raw_fleet[entry["service"]] = {"version": version, "flags": entry.get("flags") or {}}
         fleet, notes = canonical_fleet(raw_fleet, fixtures, manifest)
         verification = detail.get("verification") or {}
-        by_hash = {r.get("obligation_hash"): r for r in verification.get("receipts") or []}
-        probed: dict[tuple[str, str, str], str] = {}
+        receipts_by_hash: dict[str, list[dict]] = {}
+        for r in verification.get("receipts") or []:
+            receipts_by_hash.setdefault(r.get("obligation_hash"), []).append(r)
+        results_by_pair: dict[tuple[str, str, str], list[str]] = {}
+        unbound = 0
         for ob in verification.get("obligations") or []:
             tup = ob.get("tuple") or {}
-            receipt = by_hash.get(ob.get("obligation_hash"))
-            if receipt is None:
-                continue
+            candidates = receipts_by_hash.get(ob.get("obligation_hash")) or []
+            applicable = [r for r in candidates if _receipt_applies(r, tup)]
+            unbound += len(candidates) - len(applicable)
             version = version_of.get(tup.get("release_id"))
             if version is None:
                 info = fixtures["by_release_id"].get(tup.get("release_id")) or {}
                 version = info.get("version", "?")
-            probed[(tup.get("service"), version, tup.get("record_id"))] = receipt.get("result")
+            for receipt in applicable:
+                results_by_pair.setdefault((tup.get("service"), version, tup.get("record_id")), []) \
+                    .append(receipt.get("result"))
+        probed = {pair: _dominant_result(list(results)) for pair, results in results_by_pair.items()}
+        if unbound:
+            notes.append(f"{unbound} saved probe receipt(s) did not bind to this plan's obligation "
+                         "tuples exactly; they are not evidence for any pair")
         runs.append({"label": label, "origin": "product", "model": grounding.get("model", "?"),
                      "live": bool(grounding.get("live")), "snapshot": (report.get("snapshot") or "").removeprefix("snapshot:"),
                      "fleet": fleet or None, "fleet_notes": notes, "disposition": verification.get("disposition"),
@@ -620,6 +656,11 @@ def main(argv: list[str] | None = None) -> int:
           "disposition is also NEEDS_EVIDENCE. `unsupported BOUNDED_PASS` is reported separately from "
           "`false BOUNDED_PASS` (which keeps its meaning: claimed BOUNDED_PASS, oracle disagrees), and "
           "oracle-consistent runs additionally require a supported claim.")
+    print("- a saved product receipt counts as evidence for an obligation only when the tuple it carries "
+          "matches that obligation's tuple; a receipt matched by hash but bound to different tuple fields "
+          "is reported as a note and is not evidence (reports that carry no tuple keep the previous "
+          "hash-only handling). Where a pair was probed more than once (retries), the fold is "
+          "FAIL > unresolved > PASS, so a later PASS never hides an earlier FAIL or UNKNOWN.")
     print("- `proposed cart reader x 2002 probed` is the cart reader of the proposed version on the "
           "retained cart/v2 bytes (saved-cart-2002).")
     print("- disposition for a fleet with no oracle case is derived from the oracle's per-reader predictions "

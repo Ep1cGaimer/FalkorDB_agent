@@ -99,8 +99,19 @@ class Session:
     # ---- plan from a grounded proposal (or a fixture-defined fleet for controls/tests)
     def plan_from_proposal(self, proposal: GroundingProposal, request_text: str, origin: str = "agent",
                            label: str = "") -> tuple[CandidatePlan | None, list[str]]:
-        fleet_rows, _ = G.current_fleet(self.g, self.snapshot_id)
-        releases = {r["service"]: G.releases_for_service(self.g, r["service"])[0] for r in fleet_rows}
+        # Completeness: a capped query returned cap rows and truncated=True, so the observation is
+        # provably incomplete. Materializing a plan (and possibly BOUNDED_PASSing it) from a
+        # truncated fleet or release inventory would certify unseen deployments; refuse instead.
+        fleet_rows, fleet_log = G.current_fleet(self.g, self.snapshot_id)
+        if fleet_log["truncated"]:
+            return None, ["current fleet observation is truncated; cannot build a complete plan"]
+        releases: dict[str, list[dict[str, Any]]] = {}
+        for row in fleet_rows:
+            rows, release_log = G.releases_for_service(self.g, row["service"])
+            if release_log["truncated"]:
+                return None, [f"release inventory for service {row['service']!r} is truncated; "
+                              "cannot build a complete plan"]
+            releases[row["service"]] = rows
         errors: list[str] = []
         ex_rows: list[dict[str, Any]] = []
         if proposal.citations:

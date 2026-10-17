@@ -630,17 +630,29 @@ _NO_WRITER = object()  # sentinel: this (store, record) had no obligation, so no
 def fixture_file(path: str, fixture_root: Path) -> Path:
     """Resolve a stored artifact path against one fixture root.
 
-    Obligation payload/codec paths are posix paths relative to the repository root
-    (``fixtures/shop/...``) while manifest record paths are fixture-relative; re-rooting the
-    fixture-relative part under ``fixture_root`` therefore resolves the real fixture and any copy of
-    it identically. An already-absolute path is returned unchanged, and a path that does not exist is
-    the caller's drift problem, never an exception here.
+    Two forms are stored. Obligation codec paths (and graph batch payload paths) are posix paths
+    relative to the *repository* root — ``fixtures/shop/...`` for the shipped fixture, and
+    ``artifacts/<copy>/shop/...`` when a fixture copy lives inside the repo. Manifest record
+    paths are fixture-relative. Resolution: a repo-relative path is re-rooted at the repository
+    root only when (and only when) that file resolves inside ``fixture_root``, so a fixture copy
+    under the repo reads its own codecs without re-rooting the stored path a second time; every
+    other relative path joins the fixture-relative part (after stripping the shipped-fixture
+    prefix) under ``fixture_root``. No relative path may resolve outside the fixture root, an
+    already-absolute path is returned unchanged, and a path that does not exist is the caller's
+    drift problem, never an exception here.
     """
     candidate = Path(path)
     if candidate.is_absolute() or candidate.as_posix().startswith("/"):
         return candidate
     posix = candidate.as_posix()
     relative = posix[len(FIXTURE_PREFIX):] if posix.startswith(FIXTURE_PREFIX) else posix
+    if not posix.startswith(FIXTURE_PREFIX):
+        try:
+            repo_file = REPO_ROOT / posix
+            if repo_file.resolve().is_relative_to(Path(fixture_root).resolve()):
+                return repo_file
+        except OSError:  # pathological paths fall back to the plain join, i.e. a drift line
+            pass
     return Path(fixture_root) / relative
 
 

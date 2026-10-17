@@ -22,16 +22,23 @@ Fixes for defects an independent repository review reproduced on `main` at `793d
 - **Fleet drift after approval:** simulation still applied. Approval and first simulation now refuse a fleet that differs from the plan's `baseline_fleet_hash`.
 - **Scorer:** it used to count UNKNOWN probes as a supported pass; a claim now needs its own PASS or FAIL evidence.
 - **Fixture rebuild test:** it used to rewrite tracked fixture files; it now builds into a temporary directory.
-- **CLI:** `investigate.py` used to reset the UI's graph; it now uses its own `rw_cli_<hex8>` graph and deletes it.
+- **CLI:** `investigate.py` used to reset the UI's graph; it now uses its own `rw_cli_<hex8>` graph and deletes it, even when setup fails partway.
+- **Second review round:**
+  - a truncated current-fleet or release-inventory read now refuses to build a plan; it used to allow BOUNDED_PASS;
+  - incomplete current-fleet rows refuse `/approve` and `/simulate` with 409 instead of 500;
+  - provider envelopes are type-checked before defaults, non-JSON 200 bodies and non-string tool names fail closed, and saved `usage` is limited to numeric token/time fields;
+  - the scorer counts a receipt only when its tuple equals the obligation's, and FAIL dominates repeated results;
+  - fixture copies inside the repo no longer report false codec drift.
 
 Observed on Windows 11, Python 3.12, FalkorDB 6.0.2, with the MCP extra installed:
 
 | Check | Observed result |
 |---|---|
-| Non-live suite | `.venv\Scripts\python.exe -m pytest -q -m "not live" -p no:cacheprovider`: **551 passed, 3 deselected**, 0 skipped. |
+| Non-live suite | `.venv\Scripts\python.exe -m pytest -q -m "not live" -p no:cacheprovider`: **635 passed, 3 deselected**, 0 skipped (after the second review round). |
 | Deterministic smoke | `scripts\smoke.py`: all checks PASS, cleanup PASS. |
 | Operator fleet CLI | `scripts\investigate.py --fleet cart=1.4 --confirm-as you`: **BLOCKED**, cart 1.4 × saved-cart-2002 FAIL with the witness path; no `rw_cli_*` graph left. |
-| Relational control | `evalselational_control.py`: SQL = FalkorDB = oracle in **8/8** cases. |
+| Relational control | `evals
+elational_control.py`: SQL = FalkorDB = oracle in **8/8** cases. |
 | Browser acceptance | `tests/ui/serve_fixture.py` + `node tests/ui/check.mjs` (Edge 155): all checks PASS; one existing SKIP (no recorded replay clarification answer). |
 | JS unit tests | `node --test tests/js/*.test.mjs`: **16 passed**. |
 

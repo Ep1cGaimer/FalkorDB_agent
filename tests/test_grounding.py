@@ -1030,6 +1030,90 @@ def test_saved_provider_errors_discard_account_details_in_failure_and_fallback(t
     assert rejection["error"]["code"] == "tool_use_failed"
 
 
+def test_groq_200_usage_trace_keeps_only_allowlisted_numeric_fields(monkeypatch):
+    """HTTP 200 trace usage is an allowlist of numeric token/time fields; anything else a provider
+    put inside `usage` (error markers, provider text, string numbers, bools, nested objects) is
+    dropped, never persisted."""
+    marker = "USAGE-MARKER-2"
+    private = "org_FAKE000 SECRET-KEY raw_provider_body"
+    response = httpx.Response(200, json={
+        "choices": None,  # envelope is malformed at parse time, but the transport still recorded
+        "usage": {"prompt_tokens": 11, "completion_tokens": 22, "total_tokens": 33,
+                  "queue_time": 0.5, "prompt_time": 0.5, "completion_time": 0.5, "total_time": 0.5,
+                  "marker": marker, "error": private, "prompt_tokens_str": "11",
+                  "total_tokens_bool": True, "nested": {"secret": private}}})
+    monkeypatch.setattr(grounding.httpx, "post", lambda *a, **kw: response)
+    transport = grounding.make_groq_transport(api_key="SECRET-KEY", retries=1)
+    transport({})
+    assert transport.trace[0]["usage"] == {
+        "prompt_tokens": 11, "completion_tokens": 22, "total_tokens": 33,
+        "queue_time": 0.5, "prompt_time": 0.5, "completion_time": 0.5, "total_time": 0.5}
+    dumped = json.dumps(transport.trace)
+    assert marker not in dumped and private not in dumped and "nested" not in dumped
+
+
+def test_groq_200_usage_allowlist_never_persists_error_markers_on_malformed_envelopes(monkeypatch, tmp_path):
+    """The exact reviewer repro: 200 with choices:null and an error marker inside usage must end as
+    a sanitized malformed_response with no marker anywhere in the saved trace or transcript."""
+    marker = "USAGE-ERROR-MARKER-3"
+    response = httpx.Response(200, json={"choices": None, "usage": {"error": marker}})
+
+    def post(*a, **kw):
+        return response
+
+    monkeypatch.setattr(grounding.httpx, "post", post)
+    transport = grounding.make_groq_transport(api_key="k", retries=1)
+    with pytest.raises(grounding.GroundingError) as ei:
+        grounding.ground("r", FakeTools(), transport=transport, artifact_dir=tmp_path)
+    assert ei.value.code == "malformed_response"
+    saved_trace = json.dumps(transport.trace)
+    assert marker not in saved_trace and transport.trace[0]["usage"] == {}
+    assert marker not in ei.value.transcript_path.read_text()
+
+
+@pytest.mark.parametrize("make", ["gemini", "groq"])
+def test_http_200_non_json_body_is_a_sanitized_malformed_response(monkeypatch, make):
+    """A 200 whose body is not JSON is malformed_response in the shared POST, for both providers:
+    no JSONDecodeError escape, no body text in the message, sanitized details."""
+    body = "<html>Gateway SECRET-KEY maintenance</html>"
+    monkeypatch.setattr(grounding.httpx, "post", lambda *a, **kw: httpx.Response(200, text=body))
+    transport = grounding.make_gemini_transport(api_key="k", sleep=lambda s: None, model="m", retries=1) \
+        if make == "gemini" else grounding.make_groq_transport(api_key="k", sleep=lambda s: None, retries=1)
+    with pytest.raises(grounding.GroundingError) as ei:
+        transport({})
+    assert grounding.provider_error_details(ei.value) == {
+        "status": None, "code": "malformed_response",
+        "message": "Provider returned a malformed response."}
+    assert "SECRET-KEY" not in str(ei.value) and "Gateway" not in str(ei.value)
+
+
+def test_chain_falls_through_when_a_provider_answers_200_with_non_json(monkeypatch, tmp_path):
+    private = "SECRET-NONJSON-BODY"
+    posts = []
+
+    def post(url, json=None, **kw):
+        posts.append(json)
+        if json["model"] == "m1":
+            return httpx.Response(200, text=f"<html>{private}</html>")
+        return httpx.Response(200, json=groq_call("ask_clarification", call_id="c1", question="q",
+                                                  unresolved=[]))
+
+    monkeypatch.setattr(grounding.httpx, "post", post)
+
+    def factory(spec):
+        return grounding.make_groq_transport(api_key="SECRET-KEY", model=grounding.split_model(spec)[1],
+                                             sleep=lambda s: None, retries=1)
+
+    gr, path = grounding.ground("r", FakeTools(), artifact_dir=tmp_path, transport_factory=factory,
+                                models=["groq:m1", "groq:m2"])
+    assert [p["model"] for p in posts] == ["m1", "m2"]
+    assert gr.model == "groq:m2" and isinstance(gr.result, GroundingClarification)
+    saved_text = path.read_text()
+    saved = json.loads(saved_text)
+    assert saved["abandoned_attempts"][0]["error"]["code"] == "malformed_response"
+    assert private not in saved_text
+
+
 def test_error_response_usage_cannot_smuggle_raw_provider_text_into_trace(monkeypatch):
     private = "org_FAKE000 SECRET-KEY raw_provider_body"
     response = httpx.Response(400, json={"error": {"code": "tool_use_failed", "message": private,
@@ -1252,6 +1336,172 @@ def test_flag_list_entries_must_be_name_str_enabled_bool(bad):
 def test_flag_dict_values_must_be_real_bools(bad):
     with pytest.raises(ValueError):
         grounding._flags_dict(bad)
+
+
+# --------------------------------------------------------------------------- type-buster envelopes
+# A PRESENT field of the wrong type (including empty dict/0/""/False) must be malformed_response,
+# never silently swapped for the empty default: an empty-looking envelope cannot become a "no calls"
+# turn that burns the whole turn budget and escapes the chain fallback.
+
+GEMINI_EMPTY_TYPE_BUSTERS = [
+    {"candidates": {}},
+    {"candidates": False},
+    {"candidates": 0},
+    {"candidates": ""},
+    {"candidates": [{"content": ""}]},
+    {"candidates": [{"content": 0}]},
+    {"candidates": [{"content": False}]},
+    {"candidates": [{"content": []}]},
+    {"candidates": [{"content": {"parts": ""}}]},
+    {"candidates": [{"content": {"parts": 0}}]},
+    {"candidates": [{"content": {"parts": False}}]},
+    {"candidates": [{"content": {"parts": {}}}]},
+]
+
+GROQ_EMPTY_TYPE_BUSTERS = [
+    {"choices": {}},
+    {"choices": False},
+    {"choices": 0},
+    {"choices": ""},
+    {"choices": [{"message": ""}]},
+    {"choices": [{"message": 0}]},
+    {"choices": [{"message": False}]},
+    {"choices": [{"message": []}]},
+    {"choices": [{"message": {"tool_calls": {}}}]},
+    {"choices": [{"message": {"tool_calls": False}}]},
+    {"choices": [{"message": {"tool_calls": 0}}]},
+    {"choices": [{"message": {"tool_calls": ""}}]},
+]
+
+
+@pytest.mark.parametrize("resp", GEMINI_EMPTY_TYPE_BUSTERS)
+def test_gemini_present_wrong_type_fields_are_malformed(resp):
+    with pytest.raises(grounding.GroundingError) as ei:
+        grounding.GeminiProvider().parse(resp)
+    assert ei.value.code == "malformed_response" and ei.value.status is None
+
+
+@pytest.mark.parametrize("resp", GROQ_EMPTY_TYPE_BUSTERS)
+def test_groq_present_wrong_type_fields_are_malformed(resp):
+    with pytest.raises(grounding.GroundingError) as ei:
+        grounding.GroqProvider().parse(resp)
+    assert ei.value.code == "malformed_response" and ei.value.status is None
+
+
+@pytest.mark.parametrize("provider,resp",
+                         [("gemini", r) for r in GEMINI_EMPTY_TYPE_BUSTERS]
+                         + [("groq", r) for r in GROQ_EMPTY_TYPE_BUSTERS])
+def test_chain_runs_the_second_model_and_never_saves_the_bad_response(provider, resp, tmp_path):
+    """Every type-buster kills only its chain entry, on the FIRST turn; the raw body/marker is
+    never persisted into the transcript, abandoned_attempts or transport_trace."""
+    marker = "RAW-CHAIN-MARKER-1"
+    payload = {**resp, "raw_marker": marker}
+    m1, m2 = f"{provider}:m1", f"{provider}:m2"
+    made, first_model_calls = [], {}
+
+    def factory(spec):
+        made.append(spec)
+        def tr(body):
+            first_model_calls.setdefault(spec, []).append(1)
+            if spec == m1:
+                return payload  # malformed on EVERY m1 turn
+            return groq_call("ask_clarification", call_id="m2-1", question="q", unresolved=[]) \
+                if provider == "groq" else call("ask_clarification", question="q", unresolved=[])
+        tr.provider = provider
+        tr.model_used = spec
+        return tr
+
+    gr, path = grounding.ground("r", FakeTools(), artifact_dir=tmp_path, transport_factory=factory,
+                                models=[m1, m2])
+    assert made == [m1, m2] and gr.model == m2
+    assert isinstance(gr.result, GroundingClarification) and not grounding.is_aborted(gr)
+    assert len(first_model_calls[m1]) == 1  # no turn-budget waste on the malformed entry
+    saved_text = path.read_text()
+    saved = json.loads(saved_text)
+    abandoned = saved["abandoned_attempts"][0]
+    assert abandoned["model"] == m1
+    assert abandoned["error"] == {"status": None, "code": "malformed_response",
+                                  "message": "Provider returned a malformed response."}
+    assert marker not in saved_text
+
+
+# --------------------------------------------------------------------------- non-string tool names
+
+@pytest.mark.parametrize("name", [[], {"a": 1}, 7, None])
+def test_gemini_non_string_function_name_is_an_invalid_call_and_the_loop_continues(tmp_path, name):
+    raw = {"candidates": [{"content": {"role": "model",
+                                       "parts": [{"functionCall": {"name": name, "args": {}}}]}}]}
+    gr, _, tools, t = run([raw, call("ask_clarification", question="q", unresolved=[])], tmp_path)
+    reply = t.bodies[1]["contents"][-1]["parts"][0]["functionResponse"]["response"]
+    assert reply == {"error": "tool name must be a string"}
+    assert tools.calls == []  # nothing executed with a non-string tool name
+    assert gr.tool_calls[0].get("error") == "tool name must be a string"
+    assert isinstance(gr.result, GroundingClarification) and not grounding.is_aborted(gr)
+
+
+def test_groq_non_string_tool_name_is_an_invalid_call_and_the_loop_continues(tmp_path):
+    bad = {"id": "chatcmpl-1", "choices": [{"index": 0, "finish_reason": "tool_calls", "message": {
+        "role": "assistant", "content": None,
+        "tool_calls": [{"id": "c1", "type": "function",
+                        "function": {"name": [], "arguments": "{}"}}]}}]}
+    gr, _, tools, t = groq_run([bad, groq_call("ask_clarification", call_id="c2", question="q",
+                                               unresolved=[])], tmp_path)
+    reply = json.loads(tool_replies(t, 1)[0]["content"])
+    assert reply == {"error": "tool name must be a string"}
+    assert tools.calls == []
+    assert gr.tool_calls[0].get("error") == "tool name must be a string"
+    assert isinstance(gr.result, GroundingClarification) and not grounding.is_aborted(gr)
+
+
+# --------------------------------------------------------------------------- malformed terminal fields
+
+@pytest.mark.parametrize("citations", [[7], [[1, 2]], "Receipt correction", {}, 0, False,
+                                       [{"excerpt_id": [EX_ID], "quote": "Receipt correction"}]])
+def test_malformed_citations_are_invalid_calls_not_crashes(tmp_path, citations):
+    bad = call("propose_fleet", changes=[{"service": "cart", "release_id": "release:cart:old"}],
+               citations=citations, rationale="r")
+    gr, _, tools, t = run([call("release_history", service="cart"), bad,
+                           call("ask_clarification", question="q", unresolved=[])], tmp_path)
+    reply = t.bodies[2]["contents"][-1]["parts"][0]["functionResponse"]["response"]
+    assert "invalid propose_fleet call" in reply["error"]
+    assert tools.calls == ["release_history:cart"]  # the loop continued past the malformed call
+    assert isinstance(gr.result, GroundingClarification) and not grounding.is_aborted(gr)
+
+
+def test_groq_malformed_citations_are_invalid_calls_not_crashes(tmp_path):
+    script = [groq_call("release_history", call_id="c1", service="cart"),
+              groq_call("propose_fleet", call_id="c2",
+                        changes=[{"service": "cart", "release_id": "release:cart:old"}],
+                        arguments=None, citations=[7], rationale="r"),
+              groq_call("ask_clarification", call_id="c3", question="q", unresolved=[])]
+    gr, _, tools, t = groq_run(script, tmp_path)
+    reply = json.loads(tool_replies(t, 2)[-1]["content"])
+    assert "invalid propose_fleet call" in reply["error"]
+    assert "release_history:cart" in tools.calls
+    assert isinstance(gr.result, GroundingClarification) and not grounding.is_aborted(gr)
+
+
+@pytest.mark.parametrize("changes", [[7], ["x"], {"release:cart:old": {}}, "release:cart:old"])
+def test_non_dict_change_entries_are_invalid_calls_not_crashes(tmp_path, changes):
+    bad = call("propose_fleet", changes=changes, citations="", rationale="r")
+    gr, _, tools, t = run([call("release_history", service="cart"), bad,
+                           call("ask_clarification", question="q", unresolved=[])], tmp_path)
+    reply = t.bodies[2]["contents"][-1]["parts"][0]["functionResponse"]["response"]
+    assert "invalid propose_fleet call" in reply["error"]
+    assert isinstance(gr.result, GroundingClarification) and not grounding.is_aborted(gr)
+
+
+@pytest.mark.parametrize("args", [{"question": 7, "unresolved": []},
+                                  {"question": "q", "unresolved": "which release?"},
+                                  {"question": "q", "unresolved": [7]},
+                                  {"question": "q", "unresolved": {}, "citations": [7]}])
+def test_malformed_clarification_fields_are_invalid_calls_not_crashes(tmp_path, args):
+    bad = call("ask_clarification", **args)
+    gr, _, tools, t = run([bad, call("ask_clarification", question="q", unresolved=[])], tmp_path)
+    reply = t.bodies[1]["contents"][-1]["parts"][0]["functionResponse"]["response"]
+    assert "invalid ask_clarification call" in reply["error"]
+    assert tools.calls == []  # ask_clarification runs no read tools; loop continued, not crashed
+    assert isinstance(gr.result, GroundingClarification) and not grounding.is_aborted(gr)
 
 
 def test_string_flag_value_is_an_invalid_call_not_silent_true(tmp_path):

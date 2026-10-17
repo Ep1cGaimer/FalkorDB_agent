@@ -60,6 +60,23 @@ GROUNDING_DIR = ROOT / "artifacts/grounding"
 EVIDENCE_DRIFT_REASON = "evidence changed since verification; re-verify and re-approve"
 
 
+def fleet_row_problem(row: dict) -> str | None:
+    """Why one current-fleet row cannot bind a plan (None when the row is complete).
+
+    approve/simulate construct FleetEntry values from these rows, so an incomplete observation
+    (no service, no RUNS release, malformed flags) must be refused with a clear reason — never a
+    raised validation error that surfaces as HTTP 500.
+    """
+    deployment = repr(row.get("deployment_id"))
+    if not (isinstance(row.get("service"), str) and row["service"].strip()):
+        return f"current fleet observation is incomplete: deployment {deployment} has no service"
+    if not (isinstance(row.get("release_id"), str) and row["release_id"].strip()):
+        return f"current fleet observation is incomplete: deployment {deployment} runs no release (no RUNS edge)"
+    if not isinstance(row.get("flags"), dict):
+        return f"current fleet observation is incomplete: deployment {deployment} has malformed flags"
+    return None
+
+
 class EvidenceDrift(SimulationRefused):
     """The bytes behind a stored verification no longer hold, so approval/simulation must stop.
 
@@ -150,6 +167,10 @@ class Investigation:
         current_rows, current_log = graph.current_fleet(self.session.g, self.session.snapshot_id)
         if current_log["truncated"]:
             raise SimulationRefused("current fleet query is truncated")
+        for row in current_rows:
+            problem = fleet_row_problem(row)
+            if problem:
+                raise SimulationRefused(problem)
         current = {row["service"]: row for row in current_rows}
         release_ids = {row["release_id"] for row in current_rows}
 
@@ -553,15 +574,21 @@ def create_app(*, session_factory: Callable | None = None,
         """Read the fleet the graph records right now, refusing on truncation like any observer.
 
         Used by both /approve and /simulate so both bind to the same observed fleet the plan was
-        materialized against.
+        materialized against. Incomplete rows are a clear 409 refusal, never a validation error.
         """
         from . import graph
 
         rows, log = graph.current_fleet(inv.session.g, inv.session.snapshot_id)
         if log["truncated"]:
             raise SimulationRefused("current fleet query is truncated")
-        return [FleetEntry(service=r["service"], release_id=r["release_id"], flags=r["flags"])
-                for r in rows]
+        entries = []
+        for row in rows:
+            problem = fleet_row_problem(row)
+            if problem:
+                raise SimulationRefused(problem)
+            entries.append(FleetEntry(service=row["service"], release_id=row["release_id"],
+                                      flags=row["flags"]))
+        return entries
 
     def verified(attempt):
         if not attempt.report:

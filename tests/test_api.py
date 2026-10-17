@@ -845,3 +845,74 @@ def test_is_live_provider_requires_real_provider_model(api, tmp_path):
                          db_path=tmp_path / f"live-{model}-{live}.sqlite")
         with TestClient(app) as other:
             assert create(other)["is_live_provider"] is expected, (model, live)
+
+
+def test_incomplete_current_fleet_refuses_approval_and_simulation(api):
+    """A current-fleet row without its RUNS release (or with malformed flags) can never bind a plan.
+
+    /approve and /simulate build FleetEntry values from the observed fleet rows; a row whose
+    release_id is missing used to raise a validation error and answer HTTP 500. Incomplete
+    observations must be refused with 409 and a clear reason instead — and the identical
+    observation must again approve and simulate cleanly once it is complete, so the refusal is
+    provably about the incomplete rows.
+    """
+    from rw import graph
+
+    client, _, original_app = api
+    state = create(client)
+    confirm(client, state)
+    alternative = client.post(f"/api/investigations/{state['id']}/alternative")
+    assert alternative.status_code == 200, alternative.text
+    alternative = alternative.json()
+    passing = confirm(client, alternative)
+    assert passing["verification"]["disposition"] == "BOUNDED_PASS"
+
+    inv = original_app.state.investigations[alternative["id"]]
+    g = inv.session.g
+    rows, log = graph.current_fleet(g, inv.session.snapshot_id)
+    assert not log["truncated"]
+    cart = next(row for row in rows if row["service"] == "cart")
+
+    # 1. the current cart deployment stops running its release: release_id is missing.
+    # /approve must refuse with a clear reason (it used to answer 500 through
+    # FleetEntry(release_id=None)), and /approve still works once the edge is back.
+    g.query("MATCH (:Deployment {id: $id})-[r:RUNS]->() DELETE r",
+            params={"id": cart["deployment_id"]})
+    refused = client.post(plan_url(alternative) + "/approve", json={"approved_by": "oncall:alice"})
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["reason"].startswith("current fleet observation is incomplete"), refused.text
+    g.query("MATCH (d:Deployment {id: $id}), (r:Release {id: $rid}) CREATE (d)-[:RUNS]->(r)",
+            params={"id": cart["deployment_id"], "rid": cart["release_id"]})
+    approval = client.post(plan_url(alternative) + "/approve", json={"approved_by": "oncall:alice"})
+    assert approval.status_code == 200, approval.text
+
+    # 2. with the approval recorded, /simulate must also refuse an incomplete observation through
+    # the shared helper — the same missing RUNS edge, never a 500
+    g.query("MATCH (:Deployment {id: $id})-[r:RUNS]->() DELETE r",
+            params={"id": cart["deployment_id"]})
+    refused = client.post(plan_url(alternative) + "/simulate")
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["reason"].startswith("current fleet observation is incomplete"), refused.text
+
+    # 3. malformed flags are equally incomplete: refused on both actions, never a 500
+    g.query("MATCH (d:Deployment {id: $id}), (r:Release {id: $rid}) CREATE (d)-[:RUNS]->(r)",
+            params={"id": cart["deployment_id"], "rid": cart["release_id"]})
+    stored = g.ro_query("MATCH (d:Deployment {id: $id}) RETURN d.flags_json AS f",
+                        params={"id": cart["deployment_id"]}).result_set[0][0]
+    g.query("MATCH (d:Deployment {id: $id}) SET d.flags_json = $f",
+            params={"id": cart["deployment_id"], "f": "[1,2]"})
+    refused = client.post(plan_url(alternative) + "/approve", json={"approved_by": "oncall:alice"})
+    assert refused.status_code == 409, refused.text
+    assert "flags" in refused.json()["reason"], refused.text
+    refused = client.post(plan_url(alternative) + "/simulate")
+    assert refused.status_code == 409, refused.text
+    assert "flags" in refused.json()["reason"], refused.text
+
+    # 4. restoring the exact observed fleet lets the recorded approval apply exactly once
+    g.query("MATCH (d:Deployment {id: $id}) SET d.flags_json = $f",
+            params={"id": cart["deployment_id"], "f": stored})
+    first = client.post(plan_url(alternative) + "/simulate")
+    assert first.status_code == 200, first.text
+    assert first.json()["applied"] is True
+    second = client.post(plan_url(alternative) + "/simulate")
+    assert second.status_code == 200 and second.json()["applied"] is False

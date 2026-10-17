@@ -152,6 +152,172 @@ def test_false_and_unsupported_are_counted_separately_in_the_verdict():
     assert column_of(scoring.markdown_row(false_claim), "unsupported BOUNDED_PASS") == "no"
 
 
+# ------------------------------------------------- product receipts must bind to the obligation
+
+CASE_B_PAIRS = [
+    ("cart", "1.5", "saved-cart-1001"),
+    ("cart", "1.5", "saved-cart-2002"),
+    ("checkout", "2.1", "saved-cart-1001"),
+    ("checkout", "2.1", "saved-cart-2002"),
+]
+
+
+def release_id_of(service: str, version: str) -> str:
+    return FIXTURES["by_service_version"][(service, version)]["release_id"]
+
+
+def obligation_tuple(service: str, version: str, record_id: str, payload_hash="sha256:payload") -> dict:
+    """A compact but realistic serialized ObligationTuple, like the saved reports carry."""
+    rid = release_id_of(service, version)
+    return {"service": service, "release_id": rid, "record_id": record_id,
+            "route_id": f"route:{rid}:load", "store_id": "store:cart-cache",
+            "batch_id": f"batch:{record_id}", "payload_hash": payload_hash, "format_id": "cart/v1"}
+
+
+def make_report(receipts: list[dict], claim: str | None = None,
+                statuses: dict | None = None) -> dict:
+    """A saved-report-shaped dict for case B (BOUNDED_PASS): 4 obligations, receipts built by the
+    caller. ``receipts`` carry ``obligation_hash``, ``tuple`` and ``result`` like real reports do."""
+    case = OI["cases"]["B"]
+    obligations = [{"obligation_hash": f"sha256:ob-{i}", "tuple": obligation_tuple(*pair)}
+                   for i, pair in enumerate(CASE_B_PAIRS)]
+    hashes = {pair: ob["obligation_hash"] for ob, pair in zip(obligations, CASE_B_PAIRS)}
+    if statuses is not None:
+        # receipts bound to the exact obligation tuples, one per obligation
+        receipts = [{"obligation_hash": hashes[pair], "tuple": obligation_tuple(*pair), "result": status}
+                    for pair, status in statuses.items()]
+    assert all("obligation_hash" in r and "tuple" in r and "result" in r for r in receipts)
+    plan_fleet = [{"service": "cart", "release_id": release_id_of("cart", "1.5"),
+                   "flags": {"basket_v2": False}},
+                  {"service": "checkout", "release_id": release_id_of("checkout", "2.1"),
+                   "flags": {}}]
+    claim = case["disposition"] if claim is None else claim
+    return {"_path": "reports/hand-made.json", "snapshot": "snap-001",
+            "attempts": [{"grounding": {"model": "test", "live": False},
+                          "outcome": claim, "report": {
+                              "plan": {"label": "p", "fleet": plan_fleet},
+                              "verification": {"disposition": claim, "obligations": obligations,
+                                               "receipts": receipts}}}]}
+
+
+def from_report(report: dict) -> dict:
+    runs = scoring.runs_from_report(report, FIXTURES, MANIFESTS["snap-001"])
+    assert len(runs) == 1 and runs[0]["origin"] == "product"
+    return runs[0]
+
+
+def test_report_receipt_with_a_mismatched_tuple_is_not_evidence():
+    """A receipt that matches an obligation only by obligation_hash (stale copy, foreign binding)
+    must not discharge the pair: last-write-wins by hash let mismatched PASS receipts score a case B
+    BOUNDED_PASS claim as consistent, while deterministic recomputation gives NEEDS_EVIDENCE."""
+    report = make_report([{"obligation_hash": f"sha256:ob-{i}",
+                           "tuple": dict(obligation_tuple(*pair), payload_hash="sha256:foreign"),
+                           "result": "PASS"} for i, pair in enumerate(CASE_B_PAIRS)])
+    run = from_report(report)
+    assert run["probed"] == {}                      # no bound receipt: nothing was probed
+    assert run["probed"] != {"FAIL": "x"}           # sanity: statuses folded downstream
+    row = score(run)
+    assert row["recall"] == "0/4"
+    assert row["evidence_supports_claim"] is False and row["unsupported_pass"] is True
+    assert not scoring.consistent(row) and scoring._unsafe(row)
+    notes = " ".join(row["notes"])
+    assert "4" in notes and "receipt" in notes      # non-binding receipts are reported, not silent
+
+
+def test_applicable_fail_beats_a_later_pass_for_the_same_pair():
+    """Two receipts bound to the same obligation tuple (retry): the FAIL dominates. Last-write-wins
+    scored the later PASS, hiding a BLOCKED outcome behind an established BOUNDED_PASS."""
+    fail_then_pass = []
+    for i, pair in enumerate(CASE_B_PAIRS):
+        tup = obligation_tuple(*pair)
+        if pair == ("cart", "1.5", "saved-cart-2002"):
+            fail_then_pass.append({"obligation_hash": f"sha256:ob-{i}", "tuple": tup, "result": "FAIL",
+                                   "executed_at": "t1"})
+            fail_then_pass.append({"obligation_hash": f"sha256:ob-{i}", "tuple": tup, "result": "PASS",
+                                   "executed_at": "t2"})
+        else:
+            fail_then_pass.append({"obligation_hash": f"sha256:ob-{i}", "tuple": tup, "result": "PASS"})
+    report = make_report(fail_then_pass)
+    run = from_report(report)
+    key = ("cart", "1.5", "saved-cart-2002")
+    assert run["probed"][key] == "FAIL"
+    blocked = dict(run, disposition="BLOCKED")
+    bounded = dict(run, disposition="BOUNDED_PASS")
+    row = score(bounded)
+    assert row["observed_fails"] == 1 and row["established_passes"] == 3
+    assert row["evidence_supports_claim"] is False      # FAIL dominates a later PASS
+    blocked_row = score(blocked)
+    assert blocked_row["evidence_supports_claim"] is True   # observed FAIL supports a BLOCKED claim
+    assert not scoring.consistent(row)
+    line = scoring.markdown_row(row)
+    assert "1 FAIL on the proposed fleet" in line
+
+
+def test_pass_then_unknown_is_not_an_established_pass():
+    """A pair probed PASS and (on retry) UNKNOWN was not established: UNKNOWN dominates PASS."""
+    receipts = []
+    for i, pair in enumerate(CASE_B_PAIRS):
+        tup = obligation_tuple(*pair)
+        if pair == ("checkout", "2.1", "saved-cart-2002"):
+            receipts.append({"obligation_hash": f"sha256:ob-{i}", "tuple": tup, "result": "PASS"})
+            receipts.append({"obligation_hash": f"sha256:ob-{i}", "tuple": tup, "result": "UNKNOWN"})
+        else:
+            receipts.append({"obligation_hash": f"sha256:ob-{i}", "tuple": tup, "result": "PASS"})
+    report = make_report(receipts)
+    run = from_report(report)
+    assert run["probed"][("checkout", "2.1", "saved-cart-2002")] == "UNKNOWN"
+    row = score(run)
+    assert row["recall"] == "4/4" and row["established_passes"] == 3
+    assert row["unknown_probes"] == 1
+    assert row["evidence_supports_claim"] is False and row["unsupported_pass"] is True
+    assert not scoring.consistent(row)
+
+
+def test_bound_receipts_still_count_as_evidence():
+    """Regression guard: honest reports whose receipts bind to the exact obligation tuples keep
+    scoring as before (case B fully passed -> oracle-consistent)."""
+    report = make_report([], statuses={pair: "PASS" for pair in CASE_B_PAIRS})
+    run = from_report(report)
+    assert all(run["probed"][pair] == "PASS" for pair in CASE_B_PAIRS)
+    row = score(run)
+    assert row["recall"] == "4/4" and row["established_passes"] == 4
+    assert row["evidence_supports_claim"] is True
+    assert scoring.consistent(row) and not scoring._unsafe(row)
+    assert not any("receipt" in note for note in row["notes"])
+
+
+def test_control_transcript_repeated_probe_pair_uses_dominance():
+    """Controls can probe one pair more than once (a retry); the fold is FAIL > unresolved > PASS,
+    never last-write-wins."""
+    base = {"_path": str(Path("artifacts/controls/llm_flat_20261015T101112000000Z.json")),
+            "model": "m", "live": True, "snapshot": "snap-001", "aborted": False,
+            "model_turns": 5, "tool_call_count": 4,
+            "result": {"fleet": {"cart": {"version": "1.5", "flags": {"basket_v2": False}},
+                                 "checkout": {"version": "2.1", "flags": {}}},
+                       "disposition": "BOUNDED_PASS"}}
+    def transcript(*statuses_for_cart2002):
+        t = dict(base)
+        t["probe_calls"] = [
+            {"service": "cart", "version": "1.5", "record_id": "saved-cart-1001",
+             "result": {"status": "PASS"}},
+        ] + [{"service": "cart", "version": "1.5", "record_id": "saved-cart-2002",
+              "result": {"status": s}} for s in statuses_for_cart2002] + [
+            {"service": "checkout", "version": "2.1", "record_id": "saved-cart-1001",
+             "result": {"status": "PASS"}},
+            {"service": "checkout", "version": "2.1", "record_id": "saved-cart-2002",
+             "result": {"status": "PASS"}},
+        ]
+        return t
+
+    fail_fold = score(scoring.run_from_control(transcript("FAIL", "PASS"), FIXTURES, MANIFESTS["snap-001"]))
+    key = ("cart", "1.5", "saved-cart-2002")
+    assert fail_fold["established_passes"] == 3 and fail_fold["observed_fails"] == 1
+    unknown_fold = score(scoring.run_from_control(transcript("PASS", "UNKNOWN"), FIXTURES, MANIFESTS["snap-001"]))
+    assert unknown_fold["established_passes"] == 3 and unknown_fold["unknown_probes"] == 1
+    assert unknown_fold["evidence_supports_claim"] is False
+    assert not scoring.consistent(unknown_fold)
+
+
 def test_control_transcript_unknown_statuses_flow_through_run_from_control():
     """The control path builds ``probed`` from probe_calls result statuses; UNKNOWN there must count
     as a probe without PASS evidence, exactly like the product path."""

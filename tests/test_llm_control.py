@@ -654,7 +654,8 @@ def test_product_report_with_a_plan_resolves_release_ids_and_receipts(fixtures, 
         obs.append({"obligation_hash": ob_hash, "writer_release_id": None, "witness_path": [],
                     "tuple": {"service": service, "release_id": release_id, "record_id": record_id,
                               "format_id": "cart/v1" if record_id.endswith("1001") else "cart/v2"}})
-        receipts.append({"obligation_hash": ob_hash, "result": result,
+        # A saved ProbeReceipt carries the exact obligation tuple it was run on.
+        receipts.append({"obligation_hash": ob_hash, "tuple": dict(obs[-1]["tuple"]), "result": result,
                          "error_type": "ValueError" if result == "FAIL" else None})
 
     report = {

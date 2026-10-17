@@ -508,3 +508,62 @@ def test_summary_caps_the_gap_section_too():
     assert len(gap_lines) == 20
     assert more == ["... and 5 more"]
     assert text.splitlines()[-1] == "PASS: 1 obligations"
+
+
+# --------------------------------------------------------------------------- completeness: truncated observations
+
+def test_truncated_current_fleet_or_release_inventory_makes_no_plan(copied_fixture):
+    """A fleet observation or a release inventory past the fixed query cap is incomplete evidence.
+
+    With cap+1 deployments the current_fleet query returns `cap` rows and truncated=True; trusting
+    those rows anyway materialized a plan from an unseen fleet, and verification could then
+    BOUNDED_PASS while whole deployments were missing from the observation. A truncated
+    observation must refuse planning with a clear error instead (completeness: caps/truncation
+    are incomplete, never passed).
+    """
+    name = "rw_test_" + uuid.uuid4().hex[:8]
+    session = Session(snapshot="snap-001", graph_name=name, fixture_root=copied_fixture)
+    try:
+        rows, _ = G.releases_for_service(session.g, "cart")
+        release = next(r for r in rows if r["version"] == "1.5")
+        proposal = GroundingProposal(
+            changes=[FleetEntry(service="cart", release_id=release["release_id"], flags={"basket_v2": False})],
+            citations=[], rationale="keep 1.5 with the basket rollout off")
+        # control: the complete observation plans normally
+        plan, errors = session.plan_from_proposal(proposal, "undo the basket rollout", origin="fixture")
+        assert not errors and plan is not None
+
+        # push the current fleet past the cap: 2 real deployments + 199 extra = cap + 1
+        session.g.query(
+            "UNWIND $rows AS row "
+            "MATCH (s:Snapshot {id: $snapshot_id}) "
+            "CREATE (d:Deployment {id: row.id, scope_id: $scope_id, service: row.service, "
+            "snapshot_id: $snapshot_id}) CREATE (s)-[:HAS_DEPLOYMENT]->(d)",
+            params={"rows": [{"id": f"deployment:snap-001:extra-{i}", "service": f"extra-{i}"}
+                             for i in range(199)],
+                    "snapshot_id": session.snapshot_id, "scope_id": "fixture-shop"})
+
+        plan, errors = session.plan_from_proposal(proposal, "undo the basket rollout", origin="fixture")
+        assert plan is None
+        assert "current fleet observation is truncated; cannot build a complete plan" in errors, errors
+
+        # the same refusal closes the release inventory of any fleet service:
+        # 2 real cart builds + 199 unlisted ones = cap + 1 rows for releases_for_service("cart")
+        session.g.query("MATCH (d:Deployment) WHERE d.service STARTS WITH $prefix DETACH DELETE d",
+                        params={"prefix": "extra-"})
+        session.g.query(
+            "UNWIND $rows AS row "
+            "CREATE (r:Release {id: row.id, scope_id: $scope_id, service: 'cart', "
+            "version: row.version, codec_hash: 'sha256:unlisted'})",
+            params={"rows": [{"id": f"release:cart:unlisted-{i}", "version": f"9.{i}"}
+                             for i in range(199)],
+                    "scope_id": "fixture-shop"})
+        plan, errors = session.plan_from_proposal(proposal, "undo the basket rollout", origin="fixture")
+        assert plan is None
+        assert ("release inventory for service 'cart' is truncated; cannot build a complete plan"
+                in errors), errors
+    finally:
+        try:
+            session.g.delete()
+        except Exception:
+            pass

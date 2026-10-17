@@ -268,6 +268,37 @@ class FakePlan:
         return {"label": self.label, "fleet": [], "origin": "stub"}
 
 
+def test_cli_deletes_the_graph_when_session_construction_fails(monkeypatch, tmp_path):
+    """Session construction runs inside the same try/finally as the investigation: a failure during
+    the fixture import (after the graph was created on the server) must not leave the rw_cli_ graph
+    behind — the finally path deletes it by name through a fresh connection."""
+
+    class StubUUID:
+        hex = "0123abcd"
+
+    name = "rw_cli_0123abcd"
+    db = graph.connect()
+    created = []
+
+    def broken_import(*args, **kwargs):
+        db.select_graph(name).query("CREATE (:Release {release_id: 'left-behind-by-injection'})")
+        created.append(name in db.list_graphs())
+        raise RuntimeError("injected importer failure")
+
+    try:
+        monkeypatch.setattr(investigate, "uuid4", lambda: StubUUID())
+        monkeypatch.setattr(graph, "reset_and_import", broken_import)
+        with pytest.raises(RuntimeError, match="injected importer failure"):
+            investigate.main(["--fleet", "cart=1.4", "--confirm-as", "tester"])
+        assert created == [True], "the injection must have created the graph before failing"
+        assert name not in db.list_graphs()
+    finally:
+        try:
+            db.select_graph(name).delete()
+        except Exception:
+            pass  # deleted already (fixed behaviour); only the red run leaves it for cleanup
+
+
 def test_cli_uses_and_deletes_its_own_graph(monkeypatch, capsys, tmp_path):
     """The CLI must create its own rw_cli_<hex8> graph instead of (re)importing the shared evidence
     graph the UI reads, and must delete it in a finally block on every exit path: here the invalid
