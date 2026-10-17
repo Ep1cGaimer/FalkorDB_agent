@@ -68,6 +68,10 @@ Rules:
   history order) does NOT prove that a fix is preserved in an older or newer release. Decide from
   the excerpts which release actually contains each requested behavior.
 - Flags may only be ones the release declares (declared_flags). Omit flags to use release defaults.
+- Honor requested artifact identity separately from behavior: when the operator asks for an earlier
+  build or release, select that evidenced artifact. A flag on the current build is not an earlier
+  build, even if it restores similar behavior. Do not substitute a mitigation unless
+  alternative_context asks for an alternative to a previously checked plan.
 - Cite exact quotes: every citation is an excerpt_id you retrieved plus a verbatim substring of its
   text. Quotes must be exact contiguous substrings of the excerpt text; never elide with "..." or
   paraphrase. Cite the evidence for each release you choose to keep or change.

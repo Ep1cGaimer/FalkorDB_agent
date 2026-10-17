@@ -311,6 +311,8 @@ selection. One correction is allowed, within the same eight-call budget. Two inv
 abort with `GROUNDING_ABORTED`; transport failure restarts both phases on the next provider.
 `READY` permits artifact search, not compatibility, approval, or deployment. Intent classification
 remains model judgment; structural validation is not a proof of semantic correctness.
+Artifact selection must honor an explicitly requested earlier build; a flag-only mitigation is not
+that artifact. An alternative requested after a checked plan may choose a different mitigation.
 
 The grounding `release_history` wrapper returns changelog text and code-excerpt metadata, with
 code text fetched on demand through `get_excerpts`. This keeps repeated history reads within a
