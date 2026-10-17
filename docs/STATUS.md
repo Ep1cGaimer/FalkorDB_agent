@@ -35,7 +35,8 @@ network access to the existing FalkorDB. No live provider evaluation was rerun. 
 lifecycle and Linux CI execution have **not been observed locally**; the workflow now includes both
 Linux install modes and a Windows PowerShell/stdio job. PR #16 at `f5afcbb` passed both Linux
 install modes, Windows MCP checks and GitGuardian.
-These are the pre-rebase results; the reviewer-fix revision needs a fresh CI run after pushing.
+The rebased source revision `cdf5a9a` also passed all three CI jobs and GitGuardian in
+[run 39007803917](https://github.com/Ep1cGaimer/FalkorDB_agent/actions/runs/39007803917).
 
 ### Reviewer-fix validation — 2026-10-17
 
@@ -64,8 +65,10 @@ PR #15 merged at `1f51cfc`; PRs #14 and #13 remain open as of this review. The u
 commit was dropped rather than waiting for its merge. No merge or review approval has been submitted.
 
 The pre-fix head `f5afcbb` passed GitHub CI: `test (false)`, `test (true)`, `mcp-windows` and
-GitGuardian. Required-check policy has not been verified. Next action: publish the reviewer fixes,
-inspect the new CI results and obtain reviewer approval before merging.
+GitGuardian. The rebased source revision `cdf5a9a` passed the same checks, including both Linux
+browser acceptance runs. Required-check policy has not been verified. Next action: inspect the
+[current PR checks](https://github.com/Ep1cGaimer/FalkorDB_agent/pull/16/checks) and obtain reviewer
+approval before merging.
 Local workflow identity remains unauthenticated and single-operator.
 
 ## Verified (commands actually run)
