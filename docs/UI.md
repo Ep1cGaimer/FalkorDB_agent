@@ -4,22 +4,35 @@ The interface follows the owner's October 16 visual references: a pale workspace
 narrow sidebar, white panels, fine dividers, compact tables and restrained blue actions.
 Color communicates result semantics. No external fonts, UI libraries, CDNs or frontend build
 are required; FastAPI serves native ES modules and CSS.
+The static mount explicitly registers `.mjs` as `text/javascript`, overriding Windows file
+associations. Regression coverage simulates a `text/plain` association before creating the app.
 
 First-time visitors get a one-sentence explanation of rollback and short captions beside the
-decisions. Plain labels describe running services, saved shopping carts, the basket feature's
-On/Off state, and saved-data checks. Small keyboard- and touch-accessible info buttons explain
+decisions. Plain labels describe running services, retained records, feature settings and
+saved-data checks. Small keyboard- and touch-accessible info buttons explain
 versions, flags, formats, coverage, run modes and verdicts on demand; there is no onboarding
 dashboard or forced tour. These explanations use the existing dialog/navigation behavior.
-Friendly format labels describe the authored fixture only and leave unknown formats unknown.
+Domain identifiers (services, flags, formats, stores and records) come from API evidence, with
+no shop-specific aliases or compatibility claims. Unknown values remain unknown. Generic help
+explains concepts rather than claiming any particular release supports a format. Synthetic-fixture and
+live/replay labels use prominent, high-contrast chips at desktop and mobile sizes. Recording
+pickers identify the recorded model, live/non-live origin, timestamp and file ID; the origin
+describes the recording, not a live call during replay.
 
 ## Presenting an investigation
 
-The opening screen shows the snapshot's current releases, inventory completeness and retained
-records. It omits counts, snapshot timestamps and store metadata that do not change the decision.
-The default request
-explicitly selects the build before the basket rollout, so the checker can expose the older
-reader's incompatibility. Live grounding may still ask a clarification; it is not forced into
-a predetermined result.
+The opening screen shows the snapshot's current releases and a compact retained-data summary.
+The summary title uses the actual store name (or store count); record counts, format identifiers
+and coverage are computed from the selected inventory. The full table is collapsed by default
+and preserves store identity when expanded. Expansion survives reload and view navigation.
+Empty inventories are distinguished from loading or unavailable inventory and are never called
+a compatibility pass. The browser title includes the selected snapshot and checked disposition.
+
+The first snapshot is selected from the API response rather than a fixture-specific browser
+default. A new live request starts blank; recorded requests come only from their transcripts.
+The server labels its own fixture data as synthetic. The UI does not assume every source is
+synthetic if that metadata is missing. Live grounding may still ask a clarification; it is not
+forced into a predetermined result.
 
 Confirm the proposed scope to run graph queries and real reader probes. The review then leads
 with the trusted disposition and contrasts startup with retained-state reads. The connected
@@ -36,6 +49,9 @@ One review contains the proposed fleet, trusted result, connected evidence, read
 and eligible next action. A compact candidate selector compares two independently checked plans
 without duplicating the fleet or result screen. The sidebar reopens actual prior reviews; there
 is no second history table, Environment page, tutorial, model-info card, profile or activity feed.
+The saved-data tile shows Unresolved (amber) while evidence gaps remain, even if observed reads
+passed; an applicable read failure still takes precedence. Bounded-pass captions explicitly
+limit the result to byte/shape readability only for modeled records.
 
 Demo setup contains only live/replay selection, the recording and retained-data scenario.
 Recorded clarification answers are selected from transcripts bound to the exact current request
@@ -118,5 +134,7 @@ available locally, and mobile navigation. It checks that name fields and removed
 absent, that explicit clicks still create separately bound confirmations and approvals, and that
 there are no browser exceptions or failed resource requests. Saved replay is optional because
 transcripts are local artifacts.
+CI also runs the isolated browser check against the real FalkorDB service and uploads screenshots
+and the synthetic QA server log on failure. It uses the hosted Linux runner's Chrome browser.
 Contextual-help checks cover keyboard access, preservation across refresh and browser
 navigation, and the guarantee that opening an explanation does not trigger an investigation.

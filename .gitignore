@@ -1,5 +1,6 @@
 # Local tooling and agent state
 runtime/
+personal_notes/
 .worktrees/
 
 # Environments, credentials and local settings

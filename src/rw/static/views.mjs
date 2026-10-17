@@ -1,6 +1,6 @@
 import { el, icon, button, panel, details, hash } from "./dom.mjs";
 import { PASS_SCOPE, disposition, preferredCheck, checkSummary, checks, recordedAnswers,
-  replayCandidates, usedReplays } from "./model.mjs";
+  replayCandidates, usedReplays, savedDataStatus, transcriptLabel, retainedData, sourceLabel } from "./model.mjs";
 import { badge, releaseLabel, sourcesView, witnessPanel, matrixPanel, gapsPanel, receiptInspector } from "./evidence.mjs";
 import { formatText, flagText, flagChip, explainButton, explanationContent } from "./explanations.mjs";
 
@@ -29,13 +29,14 @@ export function sidebar(s, a) {
 }
 
 export function topbar(s, a) {
+  const live = s.inv ? currentAttempt(s)?.is_live_provider : s.form.mode === "live";
   return [el("div", { class: "row" },
     button(icon("menu"), a.toggleSidebar, { variant: "icon-only mobile-menu", "aria-label": "Toggle navigation" }),
     s.canGoBack ? button("Back", a.back, { id: "back-button", variant: "ghost", symbol: "back", disabled: !!s.busy,
       "aria-label": "Back to previous view" }) : null,
     el("strong", { class: "topbar-title" }, "Rollback review")),
-    el("div", { class: "topbar-actions" }, el("span", { class: "context-tag" }, "Synthetic fixture"),
-      el("span", { class: "mode-label" }, el("span", { class: `dot ${s.inv ? currentAttempt(s)?.is_live_provider ? "live" : "replay" : ""}` }), runLabel(s), explainButton(a, "mode")),
+    el("div", { class: "topbar-actions" }, el("span", { class: "context-tag" }, sourceLabel(contextFor(s))),
+      el("span", { class: `mode-label ${live ? "live" : "replay"}` }, el("span", { class: `dot ${live ? "live" : "replay"}` }), runLabel(s), explainButton(a, "mode")),
       !s.inv ? button(icon("sliders"), () => a.openOverlay("settings"),
         { id: "settings-trigger", variant: "icon-only", "aria-label": "Demo setup", title: "Demo setup", disabled: !!s.busy }) : null)];
 }
@@ -43,36 +44,50 @@ export function topbar(s, a) {
 function currentFleet(s, a) {
   const c = contextFor(s);
   if (!c) return panel("Running services", null, el("div", { class: "panel-body small muted" }, s.contextError || "Loading snapshot…"));
-  const complete = c.stores.every(store => store.coverage === "COMPLETE");
   return panel("Running services", "Installed versions before this change.", el("div", { class: "panel-body" },
     el("dl", { class: "compact-fleet" }, c.deployments.map(d => [el("dt", {}, d.service), el("dd", {}, `Version ${d.version}`,
-      Object.entries(d.flags).map(([name, value]) => flagChip(a, d.service, name, value)))])),
-    el("div", { class: "inventory-line" }, el("span", { class: "label-with-help" }, "Data coverage", explainButton(a, "coverage")),
-      badge(complete ? "COMPLETE" : "PARTIAL", complete ? "Complete" : "Partial"))), explainButton(a, "versions"));
+      Object.entries(d.flags).map(([name, value]) => flagChip(a, d.service, name, value)))]))), explainButton(a, "versions"));
 }
 
 function retainedPanel(s, a) {
   const c = contextFor(s);
-  const records = c?.stores.flatMap(store => store.records.map(r => ({ ...r, store: store.name }))) || [];
+  if (!c) return panel("Retained data", null,
+    el("div", { class: "panel-body small muted" }, s.contextError || "Loading retained data…"));
+  const { records, formats, coverage, storeCount, unknownFormats, title } = retainedData(c);
   const rows = records.map(r => el("tr", {},
+    el("td", { class: "small subtle" }, r.store || "Unknown store"),
     el("td", {}, el("span", { class: "table-primary" }, r.record_id)),
-    el("td", {}, r.format ? el("span", { class: "badge data-format" }, formatText(r.format)) : badge("UNKNOWN", "Unknown format")),
+    el("td", {}, r.format && r.format !== "UNKNOWN" ? el("span", { class: "badge data-format" }, formatText(r.format)) : badge("UNKNOWN", "Unknown format")),
     el("td", { class: "small subtle" }, r.writer ? `${r.writer.service} ${r.writer.version}` : badge("UNKNOWN", "Unknown writer"))));
-  return panel("Saved shopping carts", "Rolling back the software does not remove these saved carts.", records.length
-    ? el("div", { class: "table-scroll" }, el("table", {},
-        el("thead", {}, el("tr", {}, el("th", { scope: "col" }, "Saved cart"),
+  const disclosure = el("details", { id: "retained-records", class: "disclosure retained-records", open: !!s.retainedExpanded,
+    ontoggle: () => { if (disclosure.isConnected) a.setRetainedExpanded(disclosure.open); } },
+    el("summary", {}, "Inspect listed records", icon("down")),
+    el("div", { class: "table-scroll" }, el("table", {},
+        el("thead", {}, el("tr", {}, el("th", { scope: "col" }, "Store"), el("th", { scope: "col" }, "Record"),
           el("th", { scope: "col" }, el("span", { class: "label-with-help" }, "Data format", explainButton(a, "format"))),
-          el("th", { scope: "col" }, "Saved by version"))), el("tbody", {}, rows)))
-    : el("div", { class: "panel-body small muted" }, s.contextError || "Loading retained records…"));
+          el("th", { scope: "col" }, "Saved by version"))), el("tbody", {}, rows))));
+  return panel(title, "Data this rollback must still read. The snapshot lists the modeled records; checks run after scope confirmation.",
+    el("div", { class: "panel-body retained-summary", id: "retained-summary" },
+      el("div", { class: "row between" }, el("p", { class: "small" },
+        `${records.length} listed ${records.length === 1 ? "record" : "records"} · ${storeCount} ${storeCount === 1 ? "store" : "stores"}`), badge(coverage)),
+      el("p", { class: "small subtle retained-formats" }, "Formats: ", formats.length ? formats.join(", ") : "None known",
+        unknownFormats ? ` · ${unknownFormats} unknown` : null),
+      coverage !== "COMPLETE" ? el("p", { class: "field-help" }, "The listed records do not establish a complete inventory.") : null,
+      records.length ? disclosure : el("p", { class: "field-help" }, "No records are listed in this snapshot. This is not a compatibility result.")),
+    explainButton(a, "coverage"));
 }
 
 function transcriptSelect(s, key, items, onChange) {
   if (!items.length) return el("p", { class: "field-help" }, "No matching recording is available.");
   if (!items.some(t => t.replay_path === s.form[key])) s.form[key] = items[0].replay_path;
   const select = el("select", { id: key, disabled: !!s.busy, onchange: e => { s.form[key] = e.target.value; onChange?.(e.target.value); } },
-    items.map(t => el("option", { value: t.replay_path }, t.answer || `${t.outcome === "question" ? "Clarification" : "Fleet proposal"} · ${new Date(t.mtime).toLocaleString()}`)));
+    items.map(t => el("option", { value: t.replay_path }, transcriptLabel(t))));
   select.value = s.form[key];
-  return select;
+  const metadata = el("p", { class: "field-help recording-details", id: `${key}-details` });
+  const describe = () => { metadata.textContent = transcriptLabel(items.find(t => t.replay_path === select.value)); };
+  select.setAttribute("aria-describedby", `${key}-details`);
+  select.addEventListener("change", describe); describe();
+  return el("div", {}, select, metadata);
 }
 
 function requestPanel(s, a) {
@@ -108,8 +123,7 @@ function verdictPanel(s, a, attempt) {
   const service = failed?.obligation.tuple.service || selected?.obligation.tuple.service;
   const sc = attempt.report.startup_checks?.[service];
   const serviceChecks = checks(v).filter(r => r.obligation.tuple.service === service);
-  const readStatus = serviceChecks.some(r => r.result === "FAIL") ? "FAIL"
-    : serviceChecks.length && serviceChecks.every(r => r.result === "PASS") ? "PASS" : "UNKNOWN";
+  const readStatus = savedDataStatus(v, service);
   const title = d === "BLOCKED" ? "This rollback is blocked" : d === "NEEDS_EVIDENCE" ? "More evidence is needed" : "Saved-data checks passed";
   const description = d === "BLOCKED" && failed
     ? `${releaseLabel(s.inv, failed.obligation.tuple.release_id)} cannot read ${failed.obligation.tuple.record_id}, written by ${releaseLabel(s.inv, failed.obligation.writer_release_id)}.`
@@ -124,7 +138,7 @@ function verdictPanel(s, a, attempt) {
         badge(sc.result === "GREEN" ? "PASS" : sc.result === "RED" ? "FAIL" : "UNKNOWN")),
         el("p", { class: "small" }, "Can this version start? · ", releaseLabel(s.inv, sc.release_id))),
       el("div", { class: "startup-item" }, el("div", { class: "row" }, el("span", { class: "label" }, "Saved-data check"), badge(readStatus)),
-        el("p", { class: "small check-question" }, "Can it open existing saved carts?"),
+        el("p", { class: "small check-question" }, "Can it read the retained records?"),
         el("p", { class: "small" }, failed ? `${failed.obligation.tuple.record_id} · ${failed.obligation.tuple.format_id}` : `${serviceChecks.length} records checked`))) : null,
     d === "BOUNDED_PASS" ? el("p", { class: "verdict-note" }, PASS_SCOPE) : null);
 }
@@ -236,9 +250,10 @@ export function overlay(s, a) {
     title = "Demo setup";
     const snaps = el("select", { id: "snapshot-select", disabled: !!s.inv || !!s.busy, onchange: e => a.setSnapshot(e.target.value) },
       s.contexts.map(c => {
-        const incomplete = c.stores.some(store => store.coverage !== "COMPLETE");
         const unknown = c.stores.some(store => store.records.some(r => !r.writer || !r.format));
-        return el("option", { value: c.snapshot }, unknown ? "Unknown writer / format" : incomplete ? "Partial inventory" : "Complete inventory");
+        const coverage = retainedData(c).coverage;
+        return el("option", { value: c.snapshot }, `${c.snapshot} · ${unknown ? "Unknown writer / format"
+          : coverage === "COMPLETE" ? "Complete inventory" : coverage === "PARTIAL" ? "Partial inventory" : "Unknown coverage"}`);
       }));
     snaps.value = s.form.snapshot;
     body = el("div", {},

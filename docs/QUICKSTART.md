@@ -113,7 +113,8 @@ Live (needs §6):
 .venv\Scripts\python.exe scripts\investigate.py "Roll cart back to the build it ran before the basket rollout, but keep the receipt correction." --confirm-as alice
 ```
 
-Replay of a saved transcript (always labeled `REPLAY — not live`):
+Replay of a saved transcript (the CLI labels this `REPLAY — not live`; the browser uses
+`Replay · not live`):
 
 ```powershell
 .venv\Scripts\python.exe scripts\investigate.py "Roll cart back to the build it ran before the basket rollout, but keep the receipt correction." --replay artifacts\grounding\<file>.json --confirm-as alice --no-alternative
@@ -201,14 +202,18 @@ entry is tried.
 ```
 
 Then open <http://127.0.0.1:8000>. The workspace opens with the actual fixture fleet and retained
-records. Submit the request, review cited release changes, and confirm the fleet to execute checks.
+data summary. The summary title comes from the selected store; expand Inspect listed records
+to see the inventory. A new live request starts blank. Enter your request, review cited release
+changes, and confirm the fleet to execute checks.
 The review shows the startup-vs-reader contrast, actual failure, evidence path, matrix and next
 eligible action. Select a record or matrix cell to inspect its receipt, or open Cited sources to
 inspect the proposal's evidence. Demo setup holds live/replay selection, the recording and the
 retained-data scenario. Scope confirmation and simulation approval require explicit clicks,
 without name fields; the API records a local UI audit-origin label.
 
-Synthetic-fixture and replay context remain visible. Approval and local simulation are available
+The prominent `Synthetic fixture` and `Replay · not live` labels identify the browser's demo
+context. Replay pickers show the recorded model, live/non-live origin, time and recording ID;
+replaying a live-origin recording is still not a live model call. Approval and local simulation are available
 only for `BOUNDED_PASS`, which carries its byte/shape limit. Approval is refused if relevant evidence
 bytes changed since verification. Restart any already-running server after the workspace refactor
 to load the static asset mount and snapshot endpoint. See [UI.md](UI.md) for the module layout

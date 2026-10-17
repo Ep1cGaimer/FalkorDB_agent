@@ -21,6 +21,7 @@ from rw.pipeline import Session
 def main():
     graph_name = "rw_ui_check_" + uuid4().hex
     initial = Session(graph_name=graph_name)
+    print(f"Browser QA graph={graph_name}", flush=True)
 
     def ground(request, tools, alternative_context=None):
         history, _ = tools.release_history("cart")

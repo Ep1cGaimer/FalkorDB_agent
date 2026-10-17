@@ -1,5 +1,20 @@
-export const DEFAULT_REQUEST = "Roll cart back to the build it ran before the basket rollout, but keep the receipt correction.";
-export const PASS_SCOPE = "Passing means the tested versions could read the saved records checked here. This does not establish production safety or verify receipt totals.";
+export const PASS_SCOPE = "Bounded pass means byte/shape readability only for the modeled records checked here. This does not establish behavioral compatibility, production safety or application-level correctness.";
+
+export function retainedData(context) {
+  const stores = context?.stores || [];
+  const records = stores.flatMap(store => (store.records || []).map(record => ({ ...record, store: store.name || null })));
+  const formats = [...new Set(records.map(r => r.format).filter(f => f && f !== "UNKNOWN"))].sort();
+  const coverage = stores.length && stores.every(s => s.coverage === "COMPLETE") ? "COMPLETE"
+    : stores.some(s => s.coverage === "PARTIAL") ? "PARTIAL" : "UNKNOWN";
+  return { records, formats, coverage, storeCount: stores.length,
+    unknownFormats: records.filter(r => !r.format || r.format === "UNKNOWN").length,
+    title: stores.length === 1 && stores[0].name ? `Retained data · ${stores[0].name}`
+      : stores.length ? `Retained data · ${stores.length} stores` : "Retained data" };
+}
+export const workspaceTitle = (context, attempt) => ["Rollback review", context?.snapshot,
+  attempt?.report?.verification?.disposition ? displayStatus(attempt.report.verification.disposition) : null].filter(Boolean).join(" · ");
+export const sourceLabel = context => context?.data_origin === "synthetic_fixture" ? "Synthetic fixture"
+  : context?.environment || "Data source unavailable";
 
 export const withAnswer = (request, question, answer) => `${request}\n\nAgent asked: ${question}\nOperator answered: ${answer}`;
 export const replayMatches = (transcripts, requestText, question, answer) => {
@@ -49,7 +64,20 @@ export function checkSummary(verification) {
   return { total: rows.length, passed: rows.filter(r => r.result === "PASS").length,
     failed: rows.filter(r => r.result === "FAIL").length,
     unresolved: rows.filter(r => !["PASS", "FAIL"].includes(r.result)).length,
-    gaps: verification?.gaps.length || 0 };
+    gaps: verification?.gaps?.length || 0 };
+}
+export function savedDataStatus(verification, service) {
+  const rows = checks(verification).filter(r => r.obligation.tuple.service === service);
+  if (rows.some(r => r.result === "FAIL")) return "FAIL";
+  if (verification?.disposition === "NEEDS_EVIDENCE" || verification?.gaps?.length) return "UNKNOWN";
+  return rows.length && rows.every(r => r.result === "PASS") ? "PASS" : "UNKNOWN";
+}
+export function transcriptLabel(t) {
+  const kind = t.answer ? `Answer: ${t.answer}` : t.outcome === "question" ? "Clarification" : "Fleet proposal";
+  const origin = t.live === true ? "Recorded live model" : t.live === false ? "Recorded non-live response" : "Unknown origin";
+  const date = t.mtime ? new Date(t.mtime) : null;
+  const recordedAt = date && Number.isFinite(date.getTime()) ? date.toLocaleString() : "Unknown recording time";
+  return `${kind} · ${t.model || "Unknown model"} · ${origin} · ${recordedAt} · ${t.file_name || t.replay_path || "Unknown recording"}`;
 }
 export function preferredCheck(verification, selected) {
   const rows = checks(verification);

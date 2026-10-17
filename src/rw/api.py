@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 import inspect
 import json
 import logging
+import mimetypes
 from pathlib import Path
 from threading import RLock
 from typing import Any, Callable, Literal
@@ -411,7 +412,7 @@ def create_app(*, session_factory: Callable | None = None,
         snapshots = []
         for name in ALL_SNAPSHOTS:
             manifest, manifest_hash = load_manifest(FIXTURE_ROOT, name)
-            snapshots.append({**manifest, "manifest_hash": manifest_hash,
+            snapshots.append({**manifest, "manifest_hash": manifest_hash, "data_origin": "synthetic_fixture",
                               "snapshot_id": "snapshot:" + manifest["snapshot"]})
         return snapshots
 
@@ -546,6 +547,8 @@ def create_app(*, session_factory: Callable | None = None,
         return {"product": "RollbackWitness", "api": "/docs",
                 "investigations": "/api/investigations", "note": "LOCAL SIMULATION ONLY"}
 
+    # Windows registry associations can otherwise serve ES modules as text/plain.
+    mimetypes.add_type("text/javascript", ".mjs")
     app.mount("/static", StaticFiles(directory=Path(__file__).resolve().parent / "static"), name="static")
     return app
 

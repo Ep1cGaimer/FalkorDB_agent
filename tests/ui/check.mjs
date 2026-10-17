@@ -1,6 +1,6 @@
 // Dependency-free browser acceptance check, using an isolated headless Chromium profile.
 // Start tests/ui/serve_fixture.py first. UI_BROWSER_BINARY overrides the browser executable.
-// Screenshots go to the ignored artifacts/screens/ui-refactor directory.
+// Screenshots go to the ignored artifacts/screens/decision-review directory.
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -23,7 +23,7 @@ const port = await new Promise(resolvePort => {
 const child = spawn(binary, ["--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check",
   "--disable-background-networking", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "about:blank"],
   { stdio: "ignore", windowsHide: true });
-let ws, sequence = 0;
+let ws, sequence = 0, snapshotOverride = null;
 const pending = new Map(), exceptions = [], networkFailures = [];
 const pause = ms => new Promise(r => setTimeout(r, ms));
 async function until(fn, label, timeout = 20000) {
@@ -47,7 +47,10 @@ async function evaluate(expression) {
 const body = () => evaluate("document.body.innerText");
 const waitText = text => until(async () => (await body()).includes(text), `visible text ${text}`);
 const click = selector => evaluate(`(() => { const n=document.querySelector(${JSON.stringify(selector)}); if(!n)throw Error('Missing click target'); if(n.disabled)throw Error('Disabled click target'); n.click(); })()`);
-const clickText = text => evaluate(`(() => { const n=[...document.querySelectorAll('button')].find(x=>x.textContent.trim()===${JSON.stringify(text)}); if(!n)throw Error('Missing button: '+${JSON.stringify(text)}); if(n.disabled)throw Error('Disabled button'); n.click(); })()`);
+async function clickText(text) {
+  await evaluate(`(() => { const n=[...document.querySelectorAll('button')].find(x=>x.textContent.trim()===${JSON.stringify(text)}); if(!n)throw Error('Missing button: '+${JSON.stringify(text)}); if(n.disabled)throw Error('Disabled button'); n.click(); })()`);
+  if (text === "Done") await until(() => evaluate("!document.querySelector('dialog') && document.querySelector('#workspace').getAttribute('aria-busy')==='false'"), "dialog closes before the next action");
+}
 const fill = (selector, value) => evaluate(`(() => { const n=document.querySelector(${JSON.stringify(selector)}); if(!n)throw Error('Missing field'); n.value=${JSON.stringify(value)}; n.dispatchEvent(new Event('input',{bubbles:true})); })()`);
 const select = (selector, value) => evaluate(`(() => { const n=document.querySelector(${JSON.stringify(selector)}); n.value=${JSON.stringify(value)}; n.dispatchEvent(new Event('change',{bubbles:true})); })()`);
 async function travel(delta) {
@@ -96,27 +99,47 @@ try {
       if (message.error) call.reject(new Error(message.error.message)); else call.resolve(message.result);
     } else if (message.method === "Runtime.exceptionThrown") exceptions.push(message.params.exceptionDetails);
     else if (message.method === "Network.loadingFailed" && !message.params.canceled) networkFailures.push(message.params);
+    else if (message.method === "Fetch.requestPaused") {
+      const requestId = message.params.requestId;
+      const response = snapshotOverride
+        ? send("Fetch.fulfillRequest", { requestId, responseCode: 200,
+          responseHeaders: [{ name: "Content-Type", value: "application/json" }],
+          body: Buffer.from(JSON.stringify(snapshotOverride)).toString("base64") })
+        : send("Fetch.continueRequest", { requestId });
+      response.catch(error => networkFailures.push({ errorText: error.message }));
+    }
   });
   await send("Page.enable"); await send("Runtime.enable"); await send("Network.enable");
   await send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
   await send("Page.navigate", { url: base });
   await waitText("Review a rollback");
-  await until(() => evaluate("!!document.querySelector('#start-button') && document.body.innerText.includes('saved-cart-2002')"), "initial inventory");
+  await until(() => evaluate("!!document.querySelector('#start-button') && !!document.querySelector('#retained-summary')"), "initial inventory");
+  assert.equal(await evaluate("document.querySelector('#request').value"), "", "no fixture-specific request is prefilled");
+  assert.equal(await evaluate("document.querySelector('#start-button').disabled"), true);
+  assert.equal(await evaluate("document.querySelector('#retained-records').open"), false, "record inventory starts collapsed");
+  assert((await body()).includes("2 listed records · 1 store"));
+  assert.equal(await evaluate("document.querySelector('#retained-summary').closest('section').querySelector('h2').textContent"), "Retained data · cart-cache");
+  assert((await evaluate("document.title")).includes("snap-001"));
   assert.equal(await evaluate("document.querySelectorAll('[role=tab], #history-search, .summary-stats, .how-it-works, .workspace-label, .avatar').length"), 0);
   assert.equal(await evaluate("document.querySelector('#sidebar').innerText.split(/\\s+/).includes('null')"), false);
   for (const removed of ["From request to decision", "Check summary", "Run context", "Investigation history", "About this demo", "Prefill guided demo inputs"]) {
     assert(!(await body()).includes(removed), `${removed} was removed`);
   }
   await screenshot("01-workspace");
-  assert((await body()).includes("Basket feature: On"));
-  assert((await body()).includes("Single-list cart · cart/v1"));
+  assert((await body()).includes("basket_v2: On"));
+  assert((await body()).includes("cart/v1, cart/v2"));
+  await evaluate("document.querySelector('#retained-records summary').click()");
+  await until(() => evaluate("document.querySelector('#retained-records').open && history.state.view.retainedExpanded"), "record disclosure opens");
+  assert((await body()).includes("saved-cart-2002"));
+  await reloadView("document.querySelector('#retained-records')?.open", "reload preserves expanded inventory");
+  await evaluate("document.querySelector('#retained-records summary').click()");
   const beforeHelp = await (await fetch(`${base}/api/investigations`)).json();
-  await click("button[aria-label='Basket feature: an on/off setting']");
-  await waitText("Existing saved carts are not converted or deleted.");
+  await click("button[aria-label='Feature settings']");
+  await waitText("changing a flag does not itself prove compatibility");
   await screenshot("08-feature-help");
-  await reloadView("document.querySelector('#dialog-title')?.textContent==='Basket feature: an on/off setting'", "reload restores contextual explanation");
+  await reloadView("document.querySelector('#dialog-title')?.textContent==='Feature settings'", "reload restores contextual explanation");
   await travel(-1); await until(() => evaluate("!document.querySelector('dialog')"), "Back closes explanation");
-  await travel(1); await waitText("Existing saved carts are not converted or deleted.");
+  await travel(1); await waitText("changing a flag does not itself prove compatibility");
   await clickText("Done");
   await until(() => evaluate("!document.querySelector('dialog')"), "feature explanation closes");
   await send("Page.bringToFront");
@@ -127,12 +150,13 @@ try {
   await waitText("Partial means some records may be absent");
   await clickText("Done");
   await until(() => evaluate("!document.querySelector('dialog')"), "coverage explanation closes");
-  await click("button[aria-label='What is a data format?']"); await waitText("cart/v2 adds named baskets"); await clickText("Done");
+  await evaluate("document.querySelector('#retained-records summary').click()");
+  await click("button[aria-label='What is a data format?']"); await waitText("An identifier alone does not describe the structure"); await clickText("Done");
   await until(() => evaluate("!document.querySelector('dialog')"), "format explanation closes");
   const afterHelp = await (await fetch(`${base}/api/investigations`)).json();
   assert.equal(afterHelp.length, beforeHelp.length, "opening explanations never starts an investigation");
   console.log("PASS contextual help works with keyboard, Back/Forward and refresh without triggering checks");
-  const draft = await evaluate("document.querySelector('#request').value + ' Keep Checkout 2.1.'");
+  const draft = "Roll cart back to the build it ran before the basket rollout, but keep the receipt correction. Keep Checkout 2.1.";
   await fill("#request", draft);
   await click("#start-button"); await confirm();
   await waitText("This rollback is blocked");
@@ -173,9 +197,11 @@ try {
   await click("#alternative-button");
   await until(() => evaluate("!!document.querySelector('#confirm-button')"), "alternative proposal");
   await confirm(); await waitText("Saved-data checks passed");
+  assert.equal(await evaluate("document.querySelectorAll('.startup-item')[1].querySelector('.badge').textContent.trim()"), "Passed");
+  assert((await body()).includes("byte/shape readability only"));
   assert.equal(await evaluate("document.querySelector('.map-record strong').textContent"), "saved-cart-2002", "alternative keeps the original failing record in focus");
   await screenshot("04-alternative", true);
-  assert((await body()).includes("Basket feature: Off"));
+  assert((await body()).includes("basket_v2: Off"));
   assert.equal(await evaluate("document.querySelectorAll('.candidate-choice button').length"), 0, "candidate buttons do not contain nested help buttons");
   await click("button[aria-label='What a bounded pass means']"); await waitText("It does not establish production safety"); await clickText("Done");
   assert.equal(await evaluate("!!document.querySelector('#approver-name')"), false);
@@ -203,15 +229,20 @@ try {
   await click("#back-button"); await waitText("This rollback is blocked"); await idle();
   await travel(1); await until(() => evaluate("!!document.querySelector('#request')"), "Forward restores the new request");
   await setSnapshot("snap-002-partial");
+  await fill("#request", draft);
   await click("#start-button"); await confirm(); await waitText("This rollback is blocked");
   await click("#alternative-button"); await confirm(); await waitText("More evidence is needed");
+  assert.equal(await evaluate("document.querySelectorAll('.startup-item')[1].querySelector('.badge').textContent.trim()"), "Unresolved");
+  assert.equal(await evaluate("document.querySelectorAll('.startup-item')[1].querySelector('.badge').classList.contains('UNKNOWN')"), true);
   assert.equal(await evaluate("!!document.querySelector('#approve-button')"), false);
   await screenshot("05-needs-evidence", true);
   console.log("PASS partial inventory remains NEEDS_EVIDENCE after passing modeled reads");
 
   await clickText("New investigation"); await setSnapshot("snap-003-orphan");
+  await fill("#request", draft);
   await click("#start-button"); await confirm(); await waitText("This rollback is blocked");
   await click("#alternative-button"); await confirm(); await waitText("More evidence is needed");
+  assert.equal(await evaluate("document.querySelectorAll('.startup-item')[1].querySelector('.badge').textContent.trim()"), "Unresolved");
   assert((await body()).includes("Writer unknown"));
   console.log("PASS orphan provenance remains an evidence gap");
 
@@ -228,6 +259,8 @@ try {
   await click("#settings-trigger"); await click("#mode-replay");
   const saved = await evaluate("[...document.querySelector('#replay')?.options || []].find(o=>o.textContent.startsWith('Fleet proposal'))?.value");
   if (saved) {
+    assert(await evaluate("[...document.querySelector('#replay').options].every(o=>o.textContent.includes('Recorded ') && o.textContent.includes(o.value))"));
+    assert(await evaluate("document.querySelector('#replay-details').textContent.includes('Recorded ')"));
     await select("#replay", saved); await clickText("Done"); await click("#start-button"); await confirm();
     assert((await body()).includes("Replay · not live"));
     console.log("PASS saved replay uses actual reader checks and retains its replay label");
@@ -251,6 +284,7 @@ try {
   await send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: false });
   await screenshot("06-mobile", true);
   assert(await evaluate("document.documentElement.scrollWidth <= window.innerWidth"), "mobile page has no horizontal overflow");
+  assert(await evaluate("['.context-tag', '.mode-label'].every(selector => { const el=document.querySelector(selector); const r=el.getBoundingClientRect(); return parseFloat(getComputedStyle(el).fontSize)>=12 && r.left>=0 && r.right<=innerWidth; })"), "demo context labels remain prominent on mobile");
   await click(".mobile-menu");
   assert(await evaluate("document.querySelector('.sidebar').classList.contains('open')"));
   await click(".recent-list .recent");
@@ -281,6 +315,36 @@ try {
   assert.equal(await evaluate("document.querySelector('#request').value"), draft);
   await travel(-1); await waitText("This rollback is blocked"); await idle();
   console.log("PASS a direct link has a safe visible Back destination");
+
+  // Only the inventory response is replaced: proves that rendering has no shop-specific defaults.
+  snapshotOverride = [{ snapshot: "warehouse-27", snapshot_id: "snapshot:warehouse-27", environment: "warehouse-test",
+    deployments: [{ service: "ingester", version: "9.3", flags: { compact_events: false } }],
+    stores: [{ name: "fulfillment-events", coverage: "PARTIAL", records: [
+      { record_id: "order-71", format: "event/v7", writer: { service: "ingester", version: "9.2" } },
+      { record_id: "order-72", format: null, writer: null },
+    ] }] }];
+  await send("Fetch.enable", { patterns: [{ urlPattern: "*/api/snapshots", requestStage: "Request" }] });
+  await send("Page.navigate", { url: `${base}?domain-check=1` });
+  await until(() => evaluate("document.querySelector('#retained-summary')?.closest('section').querySelector('h2').textContent==='Retained data · fulfillment-events'"), "alternate-domain inventory");
+  assert.equal(await evaluate("document.title"), "Rollback review · warehouse-27");
+  assert.equal(await evaluate("document.querySelector('.context-tag').textContent"), "warehouse-test");
+  assert((await body()).includes("compact_events: Off"));
+  assert((await body()).includes("Formats: event/v7 · 1 unknown"));
+  assert((await body()).includes("The listed records do not establish a complete inventory."));
+  assert.equal(await evaluate("document.querySelector('#retained-records').open"), false);
+  await evaluate("document.querySelector('#retained-records summary').click()");
+  assert((await body()).includes("order-71"));
+  assert((await body()).includes("Unknown writer"));
+  assert.equal(await evaluate("/cart|basket|checkout/i.test(document.querySelector('#workspace').innerText)"), false);
+  await send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: false });
+  assert(await evaluate("document.documentElement.scrollWidth <= innerWidth"), "generic inventory has no mobile overflow");
+  await screenshot("09-generic-inventory", true);
+  await click("#settings-trigger");
+  assert((await body()).includes("warehouse-27 · Unknown writer / format"));
+  await clickText("Done");
+  await until(() => evaluate("!document.querySelector('dialog')"), "generic setup closes");
+  snapshotOverride = null; await send("Fetch.disable");
+  console.log("PASS arbitrary services, stores, formats and snapshots drive titles, labels and the expandable inventory");
   assert.equal(exceptions.length, 0, JSON.stringify(exceptions, null, 2));
   assert.equal(networkFailures.length, 0, JSON.stringify(networkFailures, null, 2));
   console.log(`PASS no browser exceptions or failed resource requests · ${version.Browser}`);

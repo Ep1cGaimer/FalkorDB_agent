@@ -43,14 +43,14 @@ export function witnessPanel(inv, attempt, selected, actions) {
     el("span", {}, icon(symbol), type), el("strong", {}, title), subtitle ? el("small", {}, subtitle) : null);
   map.append(svg,
     node("map-reader", "Reads saved data", releaseLabel(inv, t.release_id), route?.display || ob.reader_entry, "code"),
-    node("map-store", "Shared storage", t.store_id.replace(/^store:/, ""), "Carts persist across releases", "database"),
+    node("map-store", "Shared storage", t.store_id.replace(/^store:/, ""), "Store on this modeled read path", "database"),
     el("button", { class: `map-node map-record ${result}`, type: "button", onclick: () => actions.inspect(ob.obligation_hash),
       "aria-label": `Inspect ${t.record_id}, ${displayStatus(result)}` },
-      el("span", {}, icon("file"), "Saved cart"), el("strong", {}, t.record_id), el("small", {}, formatText(t.format_id))),
+      el("span", {}, icon("file"), "Retained record"), el("strong", {}, t.record_id), el("small", {}, formatText(t.format_id))),
     ob.writer_release_id ? node("map-writer", "Saved by version", releaseLabel(inv, ob.writer_release_id), null, "layers")
       : node("map-writer", "Saved by version", "Unknown", null, "info"));
   const error = receipt && [receipt.error_type, receipt.message].filter(Boolean).join(": ");
-  return panel("Why this record matters", "How the proposed version can encounter this saved cart.",
+  return panel("Why this record matters", "How the proposed version can encounter this retained record.",
     [el("div", { class: "map-scroll" }, map),
       result === "FAIL" && error ? el("div", { class: "evidence-error mono" }, error) : null,
       el("div", { class: "panel-footer" }, el("span", {}, t.record_id, " · ", displayStatus(result)),
@@ -78,7 +78,7 @@ export function matrixPanel(inv, attempt, selected, actions) {
         "aria-pressed": String(selectedHash === ob.obligation_hash), onclick: () => actions.inspect(ob.obligation_hash),
       }, icon(row.result === "PASS" ? "check" : "alert"), displayStatus(row.result)));
     })));
-  return panel("Saved-data compatibility", "Rows are software readers; columns are saved carts. Select a result to see the recorded check.",
+  return panel("Saved-data compatibility", "Rows are software readers; columns are retained records. Select a result to see the recorded check.",
     el("div", { class: "table-scroll" }, el("table", { class: "matrix" }, el("thead", {}, head), el("tbody", {}, body))),
     badge(null, `${rows.length} checks`));
 }
@@ -109,7 +109,7 @@ export function receiptInspector(inv, attempt, selected) {
   return el("div", {}, el("div", { class: "receipt-header" }, badge(result), el("span", { class: "tiny muted" }, "Recorded read result")),
     el("h3", { class: "receipt-heading" }, ob.tuple.record_id),
     el("p", { class: "small muted" }, `${releaseLabel(inv, ob.tuple.release_id)} · ${ob.reader_entry}`),
-    el("p", { class: "explanation-intro" }, "A reader is the code that opens saved data. This is the recorded result of running that reader on this cart's stored bytes."),
+    el("p", { class: "explanation-intro" }, "A reader is the code that opens saved data. This is the recorded result of running that reader on this record's stored bytes."),
     !r ? el("div", { class: "callout", style: "margin-top:18px" }, result === "INAPPLICABLE"
       ? "A receipt exists, but it does not match this check's full bound identity. It cannot establish a result."
       : "No applicable receipt exists for this check. It remains unresolved.") : null,

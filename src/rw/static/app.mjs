@@ -1,6 +1,6 @@
 import { api, ApiError } from "./api.mjs";
-import { DEFAULT_REQUEST, disposition, preferredCheck, replayMatches, recordedAnswers, replayCandidates, usedReplays } from "./model.mjs";
-import { currentAttempt, sidebar, topbar, investigationView, overlay } from "./views.mjs";
+import { disposition, preferredCheck, replayMatches, recordedAnswers, replayCandidates, usedReplays, workspaceTitle } from "./model.mjs";
+import { currentAttempt, contextFor, sidebar, topbar, investigationView, overlay } from "./views.mjs";
 
 // Local UI audit origin, not an authenticated person's identity. Explicit clicks still
 // confirm scope and approve simulation; the server retains every evidence/approval gate.
@@ -9,8 +9,8 @@ const LOCAL_UI_IDENTITY = "local-ui-user";
 const state = {
   inv: null, attemptIndex: 0, busy: null, error: null,
   selected: null, focusRecord: null, overlay: null, returnFocus: null, contexts: [], contextError: null,
-  transcripts: [], history: [], liveRequest: DEFAULT_REQUEST,
-  form: { request: DEFAULT_REQUEST, snapshot: "snap-001", mode: "live", replay: "", answerReplay: "", altReplay: "", answer: "" },
+  transcripts: [], history: [], liveRequest: "", retainedExpanded: false,
+  form: { request: "", snapshot: "", mode: "live", replay: "", answerReplay: "", altReplay: "", answer: "" },
 };
 
 const NAVIGATION_VERSION = "rollback-review-v1";
@@ -24,6 +24,7 @@ function viewSnapshot() {
     investigationId: state.inv?.id || null, attemptIndex: state.attemptIndex,
     selected: state.selected, focusRecord: state.focusRecord, overlay: state.overlay,
     returnFocus: state.returnFocus, form: { ...state.form }, liveRequest: state.liveRequest,
+    retainedExpanded: state.retainedExpanded,
     scroll: [window.scrollX, window.scrollY],
   };
 }
@@ -72,7 +73,8 @@ async function restoreNavigation(target) {
   state.inv = inv;
   state.attemptIndex = inv ? Math.max(0, Math.min(view.attemptIndex ?? inv.attempts.length - 1, inv.attempts.length - 1)) : 0;
   state.form = { ...state.form, ...view.form };
-  state.liveRequest = view.liveRequest || DEFAULT_REQUEST;
+  state.liveRequest = view.liveRequest ?? "";
+  state.retainedExpanded = !!view.retainedExpanded;
   state.selected = view.selected;
   state.focusRecord = view.focusRecord;
   state.returnFocus = view.returnFocus;
@@ -84,6 +86,8 @@ async function restoreNavigation(target) {
       state.form.request = inv.original_request_text || inv.request_text.split("\n\nAgent asked:")[0];
       if (inv.mode === "live") state.liveRequest = state.form.request;
     }
+  } else if (!state.contexts.some(c => c.snapshot === state.form.snapshot)) {
+    state.form.snapshot = state.contexts[0]?.snapshot || "";
   }
   if (carry) Object.assign(state, carry);
   state.busy = null; state.error = error;
@@ -98,6 +102,7 @@ async function restoreNavigation(target) {
 }
 
 function render() {
+  document.title = workspaceTitle(contextFor(state), currentAttempt(state));
   const active = document.activeElement;
   const focusedId = active?.id;
   const selection = active && typeof active.selectionStart === "number" ? [active.selectionStart, active.selectionEnd] : null;
@@ -153,7 +158,7 @@ function selectLatest(inv) {
 }
 
 function canStart() {
-  return !state.busy && !state.inv && !!state.form.request.trim()
+  return !state.busy && !state.inv && state.contexts.some(c => c.snapshot === state.form.snapshot) && !!state.form.request.trim()
     && (state.form.mode !== "replay" || state.transcripts.some(t => t.replay_path === state.form.replay && t.request_text === state.form.request));
 }
 function canAnswer() {
@@ -284,7 +289,13 @@ const actions = {
     const t = state.transcripts.find(t => t.replay_path === path);
     if (!state.inv && t) { state.form.replay = path; state.form.request = t.request_text; render(); }
   },
-  setSnapshot(snapshot) { if (!state.inv && !state.busy) { state.form.snapshot = snapshot; render(); } },
+  setSnapshot(snapshot) { if (!state.inv && !state.busy) { state.form.snapshot = snapshot; state.retainedExpanded = false; render(); } },
+  setRetainedExpanded(open) {
+    // Rebuilding an already-open <details> emits toggle too; it must not rewrite
+    // a history entry while Back is restoring a dialog's previous view.
+    if (open === state.retainedExpanded) return;
+    state.retainedExpanded = open; rememberView();
+  },
   setAnswerReplay(path) {
     const question = currentAttempt(state)?.clarification?.question;
     const selected = recordedAnswers(state.transcripts, state.inv.request_text, question).find(t => t.replay_path === path);
@@ -297,7 +308,10 @@ const actions = {
 async function boot() {
   history.scrollRestoration = "manual";
   const results = await Promise.allSettled([api("GET", "/api/snapshots"), api("GET", "/api/transcripts"), loadHistory()]);
-  if (results[0].status === "fulfilled") state.contexts = results[0].value;
+  if (results[0].status === "fulfilled") {
+    state.contexts = results[0].value;
+    state.form.snapshot = state.contexts[0]?.snapshot || "";
+  }
   else state.contextError = `Fixture inventory unavailable: ${results[0].reason.message}`;
   if (results[1].status === "fulfilled") state.transcripts = results[1].value;
   else state.error = new ApiError(0, `Saved transcripts unavailable: ${results[1].reason.message}`);

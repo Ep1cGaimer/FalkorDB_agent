@@ -3,7 +3,7 @@
   .venv/Scripts/python.exe scripts/serve.py
 
 Grounding is live by default; set RW_GROUNDING_MODEL to choose the model. Replay mode in the UI
-reads a saved transcript and is always labeled "REPLAY — not live".
+reads a saved transcript and is always labeled "Replay · not live".
 """
 from __future__ import annotations
 
