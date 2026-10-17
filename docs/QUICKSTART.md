@@ -120,11 +120,8 @@ live command once, or point `--replay` at a transcript you saved. `--no-alternat
 you hold a single transcript — a `BLOCKED` result normally asks the agent for one alternative, which
 would need a second transcript.
 
-Without a key in a fresh clone the live command stops immediately with a clear, key-free error:
-
-```text
-rw.grounding.GroundingError: all models failed: groq:openai/gpt-oss-120b: GROQ_API_KEY is not set | groq:qwen/qwen3.8-27b: GROQ_API_KEY is not set
-```
+Without a configured provider key, the live command stops with `GroundingError: all models failed`
+and structured sanitized error summaries. Check the selected provider's key in `.env` (§6).
 
 Observed on the reference machine (2026-10-16, replay of a saved transcript, so the model is
 `replay:<file>` and `live=False`) — the cart rollback is blocked by a real probe (the rationale and
@@ -184,10 +181,10 @@ Never commit or paste that file. The provider chain comes from `RW_GROUNDING_MOD
 `groq:openai/gpt-oss-120b,groq:qwen/qwen3.8-27b`. `GEMINI_API_KEY` is optional and only used when a
 `gemini:` entry is selected.
 
-The tested free-tier profile is `groq:qwen/qwen3.8-27b` with a 1000-token completion cap. It
-completed all three paired control/product runs in the recorded comparison. Four transient HTTP 429
-responses were recovered, so this profile reduces the workload but does not promise uninterrupted
-access. Groq applies limits at the organization level; some accounts separate input and output
+The selected free-tier profile is `groq:qwen/qwen3.8-27b` with a 1000-token completion cap. The
+author-reported historical comparison says three pairs completed and four transient HTTP 429
+responses recovered; raw artifacts are not committed. This profile reduces the workload but does
+not promise uninterrupted access. Groq applies limits at the organization level; some accounts separate input and output
 allowances, and the exact limits are shown on your [Groq Limits page](https://console.groq.com/docs/rate-limits).
 See the [issue #4 decision and browser check](ISSUE_4_QUOTA.md) for the chosen budget profile.
 

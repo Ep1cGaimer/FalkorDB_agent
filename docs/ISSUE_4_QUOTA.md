@@ -17,9 +17,9 @@ RW_GROUNDING_MAX_COMPLETION_TOKENS=1000
 RW_GROUNDING_MAX_COMPLETION_TOKENS=1000 .venv/bin/python evals/run_comparison.py --runs 3 --model groq:qwen/qwen3.8-27b
 ```
 
-This is the smallest of the issue's proposed choices that has already been exercised against the
-project's real control and product. The October 16 comparison completed all three pairs on this
-profile. It saw four HTTP 429 responses across six conversations; each recovered. The observed
+The author reported exercising this option against the project's control and product. The historical
+October 16 comparison is author-reported, with no committed raw or sanitized evidence bundle. It
+reports all three pairs on this profile and four recovered HTTP 429 responses across six conversations. The reported
 maximum input was 6,609 tokens for the product and 5,237 for the control. No final-pair request
 failed. See [the full comparison and scorer output](ISSUE_3_COMPARISON.md).
 
@@ -30,7 +30,7 @@ also unnecessary for the measured three-pair workload. Groq notes that some acco
 input/output limits and that the account Limits page has the exact current values: [rate-limit
 documentation](https://console.groq.com/docs/rate-limits).
 
-This profile makes a bounded evaluation repeatable on the tested account; it cannot guarantee that a
+This profile bounds the workload; the historical report cannot guarantee that a
 later live request will avoid quota exhaustion. The client reports a generic quota message, retries
 transient 429s according to response headers, and preserves a failure artifact if a run cannot
 continue.
@@ -80,6 +80,7 @@ window.fetch = async (input, init = {}) => {
 
 ## Acceptance status
 
-The documented-choice and browser-message criteria are complete locally. The issue remains open for
+The choice is documented; the browser check above is an author-reported observation of the earlier UI,
+not a committed browser trace or validation of later UI revisions. The issue remains open for
 maintainer review; no issue closure was performed. The selected free-tier account can still return
 429 or 413 if its live allowance changes or a request grows beyond the tested profile.

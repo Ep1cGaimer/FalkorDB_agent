@@ -386,7 +386,7 @@ def test_control_chain_restarts_with_the_next_model(tmp_path, monkeypatch):
     # m2 started from turn 0: system + user only, none of m1's history
     assert [m["role"] for m in bodies["groq:m2"][0]["messages"]] == ["system", "user"]
     assert transcript["abandoned"][0]["model"] == "groq:m1"
-    assert "503" in transcript["abandoned"][0]["error"]
+    assert transcript["abandoned"][0]["error"]["status"] == 503
     assert transcript["result"]["disposition"] == "BLOCKED"
 
 
@@ -400,7 +400,7 @@ def test_control_reports_all_models_failing(tmp_path, monkeypatch):
         return tr
 
     monkeypatch.setattr(grounding, "make_transport", make_transport)
-    with pytest.raises(grounding.GroundingError, match="groq:m1 down.*groq:m2 down"):
+    with pytest.raises(grounding.GroundingError, match="groq:m1.*groq:m2"):
         control.run_control(artifact_dir=tmp_path, models=["groq:m1", "groq:m2"])
     saved = list(tmp_path.glob("llm_flat_*.json"))
     assert len(saved) == 1
@@ -458,6 +458,45 @@ def test_product_turn_counts_include_rejected_generations(tmp_path):
     path = tmp_path / "transcript.json"
     path.write_text(json.dumps({"events": [{"type": "model_error"}, {"type": "model"}, {"type": "tool"}]}))
     assert scoring._turns_from_grounding_transcript(str(path)) == 2
+
+
+@pytest.mark.parametrize("fallback", [False, True])
+def test_control_failure_and_fallback_artifacts_never_save_raw_provider_errors(tmp_path, monkeypatch, fallback):
+    from rw import grounding
+    private = "org_FAKE000 SECRET-KEY raw_provider_body"
+
+    def factory(model):
+        calls = []
+
+        def transport(body):
+            calls.append(body)
+            if model == "groq:good":
+                return groq_call("submit_assessment", fleet={"cart": {"version": "1.4"},
+                                                              "checkout": {"version": "2.1"}},
+                                 disposition="NEEDS_EVIDENCE", evidence=["Not fully checked"])
+            if len(calls) == 1:
+                return groq_call("run_reader_probe", service="cart", version="1.4", record_id="saved-cart-1001")
+            if len(calls) == 2:
+                raise grounding.ToolCallRejected({"message": private, "failed_generation": private})
+            raise grounding.GroundingError("HTTP 429: " + private)
+
+        transport.provider, transport.model_used = "groq", model
+        return transport
+
+    monkeypatch.setattr(grounding, "make_transport", factory)
+    models = ["groq:bad", "groq:good"] if fallback else ["groq:bad"]
+    if fallback:
+        _, path = control.run_control(models=models, artifact_dir=tmp_path)
+    else:
+        with pytest.raises(grounding.GroundingError) as error:
+            control.run_control(models=models, artifact_dir=tmp_path)
+        assert "org_FAKE" not in str(error.value) and "SECRET-KEY" not in str(error.value)
+        path = next(tmp_path.glob("llm_flat_*.json"))
+    raw = path.read_text()
+    assert all(marker not in raw for marker in ("org_FAKE", "SECRET-KEY", "raw_provider_body", "failed_generation"))
+    failed = json.loads(raw)["abandoned"][0]
+    assert failed["error"] == {"status": 429, "code": "rate_limited", "message": "Provider rate limit reached."}
+    assert any(e["type"] == "model_error" for e in failed["events"])
 
 
 # --------------------------------------------------------------------------- scoring math

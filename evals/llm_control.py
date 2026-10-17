@@ -569,7 +569,7 @@ def run_control(request_text: str = REQUEST, *, transport: Callable[[dict], dict
             answer, errors, audit, events, turns = _run_loop(request_text, tools, adapter, tr,
                                                              fixture_root, snapshot)
         except grounding.GroundingError as exc:
-            abandoned.append({"model": model, "error": str(exc),
+            abandoned.append({"model": model, "error": grounding.provider_error_details(exc),
                               "events": getattr(exc, "events", []),
                               "transport_settings": getattr(tr, "settings", {}),
                               "transport_trace": getattr(tr, "trace", [])})
@@ -621,7 +621,9 @@ def run_control(request_text: str = REQUEST, *, transport: Callable[[dict], dict
                                 "tool_calls": [], "probe_calls": [], "model_turns": None},
                                artifact_dir or CONTROL_DIR)
         message += f"; failure transcript: {path}"
-    raise grounding.GroundingError(message)
+    last_error = abandoned[-1]["error"] if abandoned else {}
+    raise grounding.GroundingError(message, status=last_error.get("status"),
+                                  code=last_error.get("code", "provider_error"))
 
 
 def main(argv: list[str] | None = None) -> int:

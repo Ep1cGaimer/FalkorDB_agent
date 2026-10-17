@@ -2,9 +2,28 @@
 
 The user authorized focused code changes after the initial environment-only attempts failed. This report supersedes that earlier implementation restriction. The [pre-fix live results](ISSUE_3_LIVE_RESULTS.md) remain historical evidence, not results for this patch.
 
-Base commit: `771ce3814e7ad8bb6c5902e4ac9de83a711abbee`. Issue #3 changes are in commit `c78b3f24b834f03be1151e1dd1aaf1c576a75c0a` on [PR #13](https://github.com/Ep1cGaimer/FalkorDB_agent/pull/13). All records and release artifacts are synthetic.
+Historical base: `771ce3814e7ad8bb6c5902e4ac9de83a711abbee`; the original patch was committed as `c78b3f24b834f03be1151e1dd1aaf1c576a75c0a`. PR #13 is now rebased onto main after PRs #14 and #16, with the review corrections described below. All release artifacts are synthetic.
 
-**Result:** issue #3's local acceptance is verified: three live control-test passes and three same-model product runs, with unchanged tested source. The [recorded comparison](ISSUE_3_COMPARISON.md) contains the exact scorer output and interpretation. The GitHub issue remains open for maintainer review.
+**Evidence status:** all historical live counts in this report and the [comparison](ISSUE_3_COMPARISON.md) are author-reported. Raw artifacts are not committed, and the original runner had completion and inventory defects. These numbers are not independently verifiable acceptance evidence for the current code. The GitHub issue remains open for review.
+
+## Maintainer review corrections
+
+| Request | Correction and reason |
+|---|---|
+| Provider identifiers leaked into product and control artifacts | Persist HTTP status, an allowlisted error code and a fixed message. Raw provider messages, rejected generations and transport exception text are discarded. Both all-failure and fallback-success artifacts use the same sanitizer, including injected transports. Error responses cannot save a raw `usage` field. |
+| Failed products counted as complete | Track `product_completed` independently of `same_model`. A successful prefix can establish identity, but any provider-error outcome/flag stops collection, leaves completion false and returns exit 1. Honest BLOCKED and NEEDS_EVIDENCE results remain valid operational completions. |
+| Changelogs and retained bytes were missing from source hashes | Inventory every fixture/evidence file, including `.md` and `.bin`, plus source/test/eval/script files. Additions, changes and removals affect the inventory. Generated eval results and caches are excluded. |
+| Live numbers lacked committed evidence | Explicitly label the historical results author-reported throughout README, this report, the comparison and quota plan. No sanitized bundle is claimed and no live evaluation was rerun for these corrections. |
+| Conflicts with merged reports and MCP work | Rebase after PRs #14 and #16, preserve the complete issue #2 and MCP reports, and remove the hard-coded Quickstart test count. README and CONTRACTS retain both sets of changes. |
+
+Regression tests exercise the reviewer's provider-identifier reproduction for both workflows, error-after-prefix completion, valid blocked/missing-evidence outcomes, and changelog/payload mutation, addition and deletion. See the verification results below.
+
+## Review verification
+
+- Full base suite: `.venv/bin/python -m pytest -q -rs -m 'not live'` — **447 passed, 3 skipped, 3 deselected**. The three skipped modules require the optional MCP SDK; CI also runs the MCP-enabled matrix leg.
+- Deterministic smoke: `.venv/bin/python scripts/smoke.py` — **8/8 PASS**, including blocked approval, passing alternative, idempotency and missing-evidence cases; disposable graph cleanup passed.
+- The first full-suite attempt was interrupted because FalkorDB was stopped. After `docker compose up -d` and a successful ping, the full rerun passed. This was an environment prerequisite, not a passing test result.
+- No new live calls or new browser claims are included in this review correction.
 
 ## What the investigation established
 
@@ -24,7 +43,7 @@ The captured baseline is under `artifacts/issue-3/diagnostics/`. The diagnostic 
 | [`src/rw/grounding.py`](../src/rw/grounding.py), `GroqProvider.body` | Require a tool call and disable parallel tool calls. | Matches the existing tool-only protocol and the current models' sequential tool support. A plain prose/JSON response should not be accepted as a terminal action. |
 | Groq wire history | Serialize tool results as compact UTF-8 JSON and forward assistant content/tool calls without provider-only reasoning metadata. | Reduces avoidable input size while preserving decoded source values and exact tool-call IDs/arguments. |
 | Grounding excerpt delivery | Replace repeated excerpt text with an ID/hash reference only after that exact text survived the output cap and reached an earlier model message. Keep full text internally for citation validation. | Prevents repeated retrieval from overflowing the input allowance without withholding unique evidence. Capped-away text and changed content hashes are sent in full on the next successful delivery. |
-| `ToolCallRejected`, `_retrying_post`, `model_response` | Recognize only HTTP 400 `tool_use_failed`; record the rejected generation as data and give the model a trusted correction listing the declared tools. | A malformed generated call should be correctable without restarting the whole investigation. Rejected text is never executed or treated as a valid call. Authentication, quota and unrelated request errors retain their existing handling. |
+| `ToolCallRejected`, `_retrying_post`, `model_response` | Recognize only HTTP 400 `tool_use_failed`; save structured sanitized metadata and give a trusted correction naming declared tools. | A malformed call can be corrected without retaining or executing raw rejected text. Authentication, quota and unrelated errors retain their existing handling. |
 | Product and control model loops | Use the same correction helper and count each rejection against the existing eight-turn cap. | Neither workflow gets unlimited retries or an extra hidden reasoning budget. Repeated rejection ends as an aborted/unresolved result. |
 | Replay transport | Replay recorded rejected-generation events as rejections. | A replay must preserve correction turns and their budget cost, rather than silently skipping them. |
 | Groq transport | Use reported token-window headers to pace later calls when the remaining allowance is below a conservative request estimate. | Avoid immediately issuing a request that is likely to be rate-limited. Missing headers remain unknown. The estimate schedules calls; it does not decide compatibility or claim an exact token count. |
@@ -69,7 +88,7 @@ Before restarting, the two earlier browser investigations were saved to `artifac
 
 This patch uses Groq's existing OpenAI-compatible Chat Completions endpoint. It does not add an arbitrary-provider endpoint override. See the official [tool-calling guide](https://console.groq.com/docs/tool-use/local-tool-calling), [API parameters](https://console.groq.com/docs/api-reference) and [rate-limit headers](https://console.groq.com/docs/rate-limits) for the provider contracts behind these choices.
 
-## Verification
+## Historical author-reported verification
 
 | Check | Result |
 |---|---|
@@ -77,7 +96,7 @@ This patch uses Groq's existing OpenAI-compatible Chat Completions endpoint. It 
 | Earlier full-suite attempt | 305 passed and one unrelated FalkorDB query timeout. The affected relational-control module then passed 17/17; the full rerun passed without changing graph code or server timeout. |
 | Deterministic end-to-end smoke | Passed all eight checkpoints, including blocked approval, passing alternative, idempotent simulation and missing-evidence snapshots. |
 | Three live control tests and same-model product comparison | **3/3 control tests passed**, zero skips; **3/3 product runs BOUNDED_PASS** on `groq:qwen/qwen3.8-27b`. Exact scorer: **product 3/3 vs control 0/3 oracle-consistent runs**, because control probe coverage was 3/4 versus product 4/4. Both had zero disposition-based false BOUNDED_PASS. |
-| Source and context consistency | Runner source hashes unchanged; all 13 context-file hashes identical across controls and equal to the checkout. All six conversations' provider response model IDs match the pin. |
+| Source and context consistency | The author reported unchanged source and 13 context-file hashes. The old inventory omitted changelogs/payload bytes, so this did not establish complete evidence integrity. |
 | Documentation | Seven Mermaid diagrams parsed successfully; new study/report links checked locally. |
 
 An intermediate GPT-OSS 120B pilot with the initial transport patch and `low` reasoning still aborted after eight turns: it repeated probes and did not submit a terminal tool call. The corresponding product run correctly reported `BLOCKED`, with all four obligations checked. This failed pair is preserved at `artifacts/issue-3/comparison-20261016T170937113211Z/`; it is not counted as acceptance evidence. The final control protocol is version 4, and GPT-OSS reasoning defaults to its original `medium` setting.
@@ -92,7 +111,7 @@ In the final dataset, each control omitted one required probe and submitted `fla
 
 The final six conversations completed despite three corrected HTTP 400 tool-generation rejections and four recovered HTTP 429 responses. No HTTP 413 occurred. This demonstrates recovery on the tested workload, not unlimited quota or a guarantee for every model/request.
 
-The runner hashes application, script, test and evaluation code plus JSON/HTML/JavaScript inputs. A change to those files during collection invalidates its completion flag. Each control transcript separately hashes all 13 supplied context files, including release changelogs; those hashes must also agree across the collected runs and with the final checkout. Documentation edits are outside the runner's source freeze.
+The corrected runner hashes all file types under application, script, test, eval and fixture directories, including changelogs and retained `.bin` payloads. It excludes caches and generated eval results. Added, removed or modified evidence invalidates completion. Top-level explanatory docs are outside that inventory. This behavior is regression-tested; it does not retroactively validate the historical source checks.
 
 ## Test the local console
 

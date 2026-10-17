@@ -92,13 +92,49 @@ You have at most 8 turns. Call tools; do not answer in prose."""
 class GroundingError(RuntimeError):
     """Provider/transport failure (retries exhausted, bad key, malformed response)."""
 
+    def __init__(self, message: str, *, status: int | None = None, code: str = "provider_error"):
+        super().__init__(message)
+        self.status = status
+        self.code = code
+
+
+_PROVIDER_ERROR_MESSAGES = {
+    "provider_error": "Provider request failed.",
+    "http_error": "Provider returned an error response.",
+    "rate_limited": "Provider rate limit reached.",
+    "quota_refused": "Provider quota or request size limit reached.",
+    "transport_error": "Provider connection failed.",
+    "timeout": "Provider request timed out.",
+    "tool_use_failed": "Provider rejected a generated tool call.",
+}
+
+
+def provider_error_details(error: GroundingError) -> dict:
+    """Safe to persist even for injected/custom transports: no provider text is copied.
+
+    Legacy exceptions may have an HTTP status only in their message. Extract that number, never
+    the surrounding body, account identifiers, generated text or arbitrary provider error codes.
+    """
+    status = getattr(error, "status", None)
+    if type(status) is not int or not 100 <= status <= 599:
+        match = re.search(r"\bHTTP\s+([1-5]\d{2})\b", str(error))
+        status = int(match[1]) if match else None
+    code = getattr(error, "code", "provider_error")
+    if not isinstance(code, str) or code not in _PROVIDER_ERROR_MESSAGES:
+        code = "provider_error"
+    if code == "provider_error" and status is not None:
+        code = "rate_limited" if status == 429 else "quota_refused" if status == 413 else "http_error"
+    return {"status": status, "code": code, "message": _PROVIDER_ERROR_MESSAGES[code]}
+
 
 class ToolCallRejected(GroundingError):
     """The provider generated a malformed tool call; no tool has executed."""
 
     def __init__(self, details: dict):
-        super().__init__("provider rejected generated tool call (tool_use_failed)")
-        self.details = details
+        # Accept old replay events, but never retain their message/failed_generation fields.
+        super().__init__("provider rejected generated tool call (tool_use_failed)",
+                         status=400, code="tool_use_failed")
+        self.details = provider_error_details(self)
 
 
 # --------------------------------------------------------------------------- tool layer
@@ -395,13 +431,14 @@ def _tls_context() -> ssl.SSLContext:
     return tls
 
 
-def _retrying_post(url: str, body: dict, headers: dict, key: str,
+def _retrying_post(url: str, body: dict, headers: dict,
                    sleep: Callable[[float], None], timeout_s: float, attempts: int, label: str,
                    on_response: Callable[[httpx.Response], None] | None = None) -> dict:
     """POST one provider request with the shared retry policy: 2..30 s exponential backoff, or the
-    server's Retry-After when present. The credential only ever travels in `headers`; it is redacted
-    from error text."""
+    server's Retry-After when present. Provider bodies and transport exception text are used only
+    for classification, never copied into exceptions or artifacts."""
     last = "no attempt made"
+    status, code = None, "provider_error"
     for attempt in range(attempts):
         wait = None
         try:
@@ -410,28 +447,31 @@ def _retrying_post(url: str, body: dict, headers: dict, key: str,
                 on_response(r)
             if r.status_code == 200:
                 return r.json()
-            redacted = r.text.replace(key, "***") if key else r.text
-            last = f"HTTP {r.status_code}: {redacted[:200]}"
+            status = r.status_code
+            code = "rate_limited" if status == 429 else "quota_refused" if status == 413 else "http_error"
+            last = f"HTTP {status}: {_PROVIDER_ERROR_MESSAGES[code]}"
             if r.status_code == 400:
                 try:
-                    error = json.loads(redacted).get("error", {})
+                    error = r.json().get("error", {})
                 except (ValueError, AttributeError):
                     error = {}
                 if isinstance(error, dict) and error.get("code") == "tool_use_failed":
-                    raise ToolCallRejected({"status": 400, "code": "tool_use_failed",
-                                            "message": str(error.get("message", ""))[:1000],
-                                            "failed_generation": str(error.get("failed_generation", ""))[:4000]})
+                    raise ToolCallRejected({})
             if r.status_code not in (408, 429, 500, 502, 503, 504):
-                raise GroundingError(f"{label} request failed (not retryable): {last}")
+                raise GroundingError(f"{label} request failed (not retryable): {last}", status=status, code=code)
             if r.status_code == 429 and _quota_refused(r):  # TPD / request too large: waiting cannot help
-                raise GroundingError(f"{label} request failed (not retryable): {last}")
+                code = "quota_refused"
+                raise GroundingError(f"{label} request failed (not retryable): HTTP {status}: "
+                                     + _PROVIDER_ERROR_MESSAGES[code], status=status, code=code)
             wait = _retry_after_s(r)
         except httpx.TransportError as e:  # TLS resets, timeouts, connection errors
-            redacted = str(e).replace(key, "***") if key else str(e)
-            last = f"{type(e).__name__}: {redacted[:200]}"
+            status = None
+            code = "timeout" if isinstance(e, httpx.TimeoutException) else "transport_error"
+            last = _PROVIDER_ERROR_MESSAGES[code]
         if attempt < attempts - 1:
             sleep(wait if wait is not None else min(RETRY_MAX_S, RETRY_MIN_S * 2 ** attempt))
-    raise GroundingError(f"{label} request failed after {attempts} attempts; last error: {last}")
+    raise GroundingError(f"{label} request failed after {attempts} attempts; last error: {last}",
+                         status=status, code=code)
 
 
 def _default_gemini_model() -> str:
@@ -460,7 +500,7 @@ def make_gemini_transport(api_key: str | None = None, sleep: Callable[[float], N
     def transport(body: dict) -> dict:
         return _retrying_post(GEMINI_API_URL.format(model=name), body,
                               {"x-goog-api-key": key, "content-type": "application/json"},
-                              key, sleep, timeout_s, attempts, label)
+                              sleep, timeout_s, attempts, label)
 
     transport.model_used = label
     transport.provider = DEFAULT_PROVIDER
@@ -509,7 +549,8 @@ def make_groq_transport(api_key: str | None = None, sleep: Callable[[float], Non
             data = {}
         if not isinstance(data, dict):
             data = {}
-        trace.append({"status": response.status_code, "rate_limits": rate, "usage": data.get("usage")})
+        trace.append({"status": response.status_code, "rate_limits": rate,
+                      "usage": data.get("usage") if response.status_code == 200 else None})
         budget.update(remaining=None, reset_at=0.0)
         try:
             remaining = int(rate["x-ratelimit-remaining-tokens"])
@@ -534,7 +575,7 @@ def make_groq_transport(api_key: str | None = None, sleep: Callable[[float], Non
             budget["remaining"] = None
         return _retrying_post(GROQ_API_URL, request,
                               {"authorization": f"Bearer {key}", "content-type": "application/json"},
-                              key, sleep, timeout_s, attempts, label, observe)
+                              sleep, timeout_s, attempts, label, observe)
 
     transport.model_used = label
     transport.provider = "groq"
@@ -749,15 +790,15 @@ def model_response(transport: Callable[[dict], dict], adapter: Provider, message
                    events: list[dict], turn: int) -> dict | None:
     """Give rejected generation a correction turn, within the SAME eight-turn budget.
 
-    Provider-rejected text is recorded as untrusted evidence only. Never execute it, parse it into
-    a call, or feed its instructions back to the model. The correction names trusted declarations.
+    Only sanitized rejection metadata is recorded. Discard the raw text; never execute it, parse it
+    into a call, or feed its instructions back. The correction names trusted declarations.
     Authentication, quota and unrelated request errors still propagate to the provider chain.
     """
     body = adapter.body(messages)
     try:
         return transport(body)
     except ToolCallRejected as exc:
-        events.append({"type": "model_error", "turn": turn, "error": exc.details})
+        events.append({"type": "model_error", "turn": turn, "error": provider_error_details(exc)})
         names = [tool["function"]["name"] for tool in body.get("tools", []) if "function" in tool]
         messages.append({"role": "user", "text":
                          "The provider rejected your generated tool call. Nothing from that response "
@@ -852,7 +893,7 @@ def ground(request_text: str, tools: Any, transport: Callable[[dict], dict] | No
             tr = tr or factory(model)
             result, errors, audit, events = _run_loop(request_text, tools, tr, alternative_context)
         except GroundingError as e:
-            abandoned.append({"model": model, "error": str(e), "events": getattr(e, "events", []),
+            abandoned.append({"model": model, "error": provider_error_details(e), "events": getattr(e, "events", []),
                               "transport_trace": getattr(tr, "trace", []),
                               "transport_settings": getattr(tr, "settings", {})})
             continue
@@ -873,8 +914,10 @@ def ground(request_text: str, tools: Any, transport: Callable[[dict], dict] | No
                   "transport_trace": last.get("transport_trace", []),
                   "transport_settings": last.get("transport_settings", {})},
                  Path(artifact_dir or ARTIFACT_DIR) / "failures")
+    details = last.get("error", {})
     error = GroundingError("all models failed: " + " | ".join(f"{a['model']}: {a['error']}" for a in abandoned)
-                           + f"; failure transcript: {path}")
+                           + f"; failure transcript: {path}",
+                           status=details.get("status"), code=details.get("code", "provider_error"))
     error.transcript_path = path
     raise error
 

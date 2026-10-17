@@ -32,14 +32,17 @@ import score_controls  # noqa: E402
 REQUEST = "Undo the basket rollout, but keep the receipt correction."
 
 
-def source_hashes() -> dict[str, str]:
-    paths = [ROOT / "pyproject.toml"]
+def source_hashes(root: Path = ROOT) -> dict[str, str]:
+    """Inventory code and every fixture/evidence file, including changelogs and retained bytes."""
+    paths = [root / "pyproject.toml"]
     for directory in ("src", "tests", "evals", "fixtures", "scripts"):
-        paths.extend(p for p in (ROOT / directory).rglob("*")
-                     if p.is_file() and "__pycache__" not in p.parts
-                     and p.suffix in {".py", ".html", ".json", ".mjs"}
-                     and "results" not in p.relative_to(ROOT).parts)
-    return {p.relative_to(ROOT).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(paths)}
+        for path in (root / directory).rglob("*"):
+            parts = path.relative_to(root).parts
+            if (not path.is_file() or any(p in parts for p in ("__pycache__", ".pytest_cache", "node_modules"))
+                    or (directory == "evals" and "results" in parts)):
+                continue
+            paths.append(path)
+    return {p.relative_to(root).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(paths)}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -110,22 +113,27 @@ def main(argv: list[str] | None = None) -> int:
                 transcript = getattr(exc, "transcript_path", None)
                 failure = json.loads(transcript.read_text()) if transcript else {}
                 report = {"request": REQUEST, "snapshot": "snap-001", "attempts": [{
-                    "outcome": "PROVIDER_ERROR", "error": str(exc),
+                    "outcome": "PROVIDER_ERROR", "error": grounding.provider_error_details(exc),
                     "transcript": str(transcript) if transcript else None,
                     "grounding": {"model": model, "live": failure.get("live", False), "result": {}},
                     "provider_failed": True}]}
             (out / "reports" / f"product-{index}.json").write_text(json.dumps(report, indent=2))
         finally:
             session.g.delete()
-        product_model = all(a["grounding"]["model"] == model and a["grounding"]["live"]
-                            for a in report["attempts"])
+        attempts = report["attempts"]
+        product_model = bool(attempts) and all(a["grounding"]["model"] == model and a["grounding"]["live"]
+                                             for a in attempts)
+        # A successful prefix proves model identity, not completion of the product workflow.
+        product_completed = bool(attempts) and all(not a.get("provider_failed")
+                                                   and a.get("outcome") != "PROVIDER_ERROR" for a in attempts)
         pair = {"index": index, "control_passed": control_passed, "control_junit": totals,
                 "control_exit_code": exit_code, "same_model": correct_model and product_model,
-                "product_outcomes": [a["outcome"] for a in report["attempts"]]}
+                "product_completed": product_completed,
+                "product_outcomes": [a["outcome"] for a in attempts]}
         metadata["pairs"].append(pair)
         (out / "manifest.json").write_text(json.dumps(metadata, indent=2))
         print(json.dumps(pair), flush=True)
-        if not control_passed or not pair["same_model"]:
+        if not control_passed or not pair["same_model"] or not product_completed:
             break
 
     output = io.StringIO()
@@ -136,7 +144,8 @@ def main(argv: list[str] | None = None) -> int:
     (out / "comparison.md").write_text(comparison)
     metadata["source_unchanged_during_run"] = source_hashes() == metadata["source_hashes"]
     metadata["requested_pairs_complete"] = (len(metadata["pairs"]) == args.runs
-                                            and all(p["control_passed"] and p["same_model"] for p in metadata["pairs"])
+                                            and all(p["control_passed"] and p["same_model"] and p["product_completed"]
+                                                    for p in metadata["pairs"])
                                             and metadata["source_unchanged_during_run"])
     metadata["issue_3_complete"] = metadata["requested_pairs_complete"] and args.runs >= 3
     (out / "manifest.json").write_text(json.dumps(metadata, indent=2))
