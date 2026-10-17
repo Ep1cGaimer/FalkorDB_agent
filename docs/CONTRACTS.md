@@ -312,6 +312,11 @@ abort with `GROUNDING_ABORTED`; transport failure restarts both phases on the ne
 `READY` permits artifact search, not compatibility, approval, or deployment. Intent classification
 remains model judgment; structural validation is not a proof of semantic correctness.
 
+The grounding `release_history` wrapper returns changelog text and code-excerpt metadata, with
+code text fetched on demand through `get_excerpts`. This keeps repeated history reads within a
+smaller model context. Code metadata alone is not registered as quotable evidence; the complete
+excerpt must first be fetched. The underlying graph query and excerpt bytes/hashes are unchanged.
+
 New transcripts carry `intent_version: 2`, the intent prompt hash, and intent-phase model/decision
 events. Replay revalidates those decisions before replaying artifact calls. Legacy transcripts
 without that marker preserve their historical behavior, including old guessed proposals, and

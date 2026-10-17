@@ -1,11 +1,13 @@
 """Enforcement tests for intent assessment, separate from live semantic judgment."""
 import json
+import hashlib
+from types import SimpleNamespace
 
 import pytest
 
 from rw import grounding
 from rw.contracts import GroundingClarification, GroundingProposal
-from test_grounding import EX_ID, FakeTools, call, groq_call
+from test_grounding import EX_ID, FakeTools, ScriptedTransport, call, groq_call
 
 
 @pytest.mark.parametrize("provider", ["gemini", "groq"])
@@ -207,6 +209,44 @@ def test_unknown_intent_transcript_version_does_not_silently_use_legacy_replay(t
     path.write_text(json.dumps({"intent_version": 99}))
     with pytest.raises(grounding.GroundingError, match="unsupported intent transcript version"):
         grounding.replay(path)
+
+
+@pytest.fixture
+def code_tools(monkeypatch):
+    code = {"excerpt_id": "excerpt:search:code", "kind": "code", "text": "return 'ready'"}
+    code["content_hash"] = "sha256:" + hashlib.sha256(code["text"].encode()).hexdigest()
+    changelog = {"excerpt_id": "excerpt:search:notes", "kind": "changelog", "text": "Prefix matching."}
+    changelog["content_hash"] = "sha256:" + hashlib.sha256(changelog["text"].encode()).hexdigest()
+    history = [{"release_id": "release:search:old", "service": "search", "version": "old",
+                "declared_flags": [], "excerpts": [changelog, code]}]
+    backend = SimpleNamespace(
+        release_history=lambda *args: (history, {"rows": 1}),
+        get_excerpts=lambda *args: ([code], {"rows": 1}))
+    monkeypatch.setattr(grounding.GroundingTools, "_graph", staticmethod(lambda: backend))
+    return grounding.GroundingTools(object()), history, code
+
+
+def test_history_defers_code_text_and_preserves_exact_fetch(code_tools):
+    tools, original, code = code_tools
+    rows, _ = tools.release_history("search")
+    metadata = next(ex for ex in rows[0]["excerpts"] if ex["kind"] == "code")
+    assert "text" not in metadata and metadata["excerpt_id"] == code["excerpt_id"]
+    assert rows[0]["excerpts"][0] == original[0]["excerpts"][0]
+    assert tools.get_excerpts([code["excerpt_id"]])[0] == [code]
+    assert original[0]["excerpts"][1]["text"] == code["text"]
+
+
+def test_code_metadata_is_not_quotable_until_explicitly_fetched(code_tools, tmp_path):
+    tools, _, code = code_tools
+    proposal = call("propose_fleet", changes=[{"service": "search", "release_id": "release:search:old"}],
+                    citations=[{"excerpt_id": code["excerpt_id"], "quote": code["text"]}], rationale="r")
+    transport = ScriptedTransport([call("release_history", service="search"), proposal,
+                                   call("get_excerpts", excerpt_ids=[code["excerpt_id"]]), proposal])
+    result, path = grounding.ground("Restore prefix matching.", tools, transport=transport, artifact_dir=tmp_path)
+    corrections = [e for e in json.loads(path.read_text())["events"] if e["type"] == "citation_correction"]
+    assert len(corrections) == 1 and "CITATION_UNKNOWN_EXCERPT" in corrections[0]["errors"][0]
+    assert result.result.citations[0].content_hash == code["content_hash"] and not result.validation_errors
+    assert grounding.replay(path).result == result.result
 
 
 @pytest.mark.parametrize("filename", ["70a0b3fbd63b17a3.json", "4f5d394955ed1fda.json", "459f0e5b394a2f39.json"])

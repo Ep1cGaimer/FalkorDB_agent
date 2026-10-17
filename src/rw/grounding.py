@@ -119,7 +119,12 @@ class GroundingTools:
     def release_history(self, service: str):
         if not isinstance(service, str) or not re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", service):
             raise ValueError("service must be a short service name such as 'cart'")
-        return self._graph().release_history(self._g, self._snapshot_id, service)
+        rows, log = self._graph().release_history(self._g, self._snapshot_id, service)
+        # Changelogs ground behavior; code stays available by id through get_excerpts. Sending
+        # every codec body repeatedly can exceed the fallback provider's input budget.
+        return [{**row, "excerpts": [
+            {key: value for key, value in ex.items() if key != "text" or ex.get("kind") != "code"}
+            for ex in row.get("excerpts", [])]} for row in rows], log
 
     def store_readers(self, store_id: str):
         if not isinstance(store_id, str) or not re.fullmatch(r"(store:)?[A-Za-z0-9_.-]{1,64}", store_id):
@@ -172,7 +177,7 @@ TOOL_SPECS: list[dict] = [
      "description": "List the currently deployed release and flags per service, with declared flags and bundle_id.",
      "parameters": {"type": "object", "properties": {}}},
     {"name": "release_history",
-     "description": "Release history of one service (newest first) with each release's excerpts (changelog and code).",
+     "description": "Release history (newest first) with changelog text and code excerpt metadata. Fetch code text with get_excerpts.",
      "parameters": {"type": "object", "properties": {"service": _S}, "required": ["service"]}},
     {"name": "store_readers",
      "description": "List releases/routes that read a state store, e.g. store:cart-cache.",
@@ -514,7 +519,7 @@ def _collect(rows: list[dict], excerpts: dict, releases: dict) -> None:
         if row.get("excerpt_id") and row.get("text") is not None:
             excerpts[row["excerpt_id"]] = row
         for ex in row.get("excerpts") or []:
-            if isinstance(ex, dict) and ex.get("excerpt_id"):
+            if isinstance(ex, dict) and ex.get("excerpt_id") and ex.get("text") is not None:
                 ex = {**ex, "release_id": ex.get("release_id") or row.get("release_id")}
                 excerpts[ex["excerpt_id"]] = ex
 
