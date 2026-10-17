@@ -5,6 +5,7 @@
 # must therefore never rewrite line endings or apply any other content conversion inside fixtures/,
 # on checkout or on add.
 fixtures/** -text
+tests/fixtures/** -text
 
 # Retained payload bytes are opaque records: keep them byte-exact and undiffed.
 *.bin binary

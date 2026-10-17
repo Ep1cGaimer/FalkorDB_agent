@@ -1,0 +1,65 @@
+{
+  "captured_at": "2026-10-15T08:00:00Z",
+  "deployments": [
+    {
+      "flags": {
+        "basket_v2": true
+      },
+      "service": "cart",
+      "version": "1.5"
+    },
+    {
+      "flags": {},
+      "service": "checkout",
+      "version": "2.1"
+    }
+  ],
+  "environment": "fixture-local",
+  "snapshot": "snap-001",
+  "stores": [
+    {
+      "coverage": "COMPLETE",
+      "kind": "kv-cache",
+      "name": "cart-cache",
+      "records": [
+        {
+          "format": "cart/v1",
+          "payload": "payloads/saved-cart-1001.bin",
+          "payload_hash": "sha256:c9dc2f8671ca885d4472ec907ecb8d7ced98e64edb559008d5eec7984fa6e82a",
+          "record_id": "saved-cart-1001",
+          "writer": {
+            "service": "cart",
+            "version": "1.4"
+          }
+        },
+        {
+          "format": "cart/v2",
+          "payload": "payloads/saved-cart-2002.bin",
+          "payload_hash": "sha256:00d293f0002b7f8a198dabc23bbc861fd800d59f4d29a99419709661445ea1cd",
+          "record_id": "saved-cart-2002",
+          "writer": {
+            "service": "cart",
+            "version": "1.5"
+          }
+        }
+      ]
+    },
+    {
+      "coverage": "COMPLETE",
+      "kind": "kv-cache",
+      "name": "cart-archive",
+      "records": [
+        {
+          "format": "cart-archive/v1",
+          "payload": "payloads/archived-cart-2002.bin",
+          "payload_hash": "sha256:f587c495b4d1451a327c4b7148ab5d8d6b841f453bf2d43836a22369c23a1bb3",
+          "record_id": "saved-cart-2002",
+          "writer": {
+            "service": "cart",
+            "version": "1.5"
+          }
+        }
+      ]
+    }
+  ]
+}

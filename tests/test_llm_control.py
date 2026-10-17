@@ -33,6 +33,18 @@ control = _load("llm_control", ROOT / "evals" / "llm_control.py")
 scoring = _load("score_controls", ROOT / "evals" / "score_controls.py")
 
 
+BASE_FIXTURES = scoring.fixture_index()
+
+
+def route_identity(service, version):
+    info = BASE_FIXTURES["by_service_version"].get((service, version))
+    return info["routes"][0]["route_id"] if info else "route:unknown"
+
+
+def key(service, version, record_id):
+    return (service, version, route_identity(service, version), "store:cart-cache", record_id)
+
+
 # --------------------------------------------------------------------------- fakes
 
 def call(name, **args):
@@ -50,10 +62,14 @@ class ScriptedTransport:
         self.bodies.append(json.loads(json.dumps(body)))
         if self.responses:
             return self.responses.pop(0)
-        return call("run_reader_probe", service="cart", version="1.4", record_id="saved-cart-1001")
+        return call("run_reader_probe", service="cart", version="1.4",
+                    route_id=route_identity("cart", "1.4"), store_id="store:cart-cache",
+                    record_id="saved-cart-1001")
 
 
-PROBE_1001 = call("run_reader_probe", service="cart", version="1.4", record_id="saved-cart-1001")
+PROBE_1001 = call("run_reader_probe", service="cart", version="1.4",
+                    route_id=route_identity("cart", "1.4"), store_id="store:cart-cache",
+                    record_id="saved-cart-1001")
 
 
 def final(fleet, disposition, evidence=None):
@@ -153,24 +169,24 @@ def test_dispatch_allowlist_is_exactly_the_declared_tools():
 
 def test_probe_tool_rejects_everything_not_in_the_fixture(tools):
     with pytest.raises(ValueError):
-        tools.run_reader_probe("cart", "9.9", "saved-cart-1001")
+        tools.run_reader_probe("cart", "9.9", route_identity("cart", "9.9"), "store:cart-cache", "saved-cart-1001")
     with pytest.raises(ValueError):
-        tools.run_reader_probe("cart", "1.4", "saved-cart-9999")
+        tools.run_reader_probe("cart", "1.4", route_identity("cart", "1.4"), "store:cart-cache", "saved-cart-9999")
     with pytest.raises(ValueError):
-        tools.run_reader_probe("../etc/passwd", "1.4", "saved-cart-1001")
+        tools.run_reader_probe("../etc/passwd", "1.4", route_identity("../etc/passwd", "1.4"), "store:cart-cache", "saved-cart-1001")
     with pytest.raises(ValueError):
-        tools.run_reader_probe("cart", "1.4", "saved-cart-1001; rm -rf /")
+        tools.run_reader_probe("cart", "1.4", route_identity("cart", "1.4"), "store:cart-cache", "saved-cart-1001; rm -rf /")
     with pytest.raises(ValueError):
-        tools.run_reader_probe(None, "1.4", "saved-cart-1001")
+        tools.run_reader_probe(None, "1.4", route_identity(None, "1.4"), "store:cart-cache", "saved-cart-1001")
 
 
 def test_probe_tool_result_shape_and_mapping(tools):
-    passed = tools.run_reader_probe("cart", "1.5", "saved-cart-2002")
+    passed = tools.run_reader_probe("cart", "1.5", route_identity("cart", "1.5"), "store:cart-cache", "saved-cart-2002")
     assert passed == {"status": "PASS", "error_type": None, "message": None}
-    failed = tools.run_reader_probe("cart", "1.4", "saved-cart-2002")
+    failed = tools.run_reader_probe("cart", "1.4", route_identity("cart", "1.4"), "store:cart-cache", "saved-cart-2002")
     assert failed["status"] == "FAIL" and failed["error_type"] == "ValueError"
     assert "cart/v2" in failed["message"]
-    assert tools.run_reader_probe("checkout", "2.1", "saved-cart-1001")["status"] == "PASS"
+    assert tools.run_reader_probe("checkout", "2.1", route_identity("checkout", "2.1"), "store:cart-cache", "saved-cart-1001")["status"] == "PASS"
 
 
 def _direct_harness(harness, codec, entry, payload):
@@ -193,7 +209,7 @@ def test_probe_matches_a_direct_harness_run(tools):
     payload = (scoring.FIXTURE_ROOT / "payloads" / "saved-cart-2002.bin").read_bytes()
     proc, direct = _direct_harness(harness, codec, "read_cart", payload)
     assert proc.returncode == 10 and direct["status"] == "FAIL" and direct["error_type"] == "ValueError"
-    got = tools.run_reader_probe("cart", "1.4", "saved-cart-2002")
+    got = tools.run_reader_probe("cart", "1.4", route_identity("cart", "1.4"), "store:cart-cache", "saved-cart-2002")
     assert (got["status"], got["error_type"], got["message"]) == ("FAIL", direct["error_type"], direct["message"])
     # and the newer reader passes on the same bytes (also checked by hand)
     codec_new = scoring.FIXTURE_ROOT / "releases" / "cart-1.5" / "codec.py"
@@ -203,7 +219,9 @@ def test_probe_matches_a_direct_harness_run(tools):
 
 def test_extra_args_never_reach_the_tool_and_unknown_tools_error(tmp_path):
     transport = ScriptedTransport([
-        call("run_reader_probe", service="cart", version="1.4", record_id="saved-cart-1001",
+        call("run_reader_probe", service="cart", version="1.4",
+                    route_id=route_identity("cart", "1.4"), store_id="store:cart-cache",
+                    record_id="saved-cart-1001",
              snapshot_id="evil", graph="other", entry="os.system"),
         call("delete_everything", target="graph"),
         final([{"service": "cart", "version": "1.4"}], "BLOCKED"),
@@ -223,7 +241,9 @@ def test_extra_args_never_reach_the_tool_and_unknown_tools_error(tmp_path):
 def test_transcript_is_saved_and_labeled(tmp_path):
     transport = ScriptedTransport([
         PROBE_1001,
-        call("run_reader_probe", service="checkout", version="2.1", record_id="saved-cart-2002"),
+        call("run_reader_probe", service="checkout", version="2.1",
+                    route_id=route_identity("checkout", "2.1"), store_id="store:cart-cache",
+                    record_id="saved-cart-2002"),
         final({"cart": {"version": "1.5", "flags": {"basket_v2": False}},
                "checkout": {"version": "2.1", "flags": {}}}, "BOUNDED_PASS",
               ["cart 1.5 read cart/v2", "checkout 2.1 read cart/v2"]),
@@ -317,7 +337,8 @@ def test_groq_control_round_trip_to_a_scored_answer(tmp_path):
     """The control runs on the product's Groq provider: OpenAI-format tool call, terminal answer."""
     transport = FakeGroqTransport([
         groq_call("run_reader_probe", call_id="c1", service="cart", version="1.4",
-                  record_id="saved-cart-2002"),
+                  route_id=route_identity("cart", "1.4"), store_id="store:cart-cache",
+                    record_id="saved-cart-2002"),
         groq_call("submit_assessment", call_id="c2", fleet=[{"service": "cart", "version": "1.4"}],
                   disposition="BLOCKED", evidence=["probe on saved-cart-2002 FAIL (ValueError)"]),
     ])
@@ -374,7 +395,9 @@ def test_control_chain_restarts_with_the_next_model(tmp_path, monkeypatch):
                 raise grounding.GroundingError("groq:m1 request failed after 6 attempts; last error: HTTP 503")
             if spec == "groq:m1" or len(n) == 1:
                 return groq_call("run_reader_probe", call_id=f"{spec}-{len(n)}", service="cart",
-                                 version="1.4", record_id="saved-cart-1001")
+                                 version="1.4",
+                    route_id=route_identity("cart", "1.4"), store_id="store:cart-cache",
+                    record_id="saved-cart-1001")
             return groq_call("submit_assessment", call_id="m2-2", fleet=[{"service": "cart", "version": "1.4"}],
                              disposition="BLOCKED", evidence=["probe PASS"])
         tr.model_used, tr.provider = spec, "groq"
@@ -475,7 +498,9 @@ def test_control_failure_and_fallback_artifacts_never_save_raw_provider_errors(t
                                                               "checkout": {"version": "2.1"}},
                                  disposition="NEEDS_EVIDENCE", evidence=["Not fully checked"])
             if len(calls) == 1:
-                return groq_call("run_reader_probe", service="cart", version="1.4", record_id="saved-cart-1001")
+                return groq_call("run_reader_probe", service="cart", version="1.4",
+                    route_id=route_identity("cart", "1.4"), store_id="store:cart-cache",
+                    record_id="saved-cart-1001")
             if len(calls) == 2:
                 raise grounding.ToolCallRejected({"message": private, "failed_generation": private})
             raise grounding.GroundingError("HTTP 429: " + private)
@@ -530,8 +555,8 @@ def test_release_and_manifest_index_are_fixture_derived(fixtures, manifests):
 def test_reader_obligations_and_derived_disposition(fixtures, manifests, oracle_index):
     fleet_a = {"cart": {"version": "1.4", "flags": {}}, "checkout": {"version": "2.1", "flags": {}}}
     pairs, gaps = scoring.reader_obligations(fixtures, manifests["snap-001"], fleet_a)
-    assert pairs == {("cart", "1.4", "saved-cart-1001"): True, ("cart", "1.4", "saved-cart-2002"): True,
-                     ("checkout", "2.1", "saved-cart-1001"): True, ("checkout", "2.1", "saved-cart-2002"): True}
+    assert pairs == {key("cart", "1.4", "saved-cart-1001"): True, key("cart", "1.4", "saved-cart-2002"): True,
+                     key("checkout", "2.1", "saved-cart-1001"): True, key("checkout", "2.1", "saved-cart-2002"): True}
     assert gaps == []
     disposition, source = scoring.derived_disposition(pairs, oracle_index["predictions"], gaps)
     assert disposition == "BLOCKED" and "1 predicted FAIL" in source
@@ -540,8 +565,8 @@ def test_reader_obligations_and_derived_disposition(fixtures, manifests, oracle_
     assert scoring.derived_disposition(pairs_b, oracle_index["predictions"], gaps_b)[0] == "BOUNDED_PASS"
     pairs_g, gaps_g = scoring.reader_obligations(fixtures, manifests["snap-003-orphan"], fleet_b)
     assert {g["kind"] for g in gaps_g} == {"WRITER_UNKNOWN", "FORMAT_UNKNOWN"}
-    assert ("cart", "1.5", "saved-cart-3003") in pairs_g
-    assert scoring.derived_disposition(pairs_g, oracle_index["predictions"], gaps_g)[0] == "NEEDS_EVIDENCE"
+    assert key("cart", "1.5", "saved-cart-3003") in pairs_g
+    assert scoring.derived_disposition(pairs_g, oracle_index["predictions"], gaps_g, "snap-003-orphan")[0] == "NEEDS_EVIDENCE"
 
 
 def _run(**kw):
@@ -554,8 +579,8 @@ def _run(**kw):
 
 
 def test_score_run_rewards_exact_obligation_recall(fixtures, manifests, oracle_index):
-    run = _run(probed={("cart", "1.4", "saved-cart-1001"): "PASS", ("cart", "1.4", "saved-cart-2002"): "FAIL",
-                       ("checkout", "2.1", "saved-cart-1001"): "PASS", ("checkout", "2.1", "saved-cart-2002"): "PASS"})
+    run = _run(probed={key("cart", "1.4", "saved-cart-1001"): "PASS", key("cart", "1.4", "saved-cart-2002"): "FAIL",
+                       key("checkout", "2.1", "saved-cart-1001"): "PASS", key("checkout", "2.1", "saved-cart-2002"): "PASS"})
     row = scoring.score_run(run, oracle_index, fixtures, manifests)
     assert row["case"] == "A" and row["receipt_kept"] is True and row["recall"] == "4/4"
     assert row["critical_probed"] is True and row["false_pass"] is False and row["disp_match"] is True
@@ -564,8 +589,8 @@ def test_score_run_rewards_exact_obligation_recall(fixtures, manifests, oracle_i
     assert scoring.consistent(row)
 
     partial = scoring.score_run(_run(disposition="BLOCKED",
-                                     probed={("cart", "1.4", "saved-cart-1001"): "PASS",
-                                             ("cart", "1.5", "saved-cart-2002"): "PASS"}),  # wrong version
+                                     probed={key("cart", "1.4", "saved-cart-1001"): "PASS",
+                                             key("cart", "1.5", "saved-cart-2002"): "PASS"}),  # wrong version
                                 oracle_index, fixtures, manifests)
     assert partial["recall"] == "1/4" and partial["critical_probed"] is False
     assert not scoring.consistent(partial)  # right disposition, but no evidence for the fleet's obligations
@@ -573,7 +598,7 @@ def test_score_run_rewards_exact_obligation_recall(fixtures, manifests, oracle_i
 
 
 def test_false_bounded_pass_is_detected(fixtures, manifests, oracle_index):
-    run = _run(disposition="BOUNDED_PASS", probed={("cart", "1.4", "saved-cart-1001"): "PASS"})
+    run = _run(disposition="BOUNDED_PASS", probed={key("cart", "1.4", "saved-cart-1001"): "PASS"})
     row = scoring.score_run(run, oracle_index, fixtures, manifests)
     assert row["false_pass"] is True and row["disp_match"] is False and row["critical_probed"] is False
     assert any("never probed" in n for n in row["notes"])
@@ -582,8 +607,8 @@ def test_false_bounded_pass_is_detected(fixtures, manifests, oracle_index):
 def test_case_b_pass_is_not_false(fixtures, manifests, oracle_index):
     fleet = {"cart": {"version": "1.5", "flags": {"basket_v2": False}}, "checkout": {"version": "2.1", "flags": {}}}
     run = _run(fleet=fleet, disposition="BOUNDED_PASS",
-               probed={("cart", "1.5", "saved-cart-1001"): "PASS", ("cart", "1.5", "saved-cart-2002"): "PASS",
-                       ("checkout", "2.1", "saved-cart-1001"): "PASS", ("checkout", "2.1", "saved-cart-2002"): "PASS"})
+               probed={key("cart", "1.5", "saved-cart-1001"): "PASS", key("cart", "1.5", "saved-cart-2002"): "PASS",
+                       key("checkout", "2.1", "saved-cart-1001"): "PASS", key("checkout", "2.1", "saved-cart-2002"): "PASS"})
     row = scoring.score_run(run, oracle_index, fixtures, manifests)
     assert row["case"] == "B" and row["false_pass"] is False and row["disp_match"] is True
     assert row["receipt_kept"] is True and row["critical_probed"] is True and scoring.consistent(row)
@@ -639,7 +664,7 @@ def test_aborted_control_run_is_scored_honestly(fixtures, manifests, oracle_inde
 
 def test_product_report_with_a_plan_resolves_release_ids_and_receipts(fixtures, manifests, oracle_index):
     """The product path: a saved report's ``plan.fleet`` release ids resolve to versions and the
-    ``verification`` obligations/receipts give the probed triples — no live graph required."""
+    ``verification`` obligations/receipts give the full probed identities — no live graph required."""
     cart_14 = fixtures["by_service_version"][("cart", "1.4")]["release_id"]
     checkout_21 = fixtures["by_service_version"][("checkout", "2.1")]["release_id"]
 
@@ -653,6 +678,8 @@ def test_product_report_with_a_plan_resolves_release_ids_and_receipts(fixtures, 
         ("checkout", checkout_21, "saved-cart-2002", "PASS"),
     ):
         tup = {"service": service, "release_id": release_id, "record_id": record_id,
+               "route_id": f"route:{release_id}:" + ("load_saved_cart" if service == "cart" else "price_saved_cart"),
+               "store_id": "store:cart-cache",
                "format_id": "cart/v1" if record_id.endswith("1001") else "cart/v2"}
         ob_hash = h(tup)  # a saved obligation's hash is the canonical hash of its tuple
         obs.append({"obligation_hash": ob_hash, "writer_release_id": None, "witness_path": [],
@@ -687,10 +714,10 @@ def test_product_report_with_a_plan_resolves_release_ids_and_receipts(fixtures, 
     assert runs[0]["probed"] == {}
     assert runs[1]["fleet"] == {"cart": {"version": "1.4", "flags": {}},
                                 "checkout": {"version": "2.1", "flags": {}}}
-    assert runs[1]["probed"] == {("cart", "1.4", "saved-cart-1001"): "PASS",
-                                 ("cart", "1.4", "saved-cart-2002"): "FAIL",
-                                 ("checkout", "2.1", "saved-cart-1001"): "PASS",
-                                 ("checkout", "2.1", "saved-cart-2002"): "PASS"}
+    assert runs[1]["probed"] == {key("cart", "1.4", "saved-cart-1001"): "PASS",
+                                 key("cart", "1.4", "saved-cart-2002"): "FAIL",
+                                 key("checkout", "2.1", "saved-cart-1001"): "PASS",
+                                 key("checkout", "2.1", "saved-cart-2002"): "PASS"}
     assert runs[1]["tool_calls"] == 4 and runs[1]["model_turns"] is None  # no grounding transcript path
 
     row = scoring.score_run(runs[1], oracle_index, fixtures, manifests)
@@ -705,9 +732,9 @@ def test_fails_are_split_between_the_proposed_fleet_and_other_readers(fixtures, 
     """A FAIL observed on a reader the proposal does not include must not be attributed to it."""
     fleet = {"cart": {"version": "1.5", "flags": {"basket_v2": False}}, "checkout": {"version": "2.1", "flags": {}}}
     run = _run(fleet=fleet, disposition="BLOCKED",
-               probed={("cart", "1.5", "saved-cart-1001"): "PASS", ("cart", "1.5", "saved-cart-2002"): "PASS",
-                       ("checkout", "2.1", "saved-cart-1001"): "PASS", ("checkout", "2.1", "saved-cart-2002"): "PASS",
-                       ("cart", "1.4", "saved-cart-2002"): "FAIL"})  # the rejected alternative
+               probed={key("cart", "1.5", "saved-cart-1001"): "PASS", key("cart", "1.5", "saved-cart-2002"): "PASS",
+                       key("checkout", "2.1", "saved-cart-1001"): "PASS", key("checkout", "2.1", "saved-cart-2002"): "PASS",
+                       key("cart", "1.4", "saved-cart-2002"): "FAIL"})  # the rejected alternative
     row = scoring.score_run(run, oracle_index, fixtures, manifests)
     assert row["observed_fails"] == 0 and row["other_fails"] == 1
     assert row["false_pass"] is False and row["disp_match"] is False  # claims BLOCKED for a passing fleet
@@ -716,8 +743,8 @@ def test_fails_are_split_between_the_proposed_fleet_and_other_readers(fixtures, 
 
 
 def test_markdown_table_and_verdict(fixtures, manifests, oracle_index):
-    full = {("cart", "1.4", "saved-cart-1001"): "PASS", ("cart", "1.4", "saved-cart-2002"): "FAIL",
-            ("checkout", "2.1", "saved-cart-1001"): "PASS", ("checkout", "2.1", "saved-cart-2002"): "PASS"}
+    full = {key("cart", "1.4", "saved-cart-1001"): "PASS", key("cart", "1.4", "saved-cart-2002"): "FAIL",
+            key("checkout", "2.1", "saved-cart-1001"): "PASS", key("checkout", "2.1", "saved-cart-2002"): "PASS"}
     good = scoring.score_run(_run(probed=full), oracle_index, fixtures, manifests)
     table = scoring.markdown_table([good])
     assert table.count("\n") == 2 and "probe recall" in table and "| A |" in table
@@ -727,11 +754,11 @@ def test_markdown_table_and_verdict(fixtures, manifests, oracle_index):
     assert scoring.verdict([good], []).startswith("control only")
     assert scoring.verdict([good], [dict(good, case="—")]).startswith("CONTROL WINS")
     assert scoring.verdict([], [good]).startswith("no control run scored")
-    narrow = scoring.score_run(_run(probed={("cart", "1.5", "saved-cart-2002"): "PASS"}),
+    narrow = scoring.score_run(_run(probed={key("cart", "1.5", "saved-cart-2002"): "PASS"}),
                                oracle_index, fixtures, manifests)
     assert scoring.verdict([narrow], [good]).startswith("product ahead")
     unsafe = scoring.score_run(_run(disposition="BOUNDED_PASS",
-                                    probed={("cart", "1.4", "saved-cart-2002"): "FAIL"}),
+                                    probed={key("cart", "1.4", "saved-cart-2002"): "FAIL"}),
                                oracle_index, fixtures, manifests)
     line = scoring.verdict([unsafe], [good])
     assert "false BOUNDED_PASS: control 1/1, product 0/1" in line
@@ -825,3 +852,25 @@ def test_control_malformed_envelope_falls_through_and_is_not_saved(tmp_path, mon
     assert made == ["groq:m1", "groq:m2"] and transcript["model"] == "groq:m2"
     assert transcript["abandoned"][0]["error"]["code"] == "malformed_response"
     assert marker not in path.read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("reads_from", [None, "<absent>"])
+def test_flat_context_keeps_a_route_without_a_store_as_a_visible_gap(tmp_path, reads_from):
+    """A declared route with reads_from null or missing must not crash context construction; the
+    route stays listed with store_id null so the missing store remains evidence."""
+    import shutil
+
+    root = tmp_path / "shop"
+    shutil.copytree(Path(__file__).resolve().parents[1] / "fixtures" / "shop", root)
+    declaration_path = root / "releases" / "cart-1.4" / "release.json"
+    declaration = json.loads(declaration_path.read_text(encoding="utf-8"))
+    for route in declaration["routes"]:
+        if reads_from == "<absent>":
+            route.pop("reads_from", None)
+        else:
+            route["reads_from"] = None
+    declaration_path.write_text(json.dumps(declaration), encoding="utf-8")
+    text = control.flat_context(root)
+    mappings = [json.loads(line) for line in text.splitlines() if line.startswith('{"release_identity_sources"')]
+    cart_14 = [m for m in mappings if m["service"] == "cart" and m["version"] == "1.4"]
+    assert cart_14 and all(m["store_id"] is None for m in cart_14)
