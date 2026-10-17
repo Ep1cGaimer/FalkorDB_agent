@@ -322,6 +322,14 @@ def _dominant_result(statuses: list[str]) -> str:
     return non_pass[0] if non_pass else statuses[0]
 
 
+def _canonical_hash(obj: Any) -> str:
+    """The documented canonical hash (CONTRACTS.md "Canonical hashing"): sha256 over sorted-key,
+    compact, UTF-8 JSON. Re-stated here so the scorer stays independent of runtime code; a test pins
+    it to the product's implementation."""
+    data = json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    return "sha256:" + hashlib.sha256(data).hexdigest()
+
+
 def _receipt_applies(receipt: dict, ob_tuple: dict) -> bool:
     """A product receipt is evidence for an obligation only when the tuple it binds equals the
     obligation's tuple exactly, the same rule the pipeline applies. Matching by obligation hash
@@ -370,8 +378,14 @@ def runs_from_report(report: dict, fixtures: dict, manifest: dict) -> list[dict]
             receipts_by_hash.setdefault(r.get("obligation_hash"), []).append(r)
         results_by_pair: dict[tuple[str, str, str], list[str]] = {}
         unbound = 0
+        bad_obligations = 0
         for ob in verification.get("obligations") or []:
             tup = ob.get("tuple") or {}
+            # An obligation whose hash is not the canonical hash of its own tuple is not a checkable
+            # binding; nothing recorded under it is evidence.
+            if not isinstance(tup, dict) or not tup or ob.get("obligation_hash") != _canonical_hash(tup):
+                bad_obligations += 1
+                continue
             candidates = receipts_by_hash.get(ob.get("obligation_hash")) or []
             applicable = [r for r in candidates if _receipt_applies(r, tup)]
             unbound += len(candidates) - len(applicable)
@@ -386,10 +400,17 @@ def runs_from_report(report: dict, fixtures: dict, manifest: dict) -> list[dict]
         if unbound:
             notes.append(f"{unbound} saved probe receipt(s) did not bind to this plan's obligation "
                          "tuples exactly; they are not evidence for any pair")
+        if bad_obligations:
+            notes.append(f"{bad_obligations} saved obligation(s) have a hash that is not the canonical hash "
+                         "of their tuple; they are not evidence for any pair")
+        reported_gaps = [g for g in verification.get("gaps") or [] if g]
+        if reported_gaps:
+            notes.append(f"the report lists {len(reported_gaps)} evidence gap(s): "
+                         + ", ".join(sorted({str((g or {}).get("kind", "?")) for g in reported_gaps})))
         runs.append({"label": label, "origin": "product", "model": grounding.get("model", "?"),
                      "live": bool(grounding.get("live")), "snapshot": (report.get("snapshot") or "").removeprefix("snapshot:"),
                      "fleet": fleet or None, "fleet_notes": notes, "disposition": verification.get("disposition"),
-                     "alternative": None, "probed": probed,
+                     "alternative": None, "probed": probed, "reported_gaps": reported_gaps,
                      "model_turns": _turns_from_grounding_transcript(attempt.get("transcript")),
                      "tool_calls": len(grounding.get("tool_calls") or []),
                      "aborted": False, "outcome": attempt.get("outcome"), "transcript": attempt.get("transcript")})
@@ -460,10 +481,13 @@ def score_run(run: dict, oi: dict, fixtures: dict, manifests: dict[str, dict]) -
     # fleet; NEEDS_EVIDENCE never fabricates a pass and is supported only when the oracle says the
     # evidence really is unresolved. Any other value (or no claim at all) is not scored as supported.
     if claimed == "BOUNDED_PASS":
-        row["unsupported_pass"] = not (required and all(probed.get(pair) == "PASS" for pair in required))
+        # Any evidence gap the run itself reported (e.g. WRITER_UNKNOWN) also leaves a pass unsupported.
+        row["unsupported_pass"] = bool(run.get("reported_gaps")) or not (
+            required and all(probed.get(pair) == "PASS" for pair in required))
         supported = not row["unsupported_pass"]
         if row["unsupported_pass"]:
-            row["notes"].append("claimed BOUNDED_PASS without a PASS on every required obligation pair")
+            row["notes"].append("claimed BOUNDED_PASS without a PASS on every required obligation pair "
+                                "and no reported evidence gap")
     elif claimed == "BLOCKED":
         row["unsupported_pass"] = False
         supported = any(probed.get(pair) == "FAIL" for pair in required)
@@ -656,10 +680,10 @@ def main(argv: list[str] | None = None) -> int:
           "disposition is also NEEDS_EVIDENCE. `unsupported BOUNDED_PASS` is reported separately from "
           "`false BOUNDED_PASS` (which keeps its meaning: claimed BOUNDED_PASS, oracle disagrees), and "
           "oracle-consistent runs additionally require a supported claim.")
-    print("- a saved product receipt counts as evidence for an obligation only when the tuple it carries "
-          "matches that obligation's tuple; a receipt matched by hash but bound to different tuple fields "
-          "is reported as a note and is not evidence (reports that carry no tuple keep the previous "
-          "hash-only handling). Where a pair was probed more than once (retries), the fold is "
+    print("- a saved product receipt counts as evidence for an obligation only when the obligation's hash "
+          "is the canonical hash of its tuple and the receipt carries exactly that tuple; anything else is "
+          "reported as a note and is not evidence. A BOUNDED_PASS claim from a report that lists evidence "
+          "gaps is unsupported. Where a pair was probed more than once (retries), the fold is "
           "FAIL > unresolved > PASS, so a later PASS never hides an earlier FAIL or UNKNOWN.")
     print("- `proposed cart reader x 2002 probed` is the cart reader of the proposed version on the "
           "retained cart/v2 bytes (saved-cart-2002).")

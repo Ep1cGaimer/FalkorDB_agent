@@ -1356,6 +1356,9 @@ GEMINI_EMPTY_TYPE_BUSTERS = [
     {"candidates": [{"content": {"parts": 0}}]},
     {"candidates": [{"content": {"parts": False}}]},
     {"candidates": [{"content": {"parts": {}}}]},
+    {},                                               # HTTP 200 without the required candidates list
+    {"error": {"message": "quota"}},                  # an error envelope delivered as HTTP 200
+    {"error": {"message": "quota"}, "candidates": []},
 ]
 
 GROQ_EMPTY_TYPE_BUSTERS = [
@@ -1371,6 +1374,9 @@ GROQ_EMPTY_TYPE_BUSTERS = [
     {"choices": [{"message": {"tool_calls": False}}]},
     {"choices": [{"message": {"tool_calls": 0}}]},
     {"choices": [{"message": {"tool_calls": ""}}]},
+    {},                                               # HTTP 200 without the required choices list
+    {"error": {"message": "quota"}},                  # an error envelope delivered as HTTP 200
+    {"error": {"message": "quota"}, "choices": []},
 ]
 
 

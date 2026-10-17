@@ -29,12 +29,17 @@ Fixes for defects an independent repository review reproduced on `main` at `793d
   - provider envelopes are type-checked before defaults, non-JSON 200 bodies and non-string tool names fail closed, and saved `usage` is limited to numeric token/time fields;
   - the scorer counts a receipt only when its tuple equals the obligation's, and FAIL dominates repeated results;
   - fixture copies inside the repo no longer report false codec drift.
+- **Third review round:**
+  - non-boolean or undecodable stored deployment flags refuse `/approve` and `/simulate` with 409;
+  - HTTP 200 error envelopes or responses without `choices`/`candidates` are malformed and fall through to the next model;
+  - the control loop has the same malformed-call guards as the product;
+  - the scorer rejects obligations whose hash is not the canonical hash of their tuple, and treats a BOUNDED_PASS from a report that lists evidence gaps as unsupported.
 
 Observed on Windows 11, Python 3.12, FalkorDB 6.0.2, with the MCP extra installed:
 
 | Check | Observed result |
 |---|---|
-| Non-live suite | `.venv\Scripts\python.exe -m pytest -q -m "not live" -p no:cacheprovider`: **635 passed, 3 deselected**, 0 skipped (after the second review round). |
+| Non-live suite | `.venv\Scripts\python.exe -m pytest -q -m "not live" -p no:cacheprovider`: **653 passed, 3 deselected**, 0 skipped (after the third review round). |
 | Deterministic smoke | `scripts\smoke.py`: all checks PASS, cleanup PASS. |
 | Operator fleet CLI | `scripts\investigate.py --fleet cart=1.4 --confirm-as you`: **BLOCKED**, cart 1.4 × saved-cart-2002 FAIL with the witness path; no `rw_cli_*` graph left. |
 | Relational control | `evals

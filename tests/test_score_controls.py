@@ -174,12 +174,18 @@ def obligation_tuple(service: str, version: str, record_id: str, payload_hash="s
             "batch_id": f"batch:{record_id}", "payload_hash": payload_hash, "format_id": "cart/v1"}
 
 
+def ob_hash(i: int) -> str:
+    """The canonical obligation hash of case B's i-th obligation tuple, as the runtime computes it."""
+    from rw.contracts import h
+    return h(obligation_tuple(*CASE_B_PAIRS[i]))
+
+
 def make_report(receipts: list[dict], claim: str | None = None,
                 statuses: dict | None = None) -> dict:
     """A saved-report-shaped dict for case B (BOUNDED_PASS): 4 obligations, receipts built by the
     caller. ``receipts`` carry ``obligation_hash``, ``tuple`` and ``result`` like real reports do."""
     case = OI["cases"]["B"]
-    obligations = [{"obligation_hash": f"sha256:ob-{i}", "tuple": obligation_tuple(*pair)}
+    obligations = [{"obligation_hash": ob_hash(i), "tuple": obligation_tuple(*pair)}
                    for i, pair in enumerate(CASE_B_PAIRS)]
     hashes = {pair: ob["obligation_hash"] for ob, pair in zip(obligations, CASE_B_PAIRS)}
     if statuses is not None:
@@ -210,7 +216,7 @@ def test_report_receipt_with_a_mismatched_tuple_is_not_evidence():
     """A receipt that matches an obligation only by obligation_hash (stale copy, foreign binding)
     must not discharge the pair: last-write-wins by hash let mismatched PASS receipts score a case B
     BOUNDED_PASS claim as consistent, while deterministic recomputation gives NEEDS_EVIDENCE."""
-    report = make_report([{"obligation_hash": f"sha256:ob-{i}",
+    report = make_report([{"obligation_hash": ob_hash(i),
                            "tuple": dict(obligation_tuple(*pair), payload_hash="sha256:foreign"),
                            "result": "PASS"} for i, pair in enumerate(CASE_B_PAIRS)])
     run = from_report(report)
@@ -231,12 +237,12 @@ def test_applicable_fail_beats_a_later_pass_for_the_same_pair():
     for i, pair in enumerate(CASE_B_PAIRS):
         tup = obligation_tuple(*pair)
         if pair == ("cart", "1.5", "saved-cart-2002"):
-            fail_then_pass.append({"obligation_hash": f"sha256:ob-{i}", "tuple": tup, "result": "FAIL",
+            fail_then_pass.append({"obligation_hash": ob_hash(i), "tuple": tup, "result": "FAIL",
                                    "executed_at": "t1"})
-            fail_then_pass.append({"obligation_hash": f"sha256:ob-{i}", "tuple": tup, "result": "PASS",
+            fail_then_pass.append({"obligation_hash": ob_hash(i), "tuple": tup, "result": "PASS",
                                    "executed_at": "t2"})
         else:
-            fail_then_pass.append({"obligation_hash": f"sha256:ob-{i}", "tuple": tup, "result": "PASS"})
+            fail_then_pass.append({"obligation_hash": ob_hash(i), "tuple": tup, "result": "PASS"})
     report = make_report(fail_then_pass)
     run = from_report(report)
     key = ("cart", "1.5", "saved-cart-2002")
@@ -259,10 +265,10 @@ def test_pass_then_unknown_is_not_an_established_pass():
     for i, pair in enumerate(CASE_B_PAIRS):
         tup = obligation_tuple(*pair)
         if pair == ("checkout", "2.1", "saved-cart-2002"):
-            receipts.append({"obligation_hash": f"sha256:ob-{i}", "tuple": tup, "result": "PASS"})
-            receipts.append({"obligation_hash": f"sha256:ob-{i}", "tuple": tup, "result": "UNKNOWN"})
+            receipts.append({"obligation_hash": ob_hash(i), "tuple": tup, "result": "PASS"})
+            receipts.append({"obligation_hash": ob_hash(i), "tuple": tup, "result": "UNKNOWN"})
         else:
-            receipts.append({"obligation_hash": f"sha256:ob-{i}", "tuple": tup, "result": "PASS"})
+            receipts.append({"obligation_hash": ob_hash(i), "tuple": tup, "result": "PASS"})
     report = make_report(receipts)
     run = from_report(report)
     assert run["probed"][("checkout", "2.1", "saved-cart-2002")] == "UNKNOWN"
@@ -344,3 +350,37 @@ def test_control_transcript_unknown_statuses_flow_through_run_from_control():
     assert row["unknown_probes"] == 4 and row["established_passes"] == 0
     assert row["false_pass"] is False and row["unsupported_pass"] is True
     assert row["evidence_supports_claim"] is False and not scoring.consistent(row)
+
+
+def test_scorer_canonical_hash_matches_the_runtime_hash():
+    """The scorer re-states the documented canonical hash; it must equal the product's."""
+    from rw.contracts import h
+    tup = obligation_tuple(*CASE_B_PAIRS[0])
+    assert scoring._canonical_hash(tup) == h(tup)
+
+
+def test_obligation_hash_that_is_not_its_tuples_hash_is_not_evidence():
+    """Replacing obligation and receipt hashes with matching arbitrary values must not bind."""
+    fake = "sha256:" + "ab" * 32
+    report = make_report([{"obligation_hash": fake, "tuple": obligation_tuple(*pair), "result": "PASS"}
+                          for pair in CASE_B_PAIRS], claim="BOUNDED_PASS")
+    for ob in report["attempts"][0]["report"]["verification"]["obligations"]:
+        ob["obligation_hash"] = fake
+    [run] = scoring.runs_from_report(report, FIXTURES, MANIFESTS["snap-001"])
+    assert run["probed"] == {}
+    assert any("not the canonical hash" in note for note in run["fleet_notes"])
+    row = scoring.score_run(run, OI, FIXTURES, MANIFESTS)
+    assert row["unsupported_pass"] and not scoring.consistent(row)
+
+
+def test_reported_evidence_gap_leaves_a_bounded_pass_unsupported():
+    """Four bound PASS receipts plus a reported WRITER_UNKNOWN gap: the runtime says NEEDS_EVIDENCE,
+    so a BOUNDED_PASS claim from that report is not supported."""
+    report = make_report([{"obligation_hash": ob_hash(i), "tuple": obligation_tuple(*pair), "result": "PASS"}
+                          for i, pair in enumerate(CASE_B_PAIRS)], claim="BOUNDED_PASS")
+    report["attempts"][0]["report"]["verification"]["gaps"] = [
+        {"kind": "WRITER_UNKNOWN", "subject": "saved-cart-2002"}]
+    [run] = scoring.runs_from_report(report, FIXTURES, MANIFESTS["snap-001"])
+    row = scoring.score_run(run, OI, FIXTURES, MANIFESTS)
+    assert row["established_passes"] == 4
+    assert row["unsupported_pass"] and not scoring.consistent(row)

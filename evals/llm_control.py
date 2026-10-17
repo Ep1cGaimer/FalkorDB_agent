@@ -475,19 +475,33 @@ def _run_loop(request_text: str, tools: FlatControlTools, adapter: grounding.Pro
         resp = grounding.model_response(transport, adapter, messages, events, turn)
         if resp is None:
             continue
+        try:
+            text, calls, native = adapter.parse(resp)
+        except grounding.GroundingError as exc:
+            exc.events = list(events)  # the sanitized successful prefix, never the raw response
+            raise
         events.append({"type": "model", "turn": turn, "response": _jsonable(resp)})
-        text, calls, native = adapter.parse(resp)
         if not calls:
             messages.append({"role": "user", "text": "Respond only by calling a tool."})
             continue
         # Preserve tool-call IDs/arguments before replies; the provider adapter selects wire fields.
         messages.append({"role": "assistant", "native": native, "text": text})
         for call in calls:
-            name, args = call.name, dict(call.args or {})
+            name, args = call.name, call.args
+            # Same guards as the product loop: a malformed call is an error payload, never a crash.
+            bad = ("tool name must be a string" if not isinstance(name, str)
+                   else "arguments must be a JSON object" if not isinstance(args, dict) else None)
+            if bad:
+                label = str(name)[:60]
+                audit.append({"name": label, "args": _jsonable(args), "rows": 0, "error": bad})
+                events.append({"type": "tool", "name": label, "args": _jsonable(args), "error": bad})
+                messages.append(adapter.tool_message(call, {"error": bad}))
+                continue
+            args = dict(args)
             if name == TERMINAL_TOOL:
                 try:
                     answer, errors = _finalize(args, tools)
-                except (ValueError, KeyError, TypeError) as exc:
+                except (ValueError, KeyError, TypeError, AttributeError) as exc:
                     message = f"invalid {TERMINAL_TOOL} call: {exc}"
                     payload = {"error": message}
                     audit.append({"name": TERMINAL_TOOL, "args": _jsonable(args), "error": message})
@@ -598,7 +612,7 @@ def run_control(request_text: str = REQUEST, *, transport: Callable[[dict], dict
             "probe_calls": [_jsonable({"service": c["args"].get("service"), "version": c["args"].get("version"),
                                        "record_id": c["args"].get("record_id"), "result": c.get("result"),
                                        "error": c.get("error")})
-                            for c in audit if c["name"] == PROBE_TOOL],
+                            for c in audit if c["name"] == PROBE_TOOL and isinstance(c["args"], dict)],
             "result": answer,
             "validation_errors": errors,
             "abandoned": abandoned,

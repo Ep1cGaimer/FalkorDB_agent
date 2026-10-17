@@ -899,14 +899,17 @@ def test_incomplete_current_fleet_refuses_approval_and_simulation(api):
             params={"id": cart["deployment_id"], "rid": cart["release_id"]})
     stored = g.ro_query("MATCH (d:Deployment {id: $id}) RETURN d.flags_json AS f",
                         params={"id": cart["deployment_id"]}).result_set[0][0]
-    g.query("MATCH (d:Deployment {id: $id}) SET d.flags_json = $f",
-            params={"id": cart["deployment_id"], "f": "[1,2]"})
-    refused = client.post(plan_url(alternative) + "/approve", json={"approved_by": "oncall:alice"})
-    assert refused.status_code == 409, refused.text
-    assert "flags" in refused.json()["reason"], refused.text
-    refused = client.post(plan_url(alternative) + "/simulate")
-    assert refused.status_code == 409, refused.text
-    assert "flags" in refused.json()["reason"], refused.text
+    # non-object flags, a non-boolean flag value (1 must not be coerced to True) and undecodable JSON
+    for bad_flags, reason in (("[1,2]", "flags"), ('{"basket_v2": 1}', "flags"),
+                              ('{"basket_v2": "false"}', "flags"), ("{not json", "unreadable")):
+        g.query("MATCH (d:Deployment {id: $id}) SET d.flags_json = $f",
+                params={"id": cart["deployment_id"], "f": bad_flags})
+        refused = client.post(plan_url(alternative) + "/approve", json={"approved_by": "oncall:alice"})
+        assert refused.status_code == 409, (bad_flags, refused.text)
+        assert reason in refused.json()["reason"], (bad_flags, refused.text)
+        refused = client.post(plan_url(alternative) + "/simulate")
+        assert refused.status_code == 409, (bad_flags, refused.text)
+        assert reason in refused.json()["reason"], (bad_flags, refused.text)
 
     # 4. restoring the exact observed fleet lets the recorded approval apply exactly once
     g.query("MATCH (d:Deployment {id: $id}) SET d.flags_json = $f",

@@ -330,7 +330,9 @@ class GeminiProvider(Provider):
                 "generationConfig": {"temperature": 0}}
 
     def parse(self, resp: dict) -> tuple[str, list[ToolCall], Any]:
-        if not isinstance(resp, dict):
+        # An error envelope, or a response without its required "candidates" list, is malformed even
+        # on HTTP 200: treating it as a no-call turn would burn the turn budget on one model.
+        if not isinstance(resp, dict) or "error" in resp or "candidates" not in resp:
             raise _malformed_response()
         candidates = _field(resp, "candidates", list, [])
         cand = candidates[0] if candidates else {}
@@ -378,7 +380,9 @@ class GroqProvider(Provider):
                 "parallel_tool_calls": False}
 
     def parse(self, resp: dict) -> tuple[str, list[ToolCall], Any]:
-        if not isinstance(resp, dict):
+        # An error envelope, or a response without its required "choices" list, is malformed even
+        # on HTTP 200: treating it as a no-call turn would burn the turn budget on one model.
+        if not isinstance(resp, dict) or "error" in resp or "choices" not in resp:
             raise _malformed_response()
         choices = _field(resp, "choices", list, [])
         first = choices[0] if choices else {}

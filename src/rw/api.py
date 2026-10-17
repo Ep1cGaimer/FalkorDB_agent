@@ -72,7 +72,9 @@ def fleet_row_problem(row: dict) -> str | None:
         return f"current fleet observation is incomplete: deployment {deployment} has no service"
     if not (isinstance(row.get("release_id"), str) and row["release_id"].strip()):
         return f"current fleet observation is incomplete: deployment {deployment} runs no release (no RUNS edge)"
-    if not isinstance(row.get("flags"), dict):
+    flags = row.get("flags")
+    if not isinstance(flags, dict) or not all(isinstance(k, str) and isinstance(v, bool)
+                                              for k, v in flags.items()):
         return f"current fleet observation is incomplete: deployment {deployment} has malformed flags"
     return None
 
@@ -164,7 +166,10 @@ class Investigation:
         from . import graph
 
         attempts = [attempt.public() for attempt in self.attempts]
-        current_rows, current_log = graph.current_fleet(self.session.g, self.session.snapshot_id)
+        try:
+            current_rows, current_log = graph.current_fleet(self.session.g, self.session.snapshot_id)
+        except ValueError as exc:  # undecodable stored flags_json/declared_flags_json
+            raise SimulationRefused("current fleet observation is unreadable") from exc
         if current_log["truncated"]:
             raise SimulationRefused("current fleet query is truncated")
         for row in current_rows:
@@ -578,7 +583,10 @@ def create_app(*, session_factory: Callable | None = None,
         """
         from . import graph
 
-        rows, log = graph.current_fleet(inv.session.g, inv.session.snapshot_id)
+        try:
+            rows, log = graph.current_fleet(inv.session.g, inv.session.snapshot_id)
+        except ValueError as exc:  # undecodable stored flags_json/declared_flags_json
+            raise SimulationRefused("current fleet observation is unreadable") from exc
         if log["truncated"]:
             raise SimulationRefused("current fleet query is truncated")
         entries = []
