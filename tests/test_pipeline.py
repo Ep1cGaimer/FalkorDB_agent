@@ -128,6 +128,7 @@ def _replay_transcript(path: Path, request_text: str) -> Path:
                     "citations": [{"excerpt_id": "excerpt:cart-1.4:changelog-saved-carts",
                                    "quote": "- Saved carts are persisted to cart-cache "
                                             "as cart/v1."}],
+                    "request_references": [request_text],
                     "rationale": "replayed proposal"}}}]}}]}},
         ]}, indent=2), encoding="utf-8")
     return path
