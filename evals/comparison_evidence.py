@@ -64,10 +64,14 @@ def safe_path(bundle, name):
     path = PurePosixPath(name)
     if path.is_absolute() or '..' in path.parts or str(path) != name or '\\' in name:
         raise ValueError('unsafe artifact path')
-    target = bundle / name
-    if any(p.is_symlink() for p in [target, *target.parents] if p != bundle.parent):
-        raise ValueError('symlink in bundle')
-    if not target.resolve().is_relative_to(bundle.resolve()):
+    root = bundle.resolve()
+    target = root / name
+    current = target
+    while current != root:
+        if current.is_symlink():
+            raise ValueError('symlink in bundle')
+        current = current.parent
+    if not target.resolve().is_relative_to(root):
         raise ValueError('artifact escapes bundle')
     return target
 

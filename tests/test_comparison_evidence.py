@@ -70,3 +70,19 @@ def test_unequal_blocks_are_visible_and_not_pooled(bundle):
 def test_canonical_tuple_is_never_redacted():
     with pytest.raises(ValueError, match='canonical'):
         evidence.sanitize({'tuple': {'path': '/Users/local/bytes'}}, {'dropped_fields': 0, 'redacted_strings': 0, 'paths': 0})
+
+
+def test_portable_bundle_allows_symlink_ancestor_outside_bundle(bundle, tmp_path):
+    alias = tmp_path / 'alias'
+    alias.symlink_to(bundle.parent, target_is_directory=True)
+    assert evidence.verify(alias / bundle.name)['complete']
+    assert evidence.rescore(alias / bundle.name) == evidence.rescore(bundle)
+
+
+def test_artifact_symlink_inside_bundle_is_rejected(bundle):
+    artifact = bundle / 'protocol.json'
+    copy = bundle.parent / 'external-protocol.json'
+    artifact.rename(copy)
+    artifact.symlink_to(copy)
+    with pytest.raises(ValueError):
+        evidence.verify(bundle)
