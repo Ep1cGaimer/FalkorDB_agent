@@ -11,6 +11,59 @@ their raw artifacts are not committed. They are separate from the issue #2 evalu
 Every row below is a command that was actually run, with its observed output. Nothing here is a plan
 or an estimate.
 
+## Obligation identity combined with the evidence rules — issue #24, 2026-10-18
+
+PR #28's route/store identity work, rebuilt on top of #21 so that both hold at once:
+- Every evaluation obligation is keyed by (service, version, route_id, store_id, record_id).
+- The scorer's evidence rules apply per full key: canonical obligation-hash check, exact receipt-tuple binding, FAIL > UNKNOWN > PASS folding, unsupported vs false BOUNDED_PASS, reported-gap handling.
+
+Review findings fixed on top:
+- `tests/fixtures/**` is protected from line-ending conversion, so the overlay's content-addressed release IDs match on Windows.
+- `evals/obligation_identity.release_identity` follows the documented rule (skip `__pycache__`/`*.pyc`, sort by posix path), pinned to the runtime by a test.
+- The flat control lists a route with no declared store as `store_id: null` instead of crashing.
+
+Observed on Windows 11, Python 3.12, FalkorDB 6.0.2, with the MCP extra installed:
+
+| Check | Observed result |
+|---|---|
+| Non-live suite | `.venv\Scripts\python.exe -m pytest -q -m "not live" -p no:cacheprovider`: **679 passed, 3 deselected**, 0 skipped. |
+| Deterministic smoke | `scripts\smoke.py`: all checks PASS. |
+| Operator fleet CLI | `scripts\investigate.py --fleet cart=1.4 --confirm-as you`: **BLOCKED**. |
+| Relational control | `evals\relational_control.py`: SQL = FalkorDB = oracle in **8/8** cases, compared as full five-field keys. |
+| JS unit tests | `node --test tests/js/*.test.mjs`: **16 passed**. |
+
+No live model calls.
+
+## Full evaluation obligation identity — issue #24 (author's PR #28 branch at `e6b15ec`), 2026-10-17
+
+The table below is the PR author's own run on their branch, before it was combined with #21. The checks for the combined result are in the next section.
+
+The oracle, SQL control, flat-control probe API and scorer now retain
+`(service, version, route_id, store_id, record_id)` within each fixture/snapshot. Baseline cases A–H
+preserve all 34 predictions, dispositions, gaps and request-fit labels. Authored overlay cases I/J
+exercise seven obligations each, with two routes over cart-cache and a third over cart-archive,
+including the same record ID with different bytes in both stores. Real graph reports and offline
+scripted Gemini/Groq transcripts score `7/7`; removing any one observation scores `6/7`. Historical
+calls receive an explicit inference note only when one exact obligation is identifiable.
+
+Observed locally on macOS arm64, Python 3.12.13, using the existing local FalkorDB and isolated graph
+names. No live provider calls were made. The existing CI workflow was unchanged.
+
+| Check | Observed result |
+|---|---|
+| Focused oracle/SQL/control/scorer suite | **79 passed, 1 deselected**, before two additional direct-harness/retry regressions; subsequent control/scorer subset **49 passed, 1 deselected**. |
+| Final base-only suite | `artifacts/issue-24/base-venv/bin/python -m pytest -q -m 'not live' --tb=short`: **472 passed, 3 skipped, 3 deselected**. Base environment installed offline from pinned cached dependencies; skips are the three optional MCP SDK modules. |
+| Final MCP-enabled suite | `.venv/bin/python -m pytest -q -m 'not live' --tb=short --junitxml=/tmp/rw-issue24-mcp-suite.xml`: **511 passed, 3 deselected**, zero skips. |
+| Explicit MCP SDK leg | `.venv/bin/python -m pytest tests/test_mcp.py tests/test_mcp_integration.py tests/test_mcp_stdio.py -q --junitxml=/tmp/rw-issue24-mcp-sdk.xml`: **39 passed**, zero skips. |
+| Baseline SQL CLI | `.venv/bin/python evals/relational_control.py`: SQL = graph = authored oracle for **8/8 cases**, comparing full identity and cardinality. Variant CLI comparison also passed for **2/2 cases** inside the relational suite. |
+| Direct fixture harness | All **14/14** authored variant predictions confirmed with isolated Python subprocesses and manifest-checked payload bytes; covered by both final suites. |
+| Deterministic smoke | `.venv/bin/python scripts/smoke.py`: **8/8 PASS**, exit 0; isolated graph cleanup confirmed. |
+| Browser acceptance | `UI_BROWSER_BINARY=/Applications/Helium.app/Contents/MacOS/Helium node tests/ui/check.mjs`: all available checks PASS, Chrome 155.0.8059.39; zero browser exceptions/failed resource requests. Existing replay-clarification case skipped because no saved question was available. QA server stopped and temporary graph cleaned up. |
+| Static/source checks | `git diff --check`: pass. Removing only the added route/store fields makes the baseline oracle structurally identical to `origin/main`. |
+
+Linux/Windows hosted CI and remote PR mergeability remain unobserved for this branch. See
+[the implementation plan](ISSUE_24_IMPLEMENTATION_PLAN.md) and [oracle method](../evals/expected/README.md).
+
 ## Review-finding fixes — 2026-10-17
 
 Fixes for defects an independent repository review reproduced on `main` at `793d7b1`:
@@ -42,8 +95,7 @@ Observed on Windows 11, Python 3.12, FalkorDB 6.0.2, with the MCP extra installe
 | Non-live suite | `.venv\Scripts\python.exe -m pytest -q -m "not live" -p no:cacheprovider`: **653 passed, 3 deselected**, 0 skipped (after the third review round). |
 | Deterministic smoke | `scripts\smoke.py`: all checks PASS, cleanup PASS. |
 | Operator fleet CLI | `scripts\investigate.py --fleet cart=1.4 --confirm-as you`: **BLOCKED**, cart 1.4 × saved-cart-2002 FAIL with the witness path; no `rw_cli_*` graph left. |
-| Relational control | `evals
-elational_control.py`: SQL = FalkorDB = oracle in **8/8** cases. |
+| Relational control | `evals\relational_control.py`: SQL = FalkorDB = oracle in **8/8** cases. |
 | Browser acceptance | `tests/ui/serve_fixture.py` + `node tests/ui/check.mjs` (Edge 155): all checks PASS; one existing SKIP (no recorded replay clarification answer). |
 | JS unit tests | `node --test tests/js/*.test.mjs`: **16 passed**. |
 

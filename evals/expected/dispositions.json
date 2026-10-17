@@ -19,28 +19,36 @@
           "version": "1.4",
           "record_id": "saved-cart-1001",
           "expected_probe": "PASS",
-          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict."
+          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict.",
+          "route_id": "route:release:cart:9703e568235e03f3:load_saved_cart",
+          "store_id": "store:cart-cache"
         },
         {
           "service": "cart",
           "version": "1.4",
           "record_id": "saved-cart-2002",
           "expected_probe": "FAIL",
-          "reason": "ValueError: unsupported saved-cart format 'cart/v2'"
+          "reason": "ValueError: unsupported saved-cart format 'cart/v2'",
+          "route_id": "route:release:cart:9703e568235e03f3:load_saved_cart",
+          "store_id": "store:cart-cache"
         },
         {
           "service": "checkout",
           "version": "2.1",
           "record_id": "saved-cart-1001",
           "expected_probe": "PASS",
-          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict."
+          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict.",
+          "route_id": "route:release:checkout:df9a7917d5945176:price_saved_cart",
+          "store_id": "store:cart-cache"
         },
         {
           "service": "checkout",
           "version": "2.1",
           "record_id": "saved-cart-2002",
           "expected_probe": "PASS",
-          "reason": "Reader accepts the retained cart/v2 bytes and returns a dict."
+          "reason": "Reader accepts the retained cart/v2 bytes and returns a dict.",
+          "route_id": "route:release:checkout:df9a7917d5945176:price_saved_cart",
+          "store_id": "store:cart-cache"
         }
       ],
       "gaps": [],
@@ -104,28 +112,36 @@
           "version": "1.5",
           "record_id": "saved-cart-1001",
           "expected_probe": "PASS",
-          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict."
+          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict.",
+          "route_id": "route:release:cart:9d521fc02aa4498e:load_saved_cart",
+          "store_id": "store:cart-cache"
         },
         {
           "service": "cart",
           "version": "1.5",
           "record_id": "saved-cart-2002",
           "expected_probe": "PASS",
-          "reason": "Reader accepts the retained cart/v2 bytes and returns a dict."
+          "reason": "Reader accepts the retained cart/v2 bytes and returns a dict.",
+          "route_id": "route:release:cart:9d521fc02aa4498e:load_saved_cart",
+          "store_id": "store:cart-cache"
         },
         {
           "service": "checkout",
           "version": "2.1",
           "record_id": "saved-cart-1001",
           "expected_probe": "PASS",
-          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict."
+          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict.",
+          "route_id": "route:release:checkout:df9a7917d5945176:price_saved_cart",
+          "store_id": "store:cart-cache"
         },
         {
           "service": "checkout",
           "version": "2.1",
           "record_id": "saved-cart-2002",
           "expected_probe": "PASS",
-          "reason": "Reader accepts the retained cart/v2 bytes and returns a dict."
+          "reason": "Reader accepts the retained cart/v2 bytes and returns a dict.",
+          "route_id": "route:release:checkout:df9a7917d5945176:price_saved_cart",
+          "store_id": "store:cart-cache"
         }
       ],
       "gaps": [],
@@ -180,28 +196,36 @@
           "version": "1.4",
           "record_id": "saved-cart-1001",
           "expected_probe": "PASS",
-          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict."
+          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict.",
+          "route_id": "route:release:cart:9703e568235e03f3:load_saved_cart",
+          "store_id": "store:cart-cache"
         },
         {
           "service": "cart",
           "version": "1.4",
           "record_id": "saved-cart-2002",
           "expected_probe": "FAIL",
-          "reason": "ValueError: unsupported saved-cart format 'cart/v2'"
+          "reason": "ValueError: unsupported saved-cart format 'cart/v2'",
+          "route_id": "route:release:cart:9703e568235e03f3:load_saved_cart",
+          "store_id": "store:cart-cache"
         },
         {
           "service": "checkout",
           "version": "2.0",
           "record_id": "saved-cart-1001",
           "expected_probe": "PASS",
-          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict."
+          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict.",
+          "route_id": "route:release:checkout:fdc1261d7c96078e:price_saved_cart",
+          "store_id": "store:cart-cache"
         },
         {
           "service": "checkout",
           "version": "2.0",
           "record_id": "saved-cart-2002",
           "expected_probe": "FAIL",
-          "reason": "ValueError: unsupported saved-cart format 'cart/v2'"
+          "reason": "ValueError: unsupported saved-cart format 'cart/v2'",
+          "route_id": "route:release:checkout:fdc1261d7c96078e:price_saved_cart",
+          "store_id": "store:cart-cache"
         }
       ],
       "gaps": [],
@@ -264,28 +288,36 @@
           "version": "1.5",
           "record_id": "saved-cart-1001",
           "expected_probe": "PASS",
-          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict."
+          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict.",
+          "route_id": "route:release:cart:9d521fc02aa4498e:load_saved_cart",
+          "store_id": "store:cart-cache"
         },
         {
           "service": "cart",
           "version": "1.5",
           "record_id": "saved-cart-2002",
           "expected_probe": "PASS",
-          "reason": "Reader accepts the retained cart/v2 bytes and returns a dict."
+          "reason": "Reader accepts the retained cart/v2 bytes and returns a dict.",
+          "route_id": "route:release:cart:9d521fc02aa4498e:load_saved_cart",
+          "store_id": "store:cart-cache"
         },
         {
           "service": "checkout",
           "version": "2.1",
           "record_id": "saved-cart-1001",
           "expected_probe": "PASS",
-          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict."
+          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict.",
+          "route_id": "route:release:checkout:df9a7917d5945176:price_saved_cart",
+          "store_id": "store:cart-cache"
         },
         {
           "service": "checkout",
           "version": "2.1",
           "record_id": "saved-cart-2002",
           "expected_probe": "PASS",
-          "reason": "Reader accepts the retained cart/v2 bytes and returns a dict."
+          "reason": "Reader accepts the retained cart/v2 bytes and returns a dict.",
+          "route_id": "route:release:checkout:df9a7917d5945176:price_saved_cart",
+          "store_id": "store:cart-cache"
         }
       ],
       "gaps": [],
@@ -342,28 +374,36 @@
           "version": "1.5",
           "record_id": "saved-cart-1001",
           "expected_probe": "PASS",
-          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict."
+          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict.",
+          "route_id": "route:release:cart:9d521fc02aa4498e:load_saved_cart",
+          "store_id": "store:cart-cache"
         },
         {
           "service": "cart",
           "version": "1.5",
           "record_id": "saved-cart-2002",
           "expected_probe": "PASS",
-          "reason": "Reader accepts the retained cart/v2 bytes and returns a dict."
+          "reason": "Reader accepts the retained cart/v2 bytes and returns a dict.",
+          "route_id": "route:release:cart:9d521fc02aa4498e:load_saved_cart",
+          "store_id": "store:cart-cache"
         },
         {
           "service": "checkout",
           "version": "2.1",
           "record_id": "saved-cart-1001",
           "expected_probe": "PASS",
-          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict."
+          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict.",
+          "route_id": "route:release:checkout:df9a7917d5945176:price_saved_cart",
+          "store_id": "store:cart-cache"
         },
         {
           "service": "checkout",
           "version": "2.1",
           "record_id": "saved-cart-2002",
           "expected_probe": "PASS",
-          "reason": "Reader accepts the retained cart/v2 bytes and returns a dict."
+          "reason": "Reader accepts the retained cart/v2 bytes and returns a dict.",
+          "route_id": "route:release:checkout:df9a7917d5945176:price_saved_cart",
+          "store_id": "store:cart-cache"
         }
       ],
       "gaps": [
@@ -425,28 +465,36 @@
           "version": "1.4",
           "record_id": "saved-cart-1001",
           "expected_probe": "PASS",
-          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict."
+          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict.",
+          "route_id": "route:release:cart:9703e568235e03f3:load_saved_cart",
+          "store_id": "store:cart-cache"
         },
         {
           "service": "cart",
           "version": "1.4",
           "record_id": "saved-cart-2002",
           "expected_probe": "FAIL",
-          "reason": "ValueError: unsupported saved-cart format 'cart/v2'"
+          "reason": "ValueError: unsupported saved-cart format 'cart/v2'",
+          "route_id": "route:release:cart:9703e568235e03f3:load_saved_cart",
+          "store_id": "store:cart-cache"
         },
         {
           "service": "checkout",
           "version": "2.1",
           "record_id": "saved-cart-1001",
           "expected_probe": "PASS",
-          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict."
+          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict.",
+          "route_id": "route:release:checkout:df9a7917d5945176:price_saved_cart",
+          "store_id": "store:cart-cache"
         },
         {
           "service": "checkout",
           "version": "2.1",
           "record_id": "saved-cart-2002",
           "expected_probe": "PASS",
-          "reason": "Reader accepts the retained cart/v2 bytes and returns a dict."
+          "reason": "Reader accepts the retained cart/v2 bytes and returns a dict.",
+          "route_id": "route:release:checkout:df9a7917d5945176:price_saved_cart",
+          "store_id": "store:cart-cache"
         }
       ],
       "gaps": [
@@ -518,42 +566,54 @@
           "version": "1.5",
           "record_id": "saved-cart-1001",
           "expected_probe": "PASS",
-          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict."
+          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict.",
+          "route_id": "route:release:cart:9d521fc02aa4498e:load_saved_cart",
+          "store_id": "store:cart-cache"
         },
         {
           "service": "cart",
           "version": "1.5",
           "record_id": "saved-cart-2002",
           "expected_probe": "PASS",
-          "reason": "Reader accepts the retained cart/v2 bytes and returns a dict."
+          "reason": "Reader accepts the retained cart/v2 bytes and returns a dict.",
+          "route_id": "route:release:cart:9d521fc02aa4498e:load_saved_cart",
+          "store_id": "store:cart-cache"
         },
         {
           "service": "cart",
           "version": "1.5",
           "record_id": "saved-cart-3003",
           "expected_probe": "PASS",
-          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict. Payload inspection identifies cart/v1 for this probe prediction only; manifest format and writer remain unknown."
+          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict. Payload inspection identifies cart/v1 for this probe prediction only; manifest format and writer remain unknown.",
+          "route_id": "route:release:cart:9d521fc02aa4498e:load_saved_cart",
+          "store_id": "store:cart-cache"
         },
         {
           "service": "checkout",
           "version": "2.1",
           "record_id": "saved-cart-1001",
           "expected_probe": "PASS",
-          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict."
+          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict.",
+          "route_id": "route:release:checkout:df9a7917d5945176:price_saved_cart",
+          "store_id": "store:cart-cache"
         },
         {
           "service": "checkout",
           "version": "2.1",
           "record_id": "saved-cart-2002",
           "expected_probe": "PASS",
-          "reason": "Reader accepts the retained cart/v2 bytes and returns a dict."
+          "reason": "Reader accepts the retained cart/v2 bytes and returns a dict.",
+          "route_id": "route:release:checkout:df9a7917d5945176:price_saved_cart",
+          "store_id": "store:cart-cache"
         },
         {
           "service": "checkout",
           "version": "2.1",
           "record_id": "saved-cart-3003",
           "expected_probe": "PASS",
-          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict. Payload inspection identifies cart/v1 for this probe prediction only; manifest format and writer remain unknown."
+          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict. Payload inspection identifies cart/v1 for this probe prediction only; manifest format and writer remain unknown.",
+          "route_id": "route:release:checkout:df9a7917d5945176:price_saved_cart",
+          "store_id": "store:cart-cache"
         }
       ],
       "gaps": [
@@ -622,28 +682,36 @@
           "version": "1.5",
           "record_id": "saved-cart-1001",
           "expected_probe": "PASS",
-          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict."
+          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict.",
+          "route_id": "route:release:cart:9d521fc02aa4498e:load_saved_cart",
+          "store_id": "store:cart-cache"
         },
         {
           "service": "cart",
           "version": "1.5",
           "record_id": "saved-cart-2002",
           "expected_probe": "PASS",
-          "reason": "Reader accepts the retained cart/v2 bytes and returns a dict."
+          "reason": "Reader accepts the retained cart/v2 bytes and returns a dict.",
+          "route_id": "route:release:cart:9d521fc02aa4498e:load_saved_cart",
+          "store_id": "store:cart-cache"
         },
         {
           "service": "checkout",
           "version": "2.0",
           "record_id": "saved-cart-1001",
           "expected_probe": "PASS",
-          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict."
+          "reason": "Reader accepts the retained cart/v1 bytes and returns a dict.",
+          "route_id": "route:release:checkout:fdc1261d7c96078e:price_saved_cart",
+          "store_id": "store:cart-cache"
         },
         {
           "service": "checkout",
           "version": "2.0",
           "record_id": "saved-cart-2002",
           "expected_probe": "FAIL",
-          "reason": "ValueError: unsupported saved-cart format 'cart/v2'"
+          "reason": "ValueError: unsupported saved-cart format 'cart/v2'",
+          "route_id": "route:release:checkout:fdc1261d7c96078e:price_saved_cart",
+          "store_id": "store:cart-cache"
         }
       ],
       "gaps": [],

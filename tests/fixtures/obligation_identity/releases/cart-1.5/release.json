@@ -1,0 +1,43 @@
+{
+  "built_at": "2026-10-06T09:00:00Z",
+  "bundle_id": "rollout-2026-10-basket",
+  "flags": [
+    {
+      "default": true,
+      "name": "basket_v2"
+    }
+  ],
+  "no_state_read": false,
+  "previous_version": "1.4",
+  "routes": [
+    {
+      "contract": "saved-cart",
+      "entry": "read_cart",
+      "name": "load_saved_cart",
+      "read_domain": "ALL_KEYS",
+      "reads_from": "cart-cache"
+    },
+    {
+      "contract": "saved-cart",
+      "entry": "inspect_cart",
+      "name": "inspect_saved_cart",
+      "read_domain": "ALL_KEYS",
+      "reads_from": "cart-cache"
+    },
+    {
+      "contract": "archived-cart",
+      "entry": "read_archive",
+      "name": "load_archived_cart",
+      "read_domain": "ALL_KEYS",
+      "reads_from": "cart-archive"
+    }
+  ],
+  "service": "cart",
+  "version": "1.5",
+  "writes": [
+    {
+      "entry": "write_cart",
+      "store": "cart-cache"
+    }
+  ]
+}
