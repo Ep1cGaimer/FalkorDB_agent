@@ -7,6 +7,7 @@ obligation. Disposition precedence is fixed here and nowhere else (see docs/CONT
 from __future__ import annotations
 
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterable
@@ -622,7 +623,7 @@ def dispose(evidence: GraphEvidence, receipts: list[ProbeReceipt]) -> Verificati
 
 # --------------------------------------------------------------------------- revalidation (F4)
 
-FIXTURE_PREFIX = "fixtures/shop/"
+FIXTURE_PREFIX = re.compile(r"fixtures/[a-z0-9][a-z0-9-]*/")  # any shipped fixture, e.g. fixtures/shop/
 
 _NO_WRITER = object()  # sentinel: this (store, record) had no obligation, so no verified writer
 
@@ -631,7 +632,7 @@ def fixture_file(path: str, fixture_root: Path) -> Path:
     """Resolve a stored artifact path against one fixture root.
 
     Two forms are stored. Obligation codec paths (and graph batch payload paths) are posix paths
-    relative to the *repository* root — ``fixtures/shop/...`` for the shipped fixture, and
+    relative to the *repository* root — ``fixtures/<name>/...`` for a shipped fixture, and
     ``artifacts/<copy>/shop/...`` when a fixture copy lives inside the repo. Manifest record
     paths are fixture-relative. Resolution: a repo-relative path is re-rooted at the repository
     root only when (and only when) that file resolves inside ``fixture_root``, so a fixture copy
@@ -645,8 +646,9 @@ def fixture_file(path: str, fixture_root: Path) -> Path:
     if candidate.is_absolute() or candidate.as_posix().startswith("/"):
         return candidate
     posix = candidate.as_posix()
-    relative = posix[len(FIXTURE_PREFIX):] if posix.startswith(FIXTURE_PREFIX) else posix
-    if not posix.startswith(FIXTURE_PREFIX):
+    shipped = FIXTURE_PREFIX.match(posix)
+    relative = posix[shipped.end():] if shipped else posix
+    if not shipped:
         try:
             repo_file = REPO_ROOT / posix
             if repo_file.resolve().is_relative_to(Path(fixture_root).resolve()):
