@@ -67,4 +67,4 @@ The SQL CLI defaults to the baseline; its reusable `compare(fixture_root, oracle
 exercised against the overlay. The scorer accepts `--fixture-root` and `--oracle` for saved runs
 against another fixture root. See [the oracle method](expected/README.md) for prediction provenance.
 
-Current issue #22 result: **3/3 tie** between matched arms; see the [verified primary bundle](evidence/issue-22/live-5a7160f-gemini31lite-05/comparison.md). Earlier refusals and the superseded protocol remain alongside it, excluded from the headline.
+Current issue #22 result: **3/3 tie** between matched arms; see the [verified primary bundle](evidence/issue-22/live-5a7160f-gemini31lite-05/comparison.md). Preliminary refusals and the superseded protocol are summarized in [STATUS](../docs/STATUS.md); only the final acceptance bundle is committed.

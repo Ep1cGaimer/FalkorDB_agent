@@ -37,7 +37,7 @@ UTC collection window: `2026-10-17T19:38:32.911447+00:00` to
 There were **21 model calls, 21 HTTP attempts**, and **113,580 reported tokens**
 (110,763 prompt; 2,817 candidate). No transport retries occurred in this primary batch.
 All successful responses supplied usage; no missing usage is reported as zero. Failed-request usage
-in the preserved earlier attempts remains unknown. Checker, grounding, whole-arm and request times
+in the preliminary attempts remains unknown. Checker, grounding, whole-arm and request times
 are preserved separately; these timings do not establish a general latency ranking.
 
 Primary matched comparison: **tie**; aligned blocks=3.
@@ -81,13 +81,17 @@ result comparison. Owned graphs were independently verified absent after cleanup
 is **connected reader–record obligation enumeration and witness paths**; SQL or an independent join
 can reconstruct the pairs, and raw records remain discoverable.
 
-Earlier attempts remain separate and are not pooled into the nine-row batch:
+Preliminary attempts are excluded from the nine-row acceptance batch. Their raw artifacts
+are not part of the committed evidence bundle:
 
-- [Groq attempt 1](../evals/evidence/issue-22/live-e811d19-01/manifest.json): graph completed, flat request refused with HTTP 413; seven slots unrun.
-- [Groq attempt 2](../evals/evidence/issue-22/live-c2b777e-02/manifest.json): compact addresses, same refusal and preserved unrun slots.
-- [Gemini 3.8 attempt](../evals/evidence/issue-22/live-0821faa-gemini-03/manifest.json): first tool response succeeded, subsequent call exhausted six attempts with HTTP 429. A separate sanitized capacity diagnostic identified the exhausted 20-request daily quota.
-- [Superseded Flash-Lite protocol](../evals/evidence/issue-22/live-0821faa-gemini31lite-04/README.md): all nine conversations completed, but the final full regression found omitted canonical store annotations in the compact context. It is retained with acceptance disabled and excluded from the headline. The final batch restores those addresses and follows both full suites passing; no model answers were repaired.
-- Standalone [Groq](../evals/evidence/issue-22/groq-capacity-preflight.json) and [Gemini capacity diagnostics](../evals/evidence/issue-22/gemini-alternatives-capacity.json) are feasibility probes, not primary experiments. Gemini 3.7 timed out, 2.5 was unavailable, and 3.6/3.1 Lite answered tiny requests. The user's Gemini preference led to the separately pinned Flash-Lite batch.
+- Two Groq attempts completed graph grounding, then stopped on the flat request's HTTP 413;
+  each left seven scheduled observations unrun.
+- The Gemini 3.8 attempt received one tool response, then stopped after six HTTP 429 attempts.
+  A capacity check reported an exhausted 20-request daily quota; failed-request usage is unknown.
+- An earlier nine-conversation Flash-Lite batch was superseded because regression testing found
+  missing canonical store annotations. The final batch restores those annotations and was collected
+  after both full test suites passed. No model answers were repaired or pooled across batches.
+- Standalone model-capacity probes were feasibility checks, not acceptance experiments.
 
 Commands actually run (repository's existing Python 3.12.13 base interpreter was used from the worktree):
 
@@ -128,7 +132,7 @@ Validation on macOS arm64, Python 3.12.13, pinned FalkorDB 6.0.2:
 | Deterministic smoke | All checks PASS, including blocked approval refusal, drift/evidence gaps, and idempotent simulation. |
 | JavaScript unit tests | **16 passed**. |
 | SQL / graph / independent oracle | Equal obligation sets in **8/8** baseline cases; inherited seven-obligation overlay regressions pass. |
-| Portable evidence | Moved bundle verified/rescored with credentials removed and sockets denied; all prior bundles also verify. |
+| Portable evidence | Moved bundle verified/rescored with credentials removed and sockets denied; saved scores and tables reproduce exactly. |
 | Final runner harness checks | **4 passed**: server metadata by module name, and provider error retained when cleanup also fails. |
 | Portability regressions | **12 passed**, including a normal filesystem alias outside the bundle and rejection of an internal artifact symlink. |
 | Whitespace | `git diff --check` passes. |
