@@ -653,12 +653,13 @@ def _assess_intent(request: str, transport: Callable[[dict], dict], adapter: Pro
         response = transport(adapter.body(messages, system_prompt=intent.SYSTEM_PROMPT,
                                            specs=[intent.TOOL_SPEC]))
         events.append({"type": "model", "phase": "intent", "turn": turn, "response": _jsonable(response)})
-        text, calls, native = adapter.parse(response)
+        text, calls, native = "", [], None
         try:
+            text, calls, native = adapter.parse(response)
             if len(calls) != 1 or calls[0].name != "assess_intent":
                 raise ValueError("call only assess_intent, exactly once; artifact tools are unavailable")
             decision = intent.IntentDecision.from_call(calls[0].args or {}, request)
-        except (ValueError, TypeError) as exc:
+        except (ValueError, TypeError, AttributeError) as exc:
             error = str(exc)
             events.append({"type": "intent_error", "phase": "intent", "error": error})
             if calls:

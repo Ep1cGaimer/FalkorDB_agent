@@ -136,6 +136,21 @@ def test_fallback_reassesses_intent_without_old_evidence_or_checker_context(tmp_
     assert json.loads(path.read_text())["abandoned_attempts"] == [{"model": "first", "error": "provider unavailable"}]
 
 
+@pytest.mark.parametrize("provider", ["gemini", "groq"])
+def test_malformed_intent_response_aborts_without_a_crash(provider, tmp_path):
+    response = ({"choices": [{"message": "not an object"}]} if provider == "groq" else
+                {"candidates": [{"content": {"parts": [
+                    {"functionCall": {"name": "assess_intent", "args": "not an object"}}]}}]})
+
+    def transport(body):
+        return response
+
+    transport.provider = provider
+    tools = FakeTools()
+    result, _ = grounding.ground("Undo that change.", tools, transport=transport, artifact_dir=tmp_path)
+    assert grounding.is_aborted(result) and not tools.calls
+
+
 @pytest.mark.parametrize("filename", ["70a0b3fbd63b17a3.json", "4f5d394955ed1fda.json", "459f0e5b394a2f39.json"])
 def test_legacy_replay_preserves_the_recorded_failure(filename):
     from test_grounding import ROOT
