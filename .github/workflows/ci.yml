@@ -80,6 +80,18 @@ jobs:
             artifacts/ui-server.log
             artifacts/screens/decision-review/
 
+  test-required:
+    name: test
+    needs: test
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Require both matrix legs to pass
+        env:
+          MATRIX_RESULT: ${{ needs.test.result }}
+        run: test "$MATRIX_RESULT" = success
+
   mcp-windows:
     runs-on: windows-latest
     timeout-minutes: 15

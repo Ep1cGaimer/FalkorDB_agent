@@ -55,6 +55,8 @@ The rebased source revision `cdf5a9a` also passed all three CI jobs and GitGuard
   answer was available; deterministic clarification and its handoff were exercised.
 - Static checks: `git diff --check`, Python compileall, shell syntax, Node module syntax and
   Ruby YAML parsing of the workflow all passed.
+- Required-check gate: parsed the shipped YAML and executed its command with `success`, `failure`,
+  `cancelled` and `skipped`; only `success` passed. The aggregate runs with `always()`.
 
 ### PR review status
 
@@ -66,7 +68,11 @@ commit was dropped rather than waiting for its merge. No merge or review approva
 
 The pre-fix head `f5afcbb` passed GitHub CI: `test (false)`, `test (true)`, `mcp-windows` and
 GitGuardian. The rebased source revision `cdf5a9a` passed the same checks, including both Linux
-browser acceptance runs. Required-check policy has not been verified. Next action: inspect the
+browser acceptance runs. The reviewer confirmed that main requires a check named exactly `test`;
+the matrix alone only emitted `test (false)` and `test (true)`. A final aggregate job now reports
+`test`, waits for the whole matrix and fails unless both legs succeeded, including when a leg
+failed, was cancelled or skipped. PR #18's separate browser-race fix remains open and is not
+included here; update from main after it merges. Next action: inspect the
 [current PR checks](https://github.com/Ep1cGaimer/FalkorDB_agent/pull/16/checks) and obtain reviewer
 approval before merging.
 Local workflow identity remains unauthenticated and single-operator.
