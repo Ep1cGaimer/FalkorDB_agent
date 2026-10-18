@@ -1,0 +1,545 @@
+diff --git a/evals/repo_eval_common.py b/evals/repo_eval_common.py
+index 4ac3d7e..59e3ffd 100644
+--- a/evals/repo_eval_common.py
++++ b/evals/repo_eval_common.py
+@@ -97,7 +97,8 @@ class Clone:
+         key = (sha, path)
+         if key not in self._lines:
+             text = self.show(sha, path)
+-            self._lines[key] = None if text is None else len(text.splitlines())
++            from rw.repo.source import source_lines
++            self._lines[key] = None if text is None else len(source_lines(text))
+         return self._lines[key]
+ 
+ 
+diff --git a/goal.md b/goal.md
+index b795b28..f3d7762 100644
+--- a/goal.md
++++ b/goal.md
+@@ -1,9 +1,114 @@
+ # Goal
+ 
+-Status: **proposed, 2026-10-18**. When the team agrees, replace this line with
+-"Agreed on <date> by <names>". After that, scope changes are made by editing this file in a commit.
+-
+-## The product claim
++Priority updated by the user on 2026-10-18: **complete Primary first, then resume
++Secondary**. This changes work order; it does not declare any acceptance gate
++passed or remove the remaining requirements. The handoff commit remains canceled.
++
++**User deadline: Primary by 18:45 IST on 2026-10-18; all Secondary work by
++19:30 IST.** Finish Primary first, then pursue the full Secondary requirements.
++These are requested deadlines, not achieved results or permission to replace the
++secondary acceptance work with demo packaging. Retain unfinished requirements
++and failed evidence explicitly if the requested deadline cannot be met.
++
++Timebox from 18:07 IST: working live graph flow by18:25; cited dependency/history
++examples and focused smoke by18:35; three rehearsals and primary readiness by18:45;
++then secondary acceptance work, launch instructions and delivery fixes through19:30.
++Use the working deterministic, source-backed investigation path if the live model
++provider remains unreliable; label its behavior honestly. Do not spend the demo
++window repeatedly probing providers or make a replay appear live.
++
++RollbackWitness helps investigate code and Git history using FalkorDB and
++revision-specific source evidence. Its specialized fixture workflow checks
++rollback compatibility against explicit runtime receipts. General source retrieval
++keeps runtime compatibility unverified. Comparative advantage remains unproven.
++
++## Primary — Immediate demo requirements
++
++Deliver a reliable, understandable demonstration on a real repository through
++one existing interface. Prioritize the complete user flow over adding features,
++new interfaces, broad test matrices or benchmark volume.
++
++| Priority | Requirement | Done when |
++|---|---|---|
++| P1 | Reliable end-to-end investigation | A fresh natural-language question on an explicitly selected real repository/revision retrieves actual FalkorDB evidence and produces a useful final answer within a declared demo time/token budget. Provider failures and budget exhaustion remain visible. A first tool call alone does not count. |
++| P2 | Inspectable source citations | The answer identifies the repository, exact commit, path and physical source lines. The presenter can open the cited source at that revision and verify the material findings. Empty files use membership evidence without invented lines. |
++| P3 | A useful multi-hop graph finding | One investigation follows at least two dependency/history hops, explains the practical implication, and retains the actual graph query/result trace linking the finding to source. |
++| P4 | A convincing correctness boundary | Show a revert/branch trap with the correct revision-specific conclusion, plus a bounded/truncated or missing-evidence case that exposes its limitation and withholds an unsupported conclusion. |
++| P5 | Repeatable presentation and recovery | Document setup/import, selected repository/revisions, the demo sequence, reset and launch commands. Rehearse the complete sequence three consecutive times within the declared demo duration, including a fresh real-repository investigation each time. Retain failures. Keep a clearly labeled replay as a backup. |
++
++### Primary verification and evidence
++
++- Run targeted regression tests for changed behavior and a short end-to-end smoke
++  check. Repeat broader suites when a change or observed failure warrants it.
++- Verify citations and conclusions in the actual demonstrated scenarios. Retain
++  commands, source/index identities, retrieval traces, model responses, timings,
++  usage and failures. Do not tune against sealed held-out answers.
++- Keep repository-code execution disabled during ingestion. Keep existing safety
++  boundaries intact: missing evidence cannot yield `BOUNDED_PASS`; source-only
++  investigation cannot establish runtime compatibility.
++- Use the existing interface that supports the flow. Additional UI polish or new
++  transport surfaces are secondary unless they block presenting the primary demo.
++- The specialized fixture failure/pass workflow is a short supporting segment if
++  it strengthens the presentation. Show it if the demo claims rollback safety;
++  clearly label its synthetic data and fixture-only runtime scope.
++- Show quantitative comparison claims only when measured and linked to evidence.
++  A successful demo does not establish the full acceptance specification.
++
++### Primary status at prioritization
++
++These are observations, not completion claims. Recheck the actual current state
++before using them as demo evidence.
++
++| Requirement | Current position | Next work |
++|---|---|---|
++| P1 | Verified for the supported deterministic natural-language workflow on inspected real source; live LLM development remains unresolved. | Preserve the working no-provider demo path. |
++| P2 | Verified: exact source citations open in the browser and hashes/spans resolve in the focused smoke. | Keep citations visible in the presentation. |
++| P3 | Verified: real two-hop dependency retrieval is connected to source and the displayed finding. | Explain the inspection use and static-inference limits. |
++| P4 | Verified: synthetic revert/ancestry trap, real-source truncation and missing-symbol gap shown through the live browser. | Clearly label the trap as synthetic. |
++| P5 | Three automated browser-flow rehearsals passed after distinct reset publications; offline labeled replay/source snapshots verified. Launch/reset and presentation notes exist. No narrated human/video rehearsal is claimed. | See [primary evidence and limits](docs/demo/STATUS.md). |
++
++## Secondary — Full acceptance, broader testing and comparison
++
++Resume this work after Primary is verified, except for a targeted check needed
++to diagnose a primary blocker or preserve its correctness/safety. These tasks
++remain required before claiming the complete original goal or v1 acceptance.
++The authoritative full contract remains [remquirements-v1.md](remquirements-v1.md);
++its thresholds and evidence rules are unchanged. Every T0–T11 gate remains
++`IN_PROGRESS` at this prioritization; none is waived or marked validated.
++
++| Gate | Secondary work remaining beyond the focused demo checks |
++|---|---|
++| T0 — Frozen evaluation contract | Final corpus/model/prompts/budgets, independent review and sign-off, exact context accounting and a pre-result hashed plan. Freeze before confirmatory evaluation. |
++| T1 — Configuration-only integration | Clean onboarding of both evaluation repositories, including a genuinely unseen repository after implementation freeze; complete regression/access evidence. |
++| T2 — Held-out quality | At least 120 independent questions across both repositories/all six strata, three paired repeats per arm, blind grading, required double-scoring and every absolute quality/safety threshold. |
++| T3 — History correctness | Complete adversarial Git DAG, at least 100 seeded histories, all identity/current-presence invariants and independent deterministic expectations. |
++| T4 — Index integrity/recovery | Full versus incremental equivalence, all persistence/publication fault points, restart/retry/concurrency behavior and stale/deleted evidence invalidation. |
++| T5 — Retrieval bounds | Complete row/hop/page boundary matrix, independent enumeration, cursor invalidation and token/time/resource exhaustion behavior. |
++| T6 — Scale/performance/cost | Three declared slices, repeated cold imports and updates, at least 100 requests per slice, concurrency, resource/latency/success measurements and actual costs. |
++| T7 — CLI/API/MCP parity | Full identity/status/coverage matrix across all surfaces, real MCP restart, malformed inputs, cancellations, concurrent selections, follow-ups and live grounding. |
++| T8 — Ingestion/runtime boundaries | Complete observable process/filesystem/network audit, malicious repository cases and all applicable receipt/disposition/approval/simulation checks. |
++| T9 — Causal graph contribution | Held-out query-to-answer traces, required multi-hop examples on each evaluation repository and dependency/history/stale/interruption/outage ablations. |
++| T10 — Fair comparative advantage | Applicable direct-context and practical search baselines, shared budgets/model/instructions, paired repeats, the preselected A/B threshold, 10,000-resample confidence intervals, repository vetoes and cost/break-even reporting. |
++| T11 — Reproduction/submission | Complete versioned evidence bundle, independent clean reproduction and score recomputation, at least 12 stratified live held-out reruns, full prescribed demos/claim card and verified official event deliverables. Primary rehearsals count only if they meet the applicable frozen requirements. |
++
++Keep all earlier failed, skipped and inconclusive attempts. A held-out result that
++informs a repair becomes development data for a later confirmatory claim. Report
++integration, history correctness, scale and advantage separately. Track exact
++current status and artifacts in the
++[evidence ledger](docs/reviews/goal-acceptance-ledger.json) and
++[repository status](docs/REPO_STATUS.md).
++
++### Preserved earlier fixture and benchmark plan
++
++The following is the original Astronomy Shop plan, retained for secondary work
++and historical traceability. Its opening comparative statement is an **unproven
++hypothesis**, not the current product claim. Its status table, branch names and
++numbers are historical assertions requiring fresh verification. Its five-repeat
++synthetic benchmark is a separate experiment from the three paired repeats in
++the real-repository T2/T10 contract; neither replaces the other. Its out-of-scope
++list applies to that fixture plan, not to the later repository-integration scope.
++
++#### The product claim
+ 
+ Rolling back code does not roll back data. RollbackWitness decides, record by record, whether every
+ reader in a proposed rollback can read what is already stored, and refuses to call a rollback safe
+@@ -12,9 +117,9 @@ and records, the result stays complete and exact as the system grows, where an L
+ code and data as plain text gives false "safe" answers, misses records and readers, and stops fitting
+ in its context.
+ 
+-## Scope
++#### Scope
+ 
+-### In scope
++##### In scope
+ 
+ | # | Capability | Done when |
+ |---|---|---|
+@@ -26,7 +131,7 @@ in its context.
+ | 6 | Plain text vs FalkorDB benchmark | the comparison below runs on all four sizes and saves raw results |
+ | 7 | Git release import | `scripts/import_git_releases.py` creates release folders from a repository's tags, keeping hand-declared routes and codecs |
+ 
+-### Scale sizes
++##### Scale sizes
+ 
+ | Size | Services | Releases | Stores | Retained records | Planted hazards |
+ |---|---|---|---|---|---|
+@@ -40,7 +145,7 @@ compatibility but is wrong (BLOCKED); a limit visible only by running the reader
+ no changelog mentions; partial coverage or an unknown writer (NEEDS_EVIDENCE); a safe rollback
+ (BOUNDED_PASS).
+ 
+-### Benchmark
++##### Benchmark
+ 
+ Three contestants answer the same request for every hazard, at every size:
+ 
+@@ -53,13 +158,15 @@ Three contestants answer the same request for every hazard, at every size:
+ Measured for each contestant and size: false "safe" rate, failing records found and wrongly flagged,
+ readers missed, agreement across repeated runs, whether the input fit in context, time and LLM tokens.
+ 
+-### Out of scope
++##### Out of scope
+ 
+ Live Kafka, Postgres or other store sampling; running real .NET, Kotlin or Go binaries; Kubernetes,
+ Helm or registry import; automatic discovery of reader routes from source code; hosting for other
+-users. These stay in [docs/plans/arbitrary-repo-onboarding.md](docs/plans/arbitrary-repo-onboarding.md).
++users. The original plan referenced `docs/plans/arbitrary-repo-onboarding.md`, which is absent
++from this checkout. Current repository-integration planning is in
++[docs/plans/repo-integration-v1.md](docs/plans/repo-integration-v1.md).
+ 
+-## Evidence rules
++#### Evidence rules
+ 
+ A capability is done, and a result may be quoted, only when all of these hold.
+ 
+@@ -88,7 +195,7 @@ A capability is done, and a result may be quoted, only when all of these hold.
+     command and output that show it are linked in the status table below. Any later change to that
+     capability makes it not done until it is re-verified.
+ 
+-## Status
++#### Status
+ 
+ | # | Capability | Status | Evidence |
+ |---|---|---|---|
+diff --git a/src/rw/repo/adapters/python.py b/src/rw/repo/adapters/python.py
+index b2890f8..5d6e1cf 100644
+--- a/src/rw/repo/adapters/python.py
++++ b/src/rw/repo/adapters/python.py
+@@ -6,7 +6,7 @@ import warnings
+ 
+ from rw.repo.model import Relation, Symbol
+ 
+-VERSION = "2"
++VERSION = "3"
+ LIMITS = [
+     "Dynamic imports (importlib, __import__, imports built from strings) are not extracted.",
+     "Calls through getattr, dicts of callables, or other dynamic dispatch are not resolved.",
+@@ -14,6 +14,9 @@ LIMITS = [
+     "CALLS are resolved by simple name only (local definitions and imported names; attribute calls "
+     "keep only the attribute name) and are marked provenance='inferred'.",
+     "INHERITS targets are base-class expressions resolved through imports; no MRO computation.",
++    "Parameterized base origins (e.g. Base[T]) are static inferences from the subscript value; "
++    "__class_getitem__ and runtime inheritance are not evaluated. Bases containing calls or "
++    "other unresolved complex expressions are not extracted.",
+     "Star imports are recorded as an import of the module; the names they bind are not tracked.",
+     "Nested functions/classes inside functions are not emitted as separate symbols.",
+     "Files that fail to parse produce an extraction error and only a module symbol.",
+@@ -126,9 +129,12 @@ class PythonAdapter:
+                     q = f"{prefix}.{node.name}"
+                     ex.symbols.append(Symbol(q, "class", node.lineno, node.end_lineno or node.lineno))
+                     for b in node.bases:
+-                        t = dotted(b)
++                        origin, provenance = b, "parsed"
++                        while isinstance(origin, ast.Subscript):
++                            origin, provenance = origin.value, "inferred"
++                        t = dotted(origin)
+                         if t:
+-                            rel("INHERITS", q, t, "parsed")
++                            rel("INHERITS", q, t, provenance)
+                     visit(node.body, q, True)
+                 elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                     q = f"{prefix}.{node.name}"
+diff --git a/src/rw/repo/budget.py b/src/rw/repo/budget.py
+index a3f6a73..1c321b6 100644
+--- a/src/rw/repo/budget.py
++++ b/src/rw/repo/budget.py
+@@ -55,12 +55,17 @@ class ReadBudget:
+         if self.rows > self.limits.rows:
+             raise BudgetExhausted(self, "rows")
+ 
+-    def consume_source(self, size: int):
++    def check_source(self, size: int):
+         self.remaining()
+-        self.source_bytes += size
+-        if self.source_bytes > self.limits.source_bytes:
++        if type(size) is not int or size < 0:
++            raise ValueError("source byte count must be a nonnegative integer")
++        if size > self.limits.source_bytes - self.source_bytes:
+             raise BudgetExhausted(self, "source_bytes")
+ 
++    def consume_source(self, size: int):
++        self.check_source(size)
++        self.source_bytes += size
++
+     def snapshot(self, *, include_elapsed: bool = False) -> dict:
+         out = {"limits": {"seconds": self.limits.seconds, "rows": self.limits.rows,
+                            "source_bytes": self.limits.source_bytes},
+diff --git a/src/rw/repo/config.py b/src/rw/repo/config.py
+index ce404aa..14b71d7 100644
+--- a/src/rw/repo/config.py
++++ b/src/rw/repo/config.py
+@@ -5,6 +5,7 @@ import json
+ import os
+ import re
+ from pathlib import Path
++from typing import Literal
+ 
+ from pydantic import BaseModel, ConfigDict, Field, field_validator
+ 
+@@ -24,6 +25,8 @@ class RepoConfig(BaseModel):
+     languages: list[str] = Field(default_factory=lambda: ["python"])
+     include: list[str] = Field(default_factory=list)
+     exclude: list[str] = Field(default_factory=list)
++    path_matching: Literal["path_or_basename", "path"] = "path_or_basename"
++    regular_files_only: bool = Field(default=False, strict=True)
+     release_notes: list[str] = Field(default_factory=lambda: list(DEFAULT_RELEASE_NOTES))
+     query_timeout_seconds: float = Field(default=120.0, gt=0, le=120.0, allow_inf_nan=False)
+     query_max_rows: int = Field(default=250_000, gt=0, le=250_000, strict=True)
+diff --git a/src/rw/repo/git.py b/src/rw/repo/git.py
+index 34b449d..765b83c 100644
+--- a/src/rw/repo/git.py
++++ b/src/rw/repo/git.py
+@@ -128,8 +128,52 @@ class GitRepo:
+         return items
+ 
+     def blob(self, sha: str) -> bytes:
++        from rw.repo.budget import active_budget
++        budget = active_budget()
++        if budget:
++            # Object identity is immutable: inspect its size before fetching payload.
++            # RepoQuery charges the actual returned bytes after fetching.
++            budget.check_source(self._blob_size(sha))
+         return self._bytes("cat-file", "blob", sha)
+ 
++    def _blob_size(self, sha: str) -> int:
++        value = self._text("cat-file", "-s", sha).strip()
++        if not value.isdecimal():
++            raise GitError("invalid Git object size")
++        return int(value)
++
++    def _reserve_patch_sources(self, child: str, parent: str | None = None) -> None:
++        """Bound raw diff inputs before Git reads them; account a conservative reservation.
++
++        Metadata is read without source payload. Old/new changed blobs are charged
++        per path, including repeated objects, so this cannot undercount reused inputs.
++        A failed diff retains its reservation. No reservation applies during indexing,
++        which runs outside request read scopes.
++        """
++        from rw.repo.budget import active_budget
++        budget = active_budget()
++        if not budget:
++            return
++        revisions = (parent, child) if parent is not None else ("--root", child)
++        records = self._text("diff-tree", "-r", "--raw", "-z", "--no-abbrev", "--no-renames",
++                             "--no-commit-id", *revisions).split("\0")
++        total, sizes = 0, {}
++        for record in records[::2]:
++            if not record:
++                continue
++            fields = record.lstrip().removeprefix(":").split()
++            if len(fields) != 5:
++                raise GitError("invalid raw diff metadata")
++            old_mode, new_mode, old, new, _status = fields
++            for mode, oid in ((old_mode, old), (new_mode, new)):
++                if mode not in {"100644", "100755", "120000"} or set(oid) == {"0"}:
++                    continue
++                if oid not in sizes:
++                    sizes[oid] = self._blob_size(oid)
++                total += sizes[oid]
++                budget.check_source(total)
++        budget.consume_source(total)
++
+     def changes(self, parent: str, child: str) -> list[Change]:
+         parts = self._text("diff-tree", "-r", "-M", "-z", "--name-status", "--no-commit-id",
+                            parent, child).split("\x00")
+@@ -164,11 +208,13 @@ class GitRepo:
+ 
+     def patch(self, parent: str, child: str) -> str:
+         """Unified diff (no context, renames detected) of child against parent."""
++        self._reserve_patch_sources(child, parent)
+         return self._text("diff-tree", "-p", "-M", "-U0", "--no-color", "--no-ext-diff",
+                           "--no-textconv", "--no-commit-id", parent, child)
+ 
+     def patch_id(self, sha: str) -> str | None:
+         """`git patch-id --stable` of a commit against its first parent (None for root/empty)."""
++        self._reserve_patch_sources(sha)
+         diff = self._bytes("diff-tree", "-p", "--no-color", "--no-ext-diff", "--no-textconv",
+                            "--root", sha)
+         out = self._bytes("patch-id", "--stable", stdin=diff).decode("utf-8", "replace").split()
+diff --git a/src/rw/repo/index.py b/src/rw/repo/index.py
+index 42702bb..f20846e 100644
+--- a/src/rw/repo/index.py
++++ b/src/rw/repo/index.py
+@@ -38,6 +38,7 @@ from rw.repo.adapters import adapter_for
+ from rw.repo.config import RepoConfig
+ from rw.repo.git import GitRepo
+ from rw.repo.model import Gap
++from rw.repo.source import LINE_SCHEMA, source_lines
+ 
+ CHUNK = 1000
+ BLOB_BATCH = 200
+@@ -74,9 +75,10 @@ def _now() -> str:
+     return datetime.now(timezone.utc).isoformat()
+ 
+ 
+-def _matches(path: str, globs: list[str]) -> bool:
++def _matches(path: str, globs: list[str], profile: str = "path_or_basename") -> bool:
+     base = path.rsplit("/", 1)[-1]
+-    return any(fnmatch.fnmatchcase(path, g) or fnmatch.fnmatchcase(base, g) for g in globs)
++    return any(fnmatch.fnmatchcase(path, g) or
++               (profile == "path_or_basename" and fnmatch.fnmatchcase(base, g)) for g in globs)
+ 
+ 
+ def _write(graph, cypher: str, rows: list[dict]) -> None:
+@@ -204,7 +206,8 @@ def _index_repository(config: RepoConfig, graph_name: str, db, *,
+ 
+     _ensure_indexes(graph)
+     fingerprint = hashlib.sha256(json.dumps({
+-        "schema": 2, "include": config.include, "exclude": config.exclude,
++        "schema": 3, "source_lines": LINE_SCHEMA, "include": config.include, "exclude": config.exclude,
++        "path_matching": config.path_matching, "regular_files_only": config.regular_files_only,
+         "languages": config.languages, "release_notes": config.release_notes,
+     }, sort_keys=True).encode()).hexdigest()
+     previous = graph.query("MATCH (r:Repository {name:$name}) RETURN r.config_hash",
+@@ -272,10 +275,14 @@ def _index_repository(config: RepoConfig, graph_name: str, db, *,
+                 if status == "D" or mode == "160000" or set(bsha) == {"0"}:
+                     cur.pop(path, None)
+                     continue
+-                if config.include and not _matches(path, config.include):
++                if config.regular_files_only and mode not in {"100644", "100755"}:
+                     cur.pop(path, None)
++                    report.coverage_gaps.append(Gap("UNSUPPORTED_FILE_KIND", f"{sha}:{path}: Git mode {mode}; regular files only"))
+                     continue
+-                if config.exclude and _matches(path, config.exclude):
++                if config.include and not _matches(path, config.include, config.path_matching):
++                    cur.pop(path, None)
++                    continue
++                if config.exclude and _matches(path, config.exclude, config.path_matching):
+                     cur.pop(path, None)
+                     continue
+                 cur[path] = bsha
+@@ -295,15 +302,15 @@ def _index_repository(config: RepoConfig, graph_name: str, db, *,
+ 
+         # ---- blobs: reuse those already extracted by the same extractor, read the rest in one stream
+         tp = time.perf_counter()
+-        known: dict[str, tuple[str, str | None]] = {
+-            r[0]: (r[1], r[2]) for r in _read_all(
++        known: dict[str, tuple[str, str | None, str | None]] = {
++            r[0]: (r[1], r[2], r[3]) for r in _read_all(
+                 graph, "MATCH (b:Blob) WHERE b.git_sha IS NOT NULL "
+-                       "RETURN b.git_sha, b.content_hash, b.extracted_by ORDER BY b.git_sha")}
++                       "RETURN b.git_sha, b.content_hash, b.extracted_by, b.line_schema ORDER BY b.git_sha")}
+         hash_of: dict[str, str] = {}
+         to_read: list[str] = []
+         for bsha, path in blob_first_path.items():
+             extractor = _extractor(adapter_for(path, config.languages))
+-            if bsha in known and known[bsha][1] == extractor:
++            if bsha in known and known[bsha][1] == extractor and known[bsha][2] == LINE_SCHEMA:
+                 hash_of[bsha] = known[bsha][0]
+                 report.blobs_reused += 1
+             else:
+@@ -338,7 +345,7 @@ def _index_repository(config: RepoConfig, graph_name: str, db, *,
+                 for path, bsha in m.items():
+                     chash = hash_of[bsha]
+                     files.append({"sha": sha, "h": chash, "path": path})
+-                    if _matches(path, config.release_notes):
++                    if _matches(path, config.release_notes, config.path_matching):
+                         notes.append({"sha": sha, "id": f"{config.name}:{chash}:{path}", "path": path,
+                                       "h": chash})
+             _write(graph, "UNWIND $rows AS row MATCH (c:Commit {sha:row.sha}), (b:Blob {content_hash:row.h}) "
+@@ -387,9 +394,9 @@ class _BlobBatch:
+         self.rels: dict[str, list[dict]] = {}
+ 
+     def add(self, chash, bsha, path, data, adapter, stale: bool = True) -> None:
+-        lines = data.decode("utf-8", "replace").splitlines()
++        lines = source_lines(data.decode("utf-8", "replace"))
+         row = {"h": chash, "g": bsha, "lang": adapter.language if adapter else None, "size": len(data),
+-               "n": max(len(lines), 1), "x": _extractor(adapter), "errors": 0}
++               "n": max(len(lines), 1), "x": _extractor(adapter), "errors": 0, "line_schema": LINE_SCHEMA}
+         self.blobs.append(row)
+         if stale:  # a Blob node already exists: earlier symbols must go (deletes are costly; only then)
+             self.stale.append({"h": chash})
+@@ -452,7 +459,7 @@ class _BlobBatch:
+                       "ON CREATE SET t.qualname=row.tq, t.external=true "
+                       f"CREATE (s)-[:{kind} {{provenance:row.prov, extractor:row.ext, relative_target:row.relative}}]->(t)", ext)
+         _write(g, "UNWIND $rows AS row MATCH (b:Blob {content_hash:row.h}) "
+-                  "SET b.extracted_by=row.x, b.errors=row.errors", self.blobs)
++                  "SET b.extracted_by=row.x, b.errors=row.errors, b.line_schema=row.line_schema", self.blobs)
+         self.blobs, self.stale, self.syms, self.rels = [], [], [], {}
+ 
+ 
+diff --git a/src/rw/repo/query.py b/src/rw/repo/query.py
+index e4e4377..9af06ec 100644
+--- a/src/rw/repo/query.py
++++ b/src/rw/repo/query.py
+@@ -33,6 +33,7 @@ import difflib
+ 
+ from rw.repo.model import Citation, FixStatus, Gap, Page
+ from rw.repo.budget import BudgetExhausted, ReadLimits, active_budget, read_scope
++from rw.repo.source import source_lines
+ 
+ MAX_LIMIT = 200
+ MAX_HOPS = 5
+@@ -509,12 +510,17 @@ class RepoQuery:
+         return out
+ 
+     def _cite(self, sha: str, s: _Sym) -> Citation:
+-        lines = self._source(sha, s.path, s.content_hash).decode("utf-8", "replace").splitlines()
+-        if not (1 <= s.start_line <= s.end_line <= max(1, len(lines))):
++        lines = source_lines(self._source(sha, s.path, s.content_hash).decode("utf-8", "replace"))
++        # The extractor uses a 1:1 module marker for empty ASTs. It identifies
++        # the file, not a physical source line; never publish it as a line span.
++        empty_module = not lines and s.kind == "module" and s.start_line == s.end_line == 1
++        if not empty_module and not (1 <= s.start_line <= s.end_line <= len(lines)):
+             raise EvidenceError("STALE_SOURCE", f"{s.path}: indexed symbol span is outside source at {sha}")
+         actual = hashlib.sha256("\n".join(lines[s.start_line - 1:s.end_line]).encode("utf-8")).hexdigest()
+         if actual != s.text_hash:
+             raise EvidenceError("STALE_SOURCE", f"{s.path}: indexed symbol span hash disagrees with source at {sha}")
++        if empty_module:
++            return Citation(self.repo, sha, s.path, content_hash=s.content_hash)
+         return Citation(self.repo, sha, s.path, s.start_line, s.end_line, s.content_hash)
+ 
+     def _gap_page(self, gap: Gap) -> Page:
+@@ -706,10 +712,10 @@ class RepoQuery:
+ 
+         def whole(sha, path, files):
+             h, n, _ = files[path]
+-            lines = max(len(self._source(sha, path, h).decode("utf-8", "replace").splitlines()), 1)
+-            if n is not None and n != lines:
++            lines = len(source_lines(self._source(sha, path, h).decode("utf-8", "replace")))
++            if n is not None and n != max(lines, 1):
+                 raise EvidenceError("STALE_SOURCE", f"{path}: indexed line count disagrees with source at {sha}")
+-            return Citation(self.repo, sha, path, 1, lines, h)
++            return Citation(self.repo, sha, path, 1 if lines else None, lines or None, h)
+ 
+         def diff(old: dict, new: dict):
+             add = sorted(q for q in new if q not in old)
+@@ -788,10 +794,11 @@ class RepoQuery:
+                 gaps.append(Gap("MISSING_SOURCE", f"cannot read {path} at {sha}"))
+                 continue
+             data = self._source(sha, path, h)
+-            lines = data.decode("utf-8", "replace").splitlines()
++            lines = source_lines(data.decode("utf-8", "replace"))
+             start, end = _section(lines, versions)
+             text = "\n".join(lines[start - 1:end])
+-            items.append(NoteItem(path, text, Citation(self.repo, sha, path, start, end, h)))
++            citation = Citation(self.repo, sha, path, start if lines else None, end if lines else None, h)
++            items.append(NoteItem(path, text, citation))
+         return _page(items, limit, cursor, {"commit": sha, "gaps": gaps}, off=off, scope=scope, total=total)
+ 
+     # ------------------------------------------------------------ history
+@@ -904,11 +911,11 @@ class RepoQuery:
+                 continue
+             h, _, g = files[p]
+             data = self._source(sha, p, h)
+-            lines = data.decode("utf-8", "replace").splitlines()
+-            file_cits[p] = Citation(self.repo, sha, p, 1, max(len(lines), 1), h)
++            lines = source_lines(data.decode("utf-8", "replace"))
++            file_cits[p] = Citation(self.repo, sha, p, 1 if lines else None, len(lines) or None, h)
+             if any(x.strip() for x in removed):
+                 fixed_data = self._source(fix, path, fix_files[path][0]) if path in fix_files else b""
+-                fixed_lines = fixed_data.decode("utf-8", "replace").splitlines()
++                fixed_lines = source_lines(fixed_data.decode("utf-8", "replace"))
+                 def occurrences(source):
+                     return sum(source[i:i + len(removed)] == removed
+                                for i in range(len(source) - len(removed) + 1))
+@@ -931,7 +938,7 @@ class RepoQuery:
+             if span is None:
+                 missing.append(path)
+                 pre_blob = self._source(parents[0][0], path, pre_files[path][0]) if path in pre_files else None
+-                pre = pre_blob.decode("utf-8", "replace").splitlines() if pre_blob else []
++                pre = source_lines(pre_blob.decode("utf-8", "replace")) if pre_blob else []
+                 similar = similar or _similar(lines, added, removed + pre)
+             else:
+                 found.append(Citation(self.repo, sha, p, span[0], span[1], h))
+@@ -991,7 +998,7 @@ class RepoQuery:
+ def _parse_patch(text: str) -> list[tuple[str, list[str], list[str]]]:
+     """Hunks of a -U0 patch: (new path, removed lines, added lines)."""
+     hunks, path, old_path, cur = [], None, None, None
+-    for line in text.splitlines():
++    for line in source_lines(text):
+         if line.startswith("diff "):
+             cur = None
+             old_path = None

@@ -97,7 +97,8 @@ class Clone:
         key = (sha, path)
         if key not in self._lines:
             text = self.show(sha, path)
-            self._lines[key] = None if text is None else len(text.splitlines())
+            from rw.repo.source import source_lines
+            self._lines[key] = None if text is None else len(source_lines(text))
         return self._lines[key]
 
 

@@ -1,0 +1,1801 @@
+{
+  "schema": "focused-development-quality-attempt-ledger/v1",
+  "classification": "Four distinct development scenarios; protocol/budget/prompt versions separate; not confirmatory",
+  "acceptance_validated": false,
+  "advantage_validated": false,
+  "model": "models/gemini-3.1-flash-lite",
+  "attempts": [
+    {
+      "attempt_version": "run-001",
+      "summary": {
+        "started_at": "2026-10-18T14:17:37.773858+00:00",
+        "model": "models/gemini-3.1-flash-lite",
+        "application_endpoint_mutations": 0,
+        "owned_database": "rw-quality-flash-lite-20261018",
+        "runs": [
+          {
+            "task": "DEV-LITE-MULTIHOP",
+            "arm": "graph",
+            "status": "ERROR",
+            "failure": "RUNNER_ValueError",
+            "answer_generated": false,
+            "seconds": 3.6658246250008233,
+            "result_path": "artifacts/goal-quality-flash-lite/run-001/DEV-LITE-MULTIHOP-graph/result.json"
+          },
+          {
+            "task": "DEV-LITE-MULTIHOP",
+            "arm": "plaintext",
+            "status": "ERROR",
+            "failure": "RUNNER_ValueError",
+            "answer_generated": false,
+            "seconds": 5.531084624992218,
+            "result_path": "artifacts/goal-quality-flash-lite/run-001/DEV-LITE-MULTIHOP-plaintext/result.json"
+          },
+          {
+            "task": "DEV-LITE-AMBIGUOUS",
+            "arm": "plaintext",
+            "status": "ERROR",
+            "failure": "MALFORMED_RETRIEVAL_ACTION",
+            "answer_generated": false,
+            "seconds": 4.328879000036977,
+            "result_path": "artifacts/goal-quality-flash-lite/run-001/DEV-LITE-AMBIGUOUS-plaintext/result.json"
+          },
+          {
+            "task": "DEV-LITE-AMBIGUOUS",
+            "arm": "graph",
+            "status": "ERROR",
+            "failure": "MALFORMED_RETRIEVAL_ACTION",
+            "answer_generated": false,
+            "seconds": 3.489712917013094,
+            "result_path": "artifacts/goal-quality-flash-lite/run-001/DEV-LITE-AMBIGUOUS-graph/result.json"
+          },
+          {
+            "task": "DEV-LITE-MISSING-REV",
+            "arm": "plaintext",
+            "status": "COMPLETE_UNSCORED",
+            "failure": null,
+            "answer_generated": true,
+            "seconds": 5.210977750015445,
+            "result_path": "artifacts/goal-quality-flash-lite/run-001/DEV-LITE-MISSING-REV-plaintext/result.json"
+          },
+          {
+            "task": "DEV-LITE-MISSING-REV",
+            "arm": "graph",
+            "status": "COMPLETE_UNSCORED",
+            "failure": null,
+            "answer_generated": true,
+            "seconds": 4.878070417034905,
+            "result_path": "artifacts/goal-quality-flash-lite/run-001/DEV-LITE-MISSING-REV-graph/result.json"
+          },
+          {
+            "task": "DEV-LITE-STATIC-LIMIT",
+            "arm": "graph",
+            "status": "ERROR",
+            "failure": "PROVIDER_HTTP_ERROR",
+            "answer_generated": false,
+            "seconds": 2.3844489170005545,
+            "result_path": "artifacts/goal-quality-flash-lite/run-001/DEV-LITE-STATIC-LIMIT-graph/result.json"
+          },
+          {
+            "task": "DEV-LITE-STATIC-LIMIT",
+            "arm": "plaintext",
+            "status": "ERROR",
+            "failure": "PROVIDER_HTTP_ERROR",
+            "answer_generated": false,
+            "seconds": 0.7784111250075512,
+            "result_path": "artifacts/goal-quality-flash-lite/run-001/DEV-LITE-STATIC-LIMIT-plaintext/result.json"
+          }
+        ],
+        "acceptance_validated": false,
+        "index": {
+          "repo": "itsdangerous-development",
+          "graph_name": "quality_flash_lite",
+          "import_run_id": "e93f022dc4104834a99f4556a1d6b474",
+          "status": "COMPLETE",
+          "commits": 607,
+          "tags": 30,
+          "blobs": 310,
+          "blobs_new": 310,
+          "blobs_reused": 0,
+          "symbols": 5358,
+          "relations": 15610,
+          "extraction_errors": [
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 289)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 291)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 291)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 291)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 334)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 335)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 335)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 335)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 335)"
+          ],
+          "coverage_gaps": [
+            {
+              "kind": "UNSUPPORTED_LANGUAGE",
+              "detail": "CHANGES.rst"
+            },
+            {
+              "kind": "UNSUPPORTED_LANGUAGE",
+              "detail": "pyproject.toml"
+            },
+            {
+              "kind": "UNSUPPORTED_LANGUAGE",
+              "detail": "setup.cfg"
+            }
+          ],
+          "metrics": {
+            "seconds": 2.236,
+            "peak_memory_bytes": 12371572,
+            "peak_rss_bytes": 105922560,
+            "phase_seconds": {
+              "commits": 0.414,
+              "file_maps": 0.202,
+              "blobs": 1.382,
+              "file_edges": 0.214,
+              "indexed": 0.012
+            },
+            "blobs_new": 310,
+            "blobs_reused": 0,
+            "commits": 607,
+            "symbols": 5358,
+            "relations": 15610,
+            "coverage_gaps": 3,
+            "extraction_errors": 9,
+            "nodes": 6502,
+            "edges": 26956
+          }
+        },
+        "cleanup": {
+          "remove_exit_code": 0,
+          "remaining": []
+        },
+        "source_mismatches": [],
+        "finished_at": "2026-10-18T14:18:10.981885+00:00"
+      },
+      "completed_result_files": [
+        {
+          "case_arm": "DEV-LITE-AMBIGUOUS-graph",
+          "result_path": "artifacts/goal-quality-flash-lite/run-001/DEV-LITE-AMBIGUOUS-graph/result.json",
+          "status": "ERROR",
+          "failure": "MALFORMED_RETRIEVAL_ACTION",
+          "answer_generated": false,
+          "usage": {
+            "budget_charges_include_uncertain_reservations": false,
+            "budget_input_tokens": 3258,
+            "budget_output_tokens": 178,
+            "calls": 2,
+            "cost_status": "UNMEASURED; token counts alone are not provider billing",
+            "elapsed_seconds": 3.4939330409979448,
+            "limits": {
+              "calls": 16,
+              "context_tokens": 1048576,
+              "input_reserve": 64,
+              "input_tokens": 24000,
+              "output_tokens": 4000,
+              "per_call_output": 1000,
+              "seconds": 120
+            },
+            "model": "models/gemini-3.1-flash-lite",
+            "reported_input_tokens": 3258,
+            "reported_output_including_thinking": 178,
+            "reported_token_counts_complete": true,
+            "response_model_version": "gemini-3.1-flash-lite",
+            "usage_unknown": false
+          },
+          "reference_integrity": null
+        },
+        {
+          "case_arm": "DEV-LITE-AMBIGUOUS-plaintext",
+          "result_path": "artifacts/goal-quality-flash-lite/run-001/DEV-LITE-AMBIGUOUS-plaintext/result.json",
+          "status": "ERROR",
+          "failure": "MALFORMED_RETRIEVAL_ACTION",
+          "answer_generated": false,
+          "usage": {
+            "budget_charges_include_uncertain_reservations": false,
+            "budget_input_tokens": 3819,
+            "budget_output_tokens": 246,
+            "calls": 2,
+            "cost_status": "UNMEASURED; token counts alone are not provider billing",
+            "elapsed_seconds": 4.328502624994144,
+            "limits": {
+              "calls": 16,
+              "context_tokens": 1048576,
+              "input_reserve": 64,
+              "input_tokens": 24000,
+              "output_tokens": 4000,
+              "per_call_output": 1000,
+              "seconds": 120
+            },
+            "model": "models/gemini-3.1-flash-lite",
+            "reported_input_tokens": 3819,
+            "reported_output_including_thinking": 246,
+            "reported_token_counts_complete": true,
+            "response_model_version": "gemini-3.1-flash-lite",
+            "usage_unknown": false
+          },
+          "reference_integrity": null
+        },
+        {
+          "case_arm": "DEV-LITE-MISSING-REV-graph",
+          "result_path": "artifacts/goal-quality-flash-lite/run-001/DEV-LITE-MISSING-REV-graph/result.json",
+          "status": "COMPLETE_UNSCORED",
+          "failure": null,
+          "answer_generated": true,
+          "usage": {
+            "budget_charges_include_uncertain_reservations": false,
+            "budget_input_tokens": 3198,
+            "budget_output_tokens": 156,
+            "calls": 3,
+            "cost_status": "UNMEASURED; token counts alone are not provider billing",
+            "elapsed_seconds": 4.882038832991384,
+            "limits": {
+              "calls": 16,
+              "context_tokens": 1048576,
+              "input_reserve": 64,
+              "input_tokens": 24000,
+              "output_tokens": 4000,
+              "per_call_output": 1000,
+              "seconds": 120
+            },
+            "model": "models/gemini-3.1-flash-lite",
+            "reported_input_tokens": 3198,
+            "reported_output_including_thinking": 156,
+            "reported_token_counts_complete": true,
+            "response_model_version": "gemini-3.1-flash-lite",
+            "usage_unknown": false
+          },
+          "reference_integrity": {
+            "answer_quality": "UNSCORED",
+            "errors": [],
+            "material_claim_grounding": "UNSCORED",
+            "references_checked": 0,
+            "schema": "reference-integrity-v1",
+            "valid": true
+          }
+        },
+        {
+          "case_arm": "DEV-LITE-MISSING-REV-plaintext",
+          "result_path": "artifacts/goal-quality-flash-lite/run-001/DEV-LITE-MISSING-REV-plaintext/result.json",
+          "status": "COMPLETE_UNSCORED",
+          "failure": null,
+          "answer_generated": true,
+          "usage": {
+            "budget_charges_include_uncertain_reservations": false,
+            "budget_input_tokens": 2589,
+            "budget_output_tokens": 150,
+            "calls": 3,
+            "cost_status": "UNMEASURED; token counts alone are not provider billing",
+            "elapsed_seconds": 5.210915917006787,
+            "limits": {
+              "calls": 16,
+              "context_tokens": 1048576,
+              "input_reserve": 64,
+              "input_tokens": 24000,
+              "output_tokens": 4000,
+              "per_call_output": 1000,
+              "seconds": 120
+            },
+            "model": "models/gemini-3.1-flash-lite",
+            "reported_input_tokens": 2589,
+            "reported_output_including_thinking": 150,
+            "reported_token_counts_complete": true,
+            "response_model_version": "gemini-3.1-flash-lite",
+            "usage_unknown": false
+          },
+          "reference_integrity": {
+            "answer_quality": "UNSCORED",
+            "errors": [],
+            "material_claim_grounding": "UNSCORED",
+            "references_checked": 0,
+            "schema": "reference-integrity-v1",
+            "valid": true
+          }
+        },
+        {
+          "case_arm": "DEV-LITE-MULTIHOP-graph",
+          "result_path": "artifacts/goal-quality-flash-lite/run-001/DEV-LITE-MULTIHOP-graph/result.json",
+          "status": "ERROR",
+          "failure": "RUNNER_ValueError",
+          "answer_generated": false,
+          "usage": {
+            "budget_charges_include_uncertain_reservations": false,
+            "budget_input_tokens": 8264,
+            "budget_output_tokens": 226,
+            "calls": 2,
+            "cost_status": "UNMEASURED; token counts alone are not provider billing",
+            "elapsed_seconds": 3.6694714160403237,
+            "limits": {
+              "calls": 16,
+              "context_tokens": 1048576,
+              "input_reserve": 64,
+              "input_tokens": 24000,
+              "output_tokens": 4000,
+              "per_call_output": 1000,
+              "seconds": 120
+            },
+            "model": "models/gemini-3.1-flash-lite",
+            "reported_input_tokens": 8264,
+            "reported_output_including_thinking": 226,
+            "reported_token_counts_complete": true,
+            "response_model_version": "gemini-3.1-flash-lite",
+            "usage_unknown": false
+          },
+          "reference_integrity": null
+        },
+        {
+          "case_arm": "DEV-LITE-MULTIHOP-plaintext",
+          "result_path": "artifacts/goal-quality-flash-lite/run-001/DEV-LITE-MULTIHOP-plaintext/result.json",
+          "status": "ERROR",
+          "failure": "RUNNER_ValueError",
+          "answer_generated": false,
+          "usage": {
+            "budget_charges_include_uncertain_reservations": false,
+            "budget_input_tokens": 7625,
+            "budget_output_tokens": 413,
+            "calls": 3,
+            "cost_status": "UNMEASURED; token counts alone are not provider billing",
+            "elapsed_seconds": 5.531050833000336,
+            "limits": {
+              "calls": 16,
+              "context_tokens": 1048576,
+              "input_reserve": 64,
+              "input_tokens": 24000,
+              "output_tokens": 4000,
+              "per_call_output": 1000,
+              "seconds": 120
+            },
+            "model": "models/gemini-3.1-flash-lite",
+            "reported_input_tokens": 7625,
+            "reported_output_including_thinking": 413,
+            "reported_token_counts_complete": true,
+            "response_model_version": "gemini-3.1-flash-lite",
+            "usage_unknown": false
+          },
+          "reference_integrity": null
+        },
+        {
+          "case_arm": "DEV-LITE-STATIC-LIMIT-graph",
+          "result_path": "artifacts/goal-quality-flash-lite/run-001/DEV-LITE-STATIC-LIMIT-graph/result.json",
+          "status": "ERROR",
+          "failure": "PROVIDER_HTTP_ERROR",
+          "answer_generated": false,
+          "usage": {
+            "budget_charges_include_uncertain_reservations": true,
+            "budget_input_tokens": 2753,
+            "budget_output_tokens": 1057,
+            "calls": 2,
+            "cost_status": "UNMEASURED; token counts alone are not provider billing",
+            "elapsed_seconds": 2.3882584160310216,
+            "limits": {
+              "calls": 16,
+              "context_tokens": 1048576,
+              "input_reserve": 64,
+              "input_tokens": 24000,
+              "output_tokens": 4000,
+              "per_call_output": 1000,
+              "seconds": 120
+            },
+            "model": "models/gemini-3.1-flash-lite",
+            "reported_input_tokens": 1245,
+            "reported_output_including_thinking": 57,
+            "reported_token_counts_complete": false,
+            "response_model_version": "gemini-3.1-flash-lite",
+            "usage_unknown": true
+          },
+          "reference_integrity": null
+        },
+        {
+          "case_arm": "DEV-LITE-STATIC-LIMIT-plaintext",
+          "result_path": "artifacts/goal-quality-flash-lite/run-001/DEV-LITE-STATIC-LIMIT-plaintext/result.json",
+          "status": "ERROR",
+          "failure": "PROVIDER_HTTP_ERROR",
+          "answer_generated": false,
+          "usage": {
+            "budget_charges_include_uncertain_reservations": true,
+            "budget_input_tokens": 1003,
+            "budget_output_tokens": 1000,
+            "calls": 1,
+            "cost_status": "UNMEASURED; token counts alone are not provider billing",
+            "elapsed_seconds": 0.7779958749888465,
+            "limits": {
+              "calls": 16,
+              "context_tokens": 1048576,
+              "input_reserve": 64,
+              "input_tokens": 24000,
+              "output_tokens": 4000,
+              "per_call_output": 1000,
+              "seconds": 120
+            },
+            "model": "models/gemini-3.1-flash-lite",
+            "reported_input_tokens": 0,
+            "reported_output_including_thinking": 0,
+            "reported_token_counts_complete": false,
+            "response_model_version": null,
+            "usage_unknown": true
+          },
+          "reference_integrity": null
+        }
+      ],
+      "unfinished_cells_are_not_passes": true
+    },
+    {
+      "attempt_version": "run-002-native",
+      "summary": {
+        "started_at": "2026-10-18T14:18:54.793473+00:00",
+        "model": "models/gemini-3.1-flash-lite",
+        "application_endpoint_mutations": 0,
+        "owned_database": "rw-quality-flash-lite-native-20261018",
+        "runs": [
+          {
+            "task": "DEV-LITE-MULTIHOP",
+            "arm": "graph",
+            "status": "ERROR",
+            "failure": "MODEL_INPUT_BUDGET_EXHAUSTED",
+            "answer_generated": false,
+            "seconds": 28.53275583300274,
+            "result_path": "artifacts/goal-quality-flash-lite/run-002-native/DEV-LITE-MULTIHOP-graph/result.json"
+          },
+          {
+            "task": "DEV-LITE-MULTIHOP",
+            "arm": "plaintext",
+            "status": "ERROR",
+            "failure": "MODEL_INPUT_BUDGET_EXHAUSTED",
+            "answer_generated": false,
+            "seconds": 44.63147600000957,
+            "result_path": "artifacts/goal-quality-flash-lite/run-002-native/DEV-LITE-MULTIHOP-plaintext/result.json"
+          },
+          {
+            "task": "DEV-LITE-AMBIGUOUS",
+            "arm": "plaintext",
+            "status": "ERROR",
+            "failure": "MODEL_INPUT_BUDGET_EXHAUSTED",
+            "answer_generated": false,
+            "seconds": 39.283994125027675,
+            "result_path": "artifacts/goal-quality-flash-lite/run-002-native/DEV-LITE-AMBIGUOUS-plaintext/result.json"
+          },
+          {
+            "task": "DEV-LITE-AMBIGUOUS",
+            "arm": "graph",
+            "status": "ERROR",
+            "failure": "MODEL_INPUT_BUDGET_EXHAUSTED",
+            "answer_generated": false,
+            "seconds": 39.17586616700282,
+            "result_path": "artifacts/goal-quality-flash-lite/run-002-native/DEV-LITE-AMBIGUOUS-graph/result.json"
+          },
+          {
+            "task": "DEV-LITE-STATIC-LIMIT",
+            "arm": "plaintext",
+            "status": "ERROR",
+            "failure": "MODEL_INPUT_BUDGET_EXHAUSTED",
+            "answer_generated": false,
+            "seconds": 45.6236857920303,
+            "result_path": "artifacts/goal-quality-flash-lite/run-002-native/DEV-LITE-STATIC-LIMIT-plaintext/result.json"
+          },
+          {
+            "task": "DEV-LITE-STATIC-LIMIT",
+            "arm": "graph",
+            "status": "ERROR",
+            "failure": "MODEL_INPUT_BUDGET_EXHAUSTED",
+            "answer_generated": false,
+            "seconds": 44.97343650000403,
+            "result_path": "artifacts/goal-quality-flash-lite/run-002-native/DEV-LITE-STATIC-LIMIT-graph/result.json"
+          }
+        ],
+        "acceptance_validated": false,
+        "index": {
+          "repo": "itsdangerous-development",
+          "graph_name": "quality_flash_lite",
+          "import_run_id": "67f0b2a085104c29a254ca2e65386339",
+          "status": "COMPLETE",
+          "commits": 607,
+          "tags": 30,
+          "blobs": 310,
+          "blobs_new": 310,
+          "blobs_reused": 0,
+          "symbols": 5358,
+          "relations": 15610,
+          "extraction_errors": [
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 289)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 291)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 291)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 291)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 334)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 335)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 335)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 335)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 335)"
+          ],
+          "coverage_gaps": [
+            {
+              "kind": "UNSUPPORTED_LANGUAGE",
+              "detail": "CHANGES.rst"
+            },
+            {
+              "kind": "UNSUPPORTED_LANGUAGE",
+              "detail": "pyproject.toml"
+            },
+            {
+              "kind": "UNSUPPORTED_LANGUAGE",
+              "detail": "setup.cfg"
+            }
+          ],
+          "metrics": {
+            "seconds": 2.242,
+            "peak_memory_bytes": 12371516,
+            "peak_rss_bytes": 106545152,
+            "phase_seconds": {
+              "commits": 0.407,
+              "file_maps": 0.205,
+              "blobs": 1.393,
+              "file_edges": 0.214,
+              "indexed": 0.011
+            },
+            "blobs_new": 310,
+            "blobs_reused": 0,
+            "commits": 607,
+            "symbols": 5358,
+            "relations": 15610,
+            "coverage_gaps": 3,
+            "extraction_errors": 9,
+            "nodes": 6502,
+            "edges": 26956
+          }
+        },
+        "cleanup": {
+          "remove_exit_code": 0,
+          "remaining": []
+        },
+        "source_mismatches": [],
+        "finished_at": "2026-10-18T14:22:59.946062+00:00"
+      },
+      "completed_result_files": [
+        {
+          "case_arm": "DEV-LITE-AMBIGUOUS-graph",
+          "result_path": "artifacts/goal-quality-flash-lite/run-002-native/DEV-LITE-AMBIGUOUS-graph/result.json",
+          "status": "ERROR",
+          "failure": "MODEL_INPUT_BUDGET_EXHAUSTED",
+          "answer_generated": false,
+          "usage": {
+            "budget_charges_include_uncertain_reservations": false,
+            "budget_input_tokens": 23726,
+            "budget_output_tokens": 503,
+            "calls": 6,
+            "cost_status": "UNMEASURED; token counts alone are not provider billing",
+            "elapsed_seconds": 39.176061249978375,
+            "limits": {
+              "calls": 16,
+              "context_tokens": 1048576,
+              "input_reserve": 64,
+              "input_tokens": 24000,
+              "output_tokens": 4000,
+              "per_call_output": 1000,
+              "seconds": 120
+            },
+            "model": "models/gemini-3.1-flash-lite",
+            "reported_input_tokens": 23726,
+            "reported_output_including_thinking": 503,
+            "reported_token_counts_complete": true,
+            "response_model_version": "gemini-3.1-flash-lite",
+            "usage_unknown": false
+          },
+          "reference_integrity": null
+        },
+        {
+          "case_arm": "DEV-LITE-AMBIGUOUS-plaintext",
+          "result_path": "artifacts/goal-quality-flash-lite/run-002-native/DEV-LITE-AMBIGUOUS-plaintext/result.json",
+          "status": "ERROR",
+          "failure": "MODEL_INPUT_BUDGET_EXHAUSTED",
+          "answer_generated": false,
+          "usage": {
+            "budget_charges_include_uncertain_reservations": false,
+            "budget_input_tokens": 22861,
+            "budget_output_tokens": 503,
+            "calls": 6,
+            "cost_status": "UNMEASURED; token counts alone are not provider billing",
+            "elapsed_seconds": 39.284086083003785,
+            "limits": {
+              "calls": 16,
+              "context_tokens": 1048576,
+              "input_reserve": 64,
+              "input_tokens": 24000,
+              "output_tokens": 4000,
+              "per_call_output": 1000,
+              "seconds": 120
+            },
+            "model": "models/gemini-3.1-flash-lite",
+            "reported_input_tokens": 22861,
+            "reported_output_including_thinking": 503,
+            "reported_token_counts_complete": true,
+            "response_model_version": "gemini-3.1-flash-lite",
+            "usage_unknown": false
+          },
+          "reference_integrity": null
+        },
+        {
+          "case_arm": "DEV-LITE-MULTIHOP-graph",
+          "result_path": "artifacts/goal-quality-flash-lite/run-002-native/DEV-LITE-MULTIHOP-graph/result.json",
+          "status": "ERROR",
+          "failure": "MODEL_INPUT_BUDGET_EXHAUSTED",
+          "answer_generated": false,
+          "usage": {
+            "budget_charges_include_uncertain_reservations": false,
+            "budget_input_tokens": 17998,
+            "budget_output_tokens": 385,
+            "calls": 5,
+            "cost_status": "UNMEASURED; token counts alone are not provider billing",
+            "elapsed_seconds": 28.532423667027615,
+            "limits": {
+              "calls": 16,
+              "context_tokens": 1048576,
+              "input_reserve": 64,
+              "input_tokens": 24000,
+              "output_tokens": 4000,
+              "per_call_output": 1000,
+              "seconds": 120
+            },
+            "model": "models/gemini-3.1-flash-lite",
+            "reported_input_tokens": 17998,
+            "reported_output_including_thinking": 385,
+            "reported_token_counts_complete": true,
+            "response_model_version": "gemini-3.1-flash-lite",
+            "usage_unknown": false
+          },
+          "reference_integrity": null
+        },
+        {
+          "case_arm": "DEV-LITE-MULTIHOP-plaintext",
+          "result_path": "artifacts/goal-quality-flash-lite/run-002-native/DEV-LITE-MULTIHOP-plaintext/result.json",
+          "status": "ERROR",
+          "failure": "MODEL_INPUT_BUDGET_EXHAUSTED",
+          "answer_generated": false,
+          "usage": {
+            "budget_charges_include_uncertain_reservations": false,
+            "budget_input_tokens": 21380,
+            "budget_output_tokens": 599,
+            "calls": 7,
+            "cost_status": "UNMEASURED; token counts alone are not provider billing",
+            "elapsed_seconds": 44.63054000004195,
+            "limits": {
+              "calls": 16,
+              "context_tokens": 1048576,
+              "input_reserve": 64,
+              "input_tokens": 24000,
+              "output_tokens": 4000,
+              "per_call_output": 1000,
+              "seconds": 120
+            },
+            "model": "models/gemini-3.1-flash-lite",
+            "reported_input_tokens": 21380,
+            "reported_output_including_thinking": 599,
+            "reported_token_counts_complete": true,
+            "response_model_version": "gemini-3.1-flash-lite",
+            "usage_unknown": false
+          },
+          "reference_integrity": null
+        },
+        {
+          "case_arm": "DEV-LITE-STATIC-LIMIT-graph",
+          "result_path": "artifacts/goal-quality-flash-lite/run-002-native/DEV-LITE-STATIC-LIMIT-graph/result.json",
+          "status": "ERROR",
+          "failure": "MODEL_INPUT_BUDGET_EXHAUSTED",
+          "answer_generated": false,
+          "usage": {
+            "budget_charges_include_uncertain_reservations": false,
+            "budget_input_tokens": 23089,
+            "budget_output_tokens": 577,
+            "calls": 7,
+            "cost_status": "UNMEASURED; token counts alone are not provider billing",
+            "elapsed_seconds": 44.97328954201657,
+            "limits": {
+              "calls": 16,
+              "context_tokens": 1048576,
+              "input_reserve": 64,
+              "input_tokens": 24000,
+              "output_tokens": 4000,
+              "per_call_output": 1000,
+              "seconds": 120
+            },
+            "model": "models/gemini-3.1-flash-lite",
+            "reported_input_tokens": 23089,
+            "reported_output_including_thinking": 577,
+            "reported_token_counts_complete": true,
+            "response_model_version": "gemini-3.1-flash-lite",
+            "usage_unknown": false
+          },
+          "reference_integrity": null
+        },
+        {
+          "case_arm": "DEV-LITE-STATIC-LIMIT-plaintext",
+          "result_path": "artifacts/goal-quality-flash-lite/run-002-native/DEV-LITE-STATIC-LIMIT-plaintext/result.json",
+          "status": "ERROR",
+          "failure": "MODEL_INPUT_BUDGET_EXHAUSTED",
+          "answer_generated": false,
+          "usage": {
+            "budget_charges_include_uncertain_reservations": false,
+            "budget_input_tokens": 22928,
+            "budget_output_tokens": 570,
+            "calls": 7,
+            "cost_status": "UNMEASURED; token counts alone are not provider billing",
+            "elapsed_seconds": 45.622804458020255,
+            "limits": {
+              "calls": 16,
+              "context_tokens": 1048576,
+              "input_reserve": 64,
+              "input_tokens": 24000,
+              "output_tokens": 4000,
+              "per_call_output": 1000,
+              "seconds": 120
+            },
+            "model": "models/gemini-3.1-flash-lite",
+            "reported_input_tokens": 22928,
+            "reported_output_including_thinking": 570,
+            "reported_token_counts_complete": true,
+            "response_model_version": "gemini-3.1-flash-lite",
+            "usage_unknown": false
+          },
+          "reference_integrity": null
+        }
+      ],
+      "unfinished_cells_are_not_passes": true
+    },
+    {
+      "attempt_version": "run-003-quality-budget",
+      "summary": {
+        "started_at": "2026-10-18T14:22:20.351838+00:00",
+        "model": "models/gemini-3.1-flash-lite",
+        "application_endpoint_mutations": 0,
+        "owned_database": "rw-quality-flash-lite-budget-20261018",
+        "runs": [
+          {
+            "task": "DEV-LITE-MULTIHOP",
+            "arm": "graph",
+            "status": "ERROR",
+            "failure": "MODEL_CALL_BUDGET_EXHAUSTED",
+            "answer_generated": false,
+            "seconds": 99.13674391701352,
+            "result_path": "artifacts/goal-quality-flash-lite/run-003-quality-budget/DEV-LITE-MULTIHOP-graph/result.json"
+          }
+        ],
+        "acceptance_validated": false,
+        "index": {
+          "repo": "itsdangerous-development",
+          "graph_name": "quality_flash_lite",
+          "import_run_id": "8f3b2f611360433eb774cf4ac65da481",
+          "status": "COMPLETE",
+          "commits": 607,
+          "tags": 30,
+          "blobs": 310,
+          "blobs_new": 310,
+          "blobs_reused": 0,
+          "symbols": 5358,
+          "relations": 15610,
+          "extraction_errors": [
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 289)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 291)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 291)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 291)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 334)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 335)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 335)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 335)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 335)"
+          ],
+          "coverage_gaps": [
+            {
+              "kind": "UNSUPPORTED_LANGUAGE",
+              "detail": "CHANGES.rst"
+            },
+            {
+              "kind": "UNSUPPORTED_LANGUAGE",
+              "detail": "pyproject.toml"
+            },
+            {
+              "kind": "UNSUPPORTED_LANGUAGE",
+              "detail": "setup.cfg"
+            }
+          ],
+          "metrics": {
+            "seconds": 2.24,
+            "peak_memory_bytes": 12371516,
+            "peak_rss_bytes": 104513536,
+            "phase_seconds": {
+              "commits": 0.424,
+              "file_maps": 0.209,
+              "blobs": 1.371,
+              "file_edges": 0.21,
+              "indexed": 0.014
+            },
+            "blobs_new": 310,
+            "blobs_reused": 0,
+            "commits": 607,
+            "symbols": 5358,
+            "relations": 15610,
+            "coverage_gaps": 3,
+            "extraction_errors": 9,
+            "nodes": 6502,
+            "edges": 26956
+          }
+        },
+        "cleanup": {
+          "remove_exit_code": 0,
+          "remaining": []
+        },
+        "source_mismatches": [],
+        "finished_at": "2026-10-18T14:24:52.767964+00:00"
+      },
+      "completed_result_files": [
+        {
+          "case_arm": "DEV-LITE-MULTIHOP-graph",
+          "result_path": "artifacts/goal-quality-flash-lite/run-003-quality-budget/DEV-LITE-MULTIHOP-graph/result.json",
+          "status": "ERROR",
+          "failure": "MODEL_CALL_BUDGET_EXHAUSTED",
+          "answer_generated": false,
+          "usage": {
+            "budget_charges_include_uncertain_reservations": false,
+            "budget_input_tokens": 75396,
+            "budget_output_tokens": 1361,
+            "calls": 16,
+            "cost_status": "UNMEASURED; token counts alone are not provider billing",
+            "elapsed_seconds": 99.1364856250002,
+            "limits": {
+              "calls": 16,
+              "context_tokens": 1048576,
+              "input_reserve": 64,
+              "input_tokens": 96000,
+              "output_tokens": 8000,
+              "per_call_output": 2000,
+              "seconds": 180
+            },
+            "model": "models/gemini-3.1-flash-lite",
+            "reported_input_tokens": 75396,
+            "reported_output_including_thinking": 1361,
+            "reported_token_counts_complete": true,
+            "response_model_version": "gemini-3.1-flash-lite",
+            "usage_unknown": false
+          },
+          "reference_integrity": null
+        }
+      ],
+      "unfinished_cells_are_not_passes": true
+    },
+    {
+      "attempt_version": "run-004-followup-fixed",
+      "summary": {
+        "started_at": "2026-10-18T14:25:22.253534+00:00",
+        "model": "models/gemini-3.1-flash-lite",
+        "application_endpoint_mutations": 0,
+        "owned_database": "rw-quality-flash-lite-followup-20261018",
+        "runs": [
+          {
+            "task": "DEV-LITE-MULTIHOP",
+            "arm": "graph",
+            "status": "ERROR",
+            "failure": "MODEL_INPUT_BUDGET_EXHAUSTED",
+            "answer_generated": false,
+            "seconds": 75.6220591670135,
+            "result_path": "artifacts/goal-quality-flash-lite/run-004-followup-fixed/DEV-LITE-MULTIHOP-graph/result.json"
+          },
+          {
+            "task": "DEV-LITE-MULTIHOP",
+            "arm": "plaintext",
+            "status": "COMPLETE_UNSCORED",
+            "failure": null,
+            "answer_generated": true,
+            "seconds": 50.60757283301791,
+            "result_path": "artifacts/goal-quality-flash-lite/run-004-followup-fixed/DEV-LITE-MULTIHOP-plaintext/result.json"
+          },
+          {
+            "task": "DEV-LITE-AMBIGUOUS",
+            "arm": "plaintext",
+            "status": "COMPLETE_UNSCORED",
+            "failure": null,
+            "answer_generated": true,
+            "seconds": 32.37863912503235,
+            "result_path": "artifacts/goal-quality-flash-lite/run-004-followup-fixed/DEV-LITE-AMBIGUOUS-plaintext/result.json"
+          },
+          {
+            "task": "DEV-LITE-AMBIGUOUS",
+            "arm": "graph",
+            "status": "COMPLETE_UNSCORED",
+            "failure": null,
+            "answer_generated": true,
+            "seconds": 32.435298792028334,
+            "result_path": "artifacts/goal-quality-flash-lite/run-004-followup-fixed/DEV-LITE-AMBIGUOUS-graph/result.json"
+          },
+          {
+            "task": "DEV-LITE-STATIC-LIMIT",
+            "arm": "plaintext",
+            "status": "ERROR",
+            "failure": "MODEL_INPUT_BUDGET_EXHAUSTED",
+            "answer_generated": false,
+            "seconds": 80.11888687498868,
+            "result_path": "artifacts/goal-quality-flash-lite/run-004-followup-fixed/DEV-LITE-STATIC-LIMIT-plaintext/result.json"
+          },
+          {
+            "task": "DEV-LITE-STATIC-LIMIT",
+            "arm": "graph",
+            "status": "COMPLETE_UNSCORED",
+            "failure": null,
+            "answer_generated": true,
+            "seconds": 66.70169962500222,
+            "result_path": "artifacts/goal-quality-flash-lite/run-004-followup-fixed/DEV-LITE-STATIC-LIMIT-graph/result.json"
+          }
+        ],
+        "acceptance_validated": false,
+        "index": {
+          "repo": "itsdangerous-development",
+          "graph_name": "quality_flash_lite",
+          "import_run_id": "63287ff1fa1c41b8a5abeb018baa1d9a",
+          "status": "COMPLETE",
+          "commits": 607,
+          "tags": 30,
+          "blobs": 310,
+          "blobs_new": 310,
+          "blobs_reused": 0,
+          "symbols": 5358,
+          "relations": 15610,
+          "extraction_errors": [
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 289)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 291)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 291)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 291)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 334)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 335)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 335)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 335)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 335)"
+          ],
+          "coverage_gaps": [
+            {
+              "kind": "UNSUPPORTED_LANGUAGE",
+              "detail": "CHANGES.rst"
+            },
+            {
+              "kind": "UNSUPPORTED_LANGUAGE",
+              "detail": "pyproject.toml"
+            },
+            {
+              "kind": "UNSUPPORTED_LANGUAGE",
+              "detail": "setup.cfg"
+            }
+          ],
+          "metrics": {
+            "seconds": 2.292,
+            "peak_memory_bytes": 12371460,
+            "peak_rss_bytes": 98107392,
+            "phase_seconds": {
+              "commits": 0.439,
+              "file_maps": 0.217,
+              "blobs": 1.402,
+              "file_edges": 0.207,
+              "indexed": 0.011
+            },
+            "blobs_new": 310,
+            "blobs_reused": 0,
+            "commits": 607,
+            "symbols": 5358,
+            "relations": 15610,
+            "coverage_gaps": 3,
+            "extraction_errors": 9,
+            "nodes": 6502,
+            "edges": 26956
+          }
+        },
+        "cleanup": {
+          "remove_exit_code": 0,
+          "remaining": []
+        },
+        "source_mismatches": [],
+        "finished_at": "2026-10-18T14:31:03.432093+00:00"
+      },
+      "completed_result_files": [
+        {
+          "case_arm": "DEV-LITE-AMBIGUOUS-graph",
+          "result_path": "artifacts/goal-quality-flash-lite/run-004-followup-fixed/DEV-LITE-AMBIGUOUS-graph/result.json",
+          "status": "COMPLETE_UNSCORED",
+          "failure": null,
+          "answer_generated": true,
+          "usage": {
+            "budget_charges_include_uncertain_reservations": false,
+            "budget_input_tokens": 19527,
+            "budget_output_tokens": 736,
+            "calls": 5,
+            "cost_status": "UNMEASURED; token counts alone are not provider billing",
+            "elapsed_seconds": 32.43544141598977,
+            "limits": {
+              "calls": 16,
+              "context_tokens": 1048576,
+              "input_reserve": 64,
+              "input_tokens": 96000,
+              "output_tokens": 8000,
+              "per_call_output": 2000,
+              "seconds": 180
+            },
+            "model": "models/gemini-3.1-flash-lite",
+            "reported_input_tokens": 19527,
+            "reported_output_including_thinking": 736,
+            "reported_token_counts_complete": true,
+            "response_model_version": "gemini-3.1-flash-lite",
+            "usage_unknown": false
+          },
+          "reference_integrity": {
+            "answer_quality": "UNSCORED",
+            "errors": [],
+            "material_claim_grounding": "UNSCORED",
+            "references_checked": 2,
+            "schema": "reference-integrity-v1",
+            "valid": true
+          }
+        },
+        {
+          "case_arm": "DEV-LITE-AMBIGUOUS-plaintext",
+          "result_path": "artifacts/goal-quality-flash-lite/run-004-followup-fixed/DEV-LITE-AMBIGUOUS-plaintext/result.json",
+          "status": "COMPLETE_UNSCORED",
+          "failure": null,
+          "answer_generated": true,
+          "usage": {
+            "budget_charges_include_uncertain_reservations": false,
+            "budget_input_tokens": 18181,
+            "budget_output_tokens": 705,
+            "calls": 5,
+            "cost_status": "UNMEASURED; token counts alone are not provider billing",
+            "elapsed_seconds": 32.378873457957525,
+            "limits": {
+              "calls": 16,
+              "context_tokens": 1048576,
+              "input_reserve": 64,
+              "input_tokens": 96000,
+              "output_tokens": 8000,
+              "per_call_output": 2000,
+              "seconds": 180
+            },
+            "model": "models/gemini-3.1-flash-lite",
+            "reported_input_tokens": 18181,
+            "reported_output_including_thinking": 705,
+            "reported_token_counts_complete": true,
+            "response_model_version": "gemini-3.1-flash-lite",
+            "usage_unknown": false
+          },
+          "reference_integrity": {
+            "answer_quality": "UNSCORED",
+            "errors": [],
+            "material_claim_grounding": "UNSCORED",
+            "references_checked": 2,
+            "schema": "reference-integrity-v1",
+            "valid": true
+          }
+        },
+        {
+          "case_arm": "DEV-LITE-MULTIHOP-graph",
+          "result_path": "artifacts/goal-quality-flash-lite/run-004-followup-fixed/DEV-LITE-MULTIHOP-graph/result.json",
+          "status": "ERROR",
+          "failure": "MODEL_INPUT_BUDGET_EXHAUSTED",
+          "answer_generated": false,
+          "usage": {
+            "budget_charges_include_uncertain_reservations": false,
+            "budget_input_tokens": 94690,
+            "budget_output_tokens": 976,
+            "calls": 12,
+            "cost_status": "UNMEASURED; token counts alone are not provider billing",
+            "elapsed_seconds": 75.6212579170242,
+            "limits": {
+              "calls": 16,
+              "context_tokens": 1048576,
+              "input_reserve": 64,
+              "input_tokens": 96000,
+              "output_tokens": 8000,
+              "per_call_output": 2000,
+              "seconds": 180
+            },
+            "model": "models/gemini-3.1-flash-lite",
+            "reported_input_tokens": 94690,
+            "reported_output_including_thinking": 976,
+            "reported_token_counts_complete": true,
+            "response_model_version": "gemini-3.1-flash-lite",
+            "usage_unknown": false
+          },
+          "reference_integrity": null
+        },
+        {
+          "case_arm": "DEV-LITE-MULTIHOP-plaintext",
+          "result_path": "artifacts/goal-quality-flash-lite/run-004-followup-fixed/DEV-LITE-MULTIHOP-plaintext/result.json",
+          "status": "COMPLETE_UNSCORED",
+          "failure": null,
+          "answer_generated": true,
+          "usage": {
+            "budget_charges_include_uncertain_reservations": false,
+            "budget_input_tokens": 39939,
+            "budget_output_tokens": 1099,
+            "calls": 8,
+            "cost_status": "UNMEASURED; token counts alone are not provider billing",
+            "elapsed_seconds": 50.60703479201766,
+            "limits": {
+              "calls": 16,
+              "context_tokens": 1048576,
+              "input_reserve": 64,
+              "input_tokens": 96000,
+              "output_tokens": 8000,
+              "per_call_output": 2000,
+              "seconds": 180
+            },
+            "model": "models/gemini-3.1-flash-lite",
+            "reported_input_tokens": 39939,
+            "reported_output_including_thinking": 1099,
+            "reported_token_counts_complete": true,
+            "response_model_version": "gemini-3.1-flash-lite",
+            "usage_unknown": false
+          },
+          "reference_integrity": {
+            "answer_quality": "UNSCORED",
+            "errors": [],
+            "material_claim_grounding": "UNSCORED",
+            "references_checked": 2,
+            "schema": "reference-integrity-v1",
+            "valid": true
+          }
+        },
+        {
+          "case_arm": "DEV-LITE-STATIC-LIMIT-graph",
+          "result_path": "artifacts/goal-quality-flash-lite/run-004-followup-fixed/DEV-LITE-STATIC-LIMIT-graph/result.json",
+          "status": "COMPLETE_UNSCORED",
+          "failure": null,
+          "answer_generated": true,
+          "usage": {
+            "budget_charges_include_uncertain_reservations": false,
+            "budget_input_tokens": 53616,
+            "budget_output_tokens": 1185,
+            "calls": 10,
+            "cost_status": "UNMEASURED; token counts alone are not provider billing",
+            "elapsed_seconds": 66.70219199999701,
+            "limits": {
+              "calls": 16,
+              "context_tokens": 1048576,
+              "input_reserve": 64,
+              "input_tokens": 96000,
+              "output_tokens": 8000,
+              "per_call_output": 2000,
+              "seconds": 180
+            },
+            "model": "models/gemini-3.1-flash-lite",
+            "reported_input_tokens": 53616,
+            "reported_output_including_thinking": 1185,
+            "reported_token_counts_complete": true,
+            "response_model_version": "gemini-3.1-flash-lite",
+            "usage_unknown": false
+          },
+          "reference_integrity": {
+            "answer_quality": "UNSCORED",
+            "errors": [],
+            "material_claim_grounding": "UNSCORED",
+            "references_checked": 2,
+            "schema": "reference-integrity-v1",
+            "valid": true
+          }
+        },
+        {
+          "case_arm": "DEV-LITE-STATIC-LIMIT-plaintext",
+          "result_path": "artifacts/goal-quality-flash-lite/run-004-followup-fixed/DEV-LITE-STATIC-LIMIT-plaintext/result.json",
+          "status": "ERROR",
+          "failure": "MODEL_INPUT_BUDGET_EXHAUSTED",
+          "answer_generated": false,
+          "usage": {
+            "budget_charges_include_uncertain_reservations": false,
+            "budget_input_tokens": 86546,
+            "budget_output_tokens": 1150,
+            "calls": 12,
+            "cost_status": "UNMEASURED; token counts alone are not provider billing",
+            "elapsed_seconds": 80.11707075004233,
+            "limits": {
+              "calls": 16,
+              "context_tokens": 1048576,
+              "input_reserve": 64,
+              "input_tokens": 96000,
+              "output_tokens": 8000,
+              "per_call_output": 2000,
+              "seconds": 180
+            },
+            "model": "models/gemini-3.1-flash-lite",
+            "reported_input_tokens": 86546,
+            "reported_output_including_thinking": 1150,
+            "reported_token_counts_complete": true,
+            "response_model_version": "gemini-3.1-flash-lite",
+            "usage_unknown": false
+          },
+          "reference_integrity": null
+        }
+      ],
+      "unfinished_cells_are_not_passes": true
+    },
+    {
+      "attempt_version": "run-005-typed-reasoning",
+      "summary": {
+        "started_at": "2026-10-18T14:36:07.036661+00:00",
+        "model": "models/gemini-3.1-flash-lite",
+        "application_endpoint_mutations": 0,
+        "owned_database": "rw-quality-flash-lite-typed-20261018",
+        "runs": [
+          {
+            "task": "DEV-LITE-MULTIHOP",
+            "arm": "graph",
+            "status": "COMPLETE_UNSCORED",
+            "failure": null,
+            "answer_generated": true,
+            "seconds": 42.663852584024426,
+            "result_path": "artifacts/goal-quality-flash-lite/run-005-typed-reasoning/DEV-LITE-MULTIHOP-graph/result.json"
+          },
+          {
+            "task": "DEV-LITE-MULTIHOP",
+            "arm": "plaintext",
+            "status": "COMPLETE_UNSCORED",
+            "failure": null,
+            "answer_generated": true,
+            "seconds": 51.37767349998467,
+            "result_path": "artifacts/goal-quality-flash-lite/run-005-typed-reasoning/DEV-LITE-MULTIHOP-plaintext/result.json"
+          },
+          {
+            "task": "DEV-LITE-AMBIGUOUS",
+            "arm": "plaintext",
+            "status": "COMPLETE_UNSCORED",
+            "failure": null,
+            "answer_generated": true,
+            "seconds": 45.37069524999242,
+            "result_path": "artifacts/goal-quality-flash-lite/run-005-typed-reasoning/DEV-LITE-AMBIGUOUS-plaintext/result.json"
+          },
+          {
+            "task": "DEV-LITE-AMBIGUOUS",
+            "arm": "graph",
+            "status": "COMPLETE_UNSCORED",
+            "failure": null,
+            "answer_generated": true,
+            "seconds": 19.00275366596179,
+            "result_path": "artifacts/goal-quality-flash-lite/run-005-typed-reasoning/DEV-LITE-AMBIGUOUS-graph/result.json"
+          },
+          {
+            "task": "DEV-LITE-STATIC-LIMIT",
+            "arm": "plaintext",
+            "status": "ERROR",
+            "failure": "MODEL_INPUT_BUDGET_EXHAUSTED",
+            "answer_generated": false,
+            "seconds": 65.21330116601894,
+            "result_path": "artifacts/goal-quality-flash-lite/run-005-typed-reasoning/DEV-LITE-STATIC-LIMIT-plaintext/result.json"
+          },
+          {
+            "task": "DEV-LITE-STATIC-LIMIT",
+            "arm": "graph",
+            "status": "COMPLETE_UNSCORED",
+            "failure": null,
+            "answer_generated": true,
+            "seconds": 79.92464687500615,
+            "result_path": "artifacts/goal-quality-flash-lite/run-005-typed-reasoning/DEV-LITE-STATIC-LIMIT-graph/result.json"
+          }
+        ],
+        "acceptance_validated": false,
+        "index": {
+          "repo": "itsdangerous-development",
+          "graph_name": "quality_flash_lite",
+          "import_run_id": "81f1b923a12448ddae2db7e4a10fa678",
+          "status": "COMPLETE",
+          "commits": 607,
+          "tags": 30,
+          "blobs": 310,
+          "blobs_new": 310,
+          "blobs_reused": 0,
+          "symbols": 5358,
+          "relations": 15610,
+          "extraction_errors": [
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 289)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 291)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 291)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 291)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 334)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 335)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 335)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 335)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 335)"
+          ],
+          "coverage_gaps": [
+            {
+              "kind": "UNSUPPORTED_LANGUAGE",
+              "detail": "CHANGES.rst"
+            },
+            {
+              "kind": "UNSUPPORTED_LANGUAGE",
+              "detail": "pyproject.toml"
+            },
+            {
+              "kind": "UNSUPPORTED_LANGUAGE",
+              "detail": "setup.cfg"
+            }
+          ],
+          "metrics": {
+            "seconds": 2.257,
+            "peak_memory_bytes": 12371516,
+            "peak_rss_bytes": 91914240,
+            "phase_seconds": {
+              "commits": 0.426,
+              "file_maps": 0.194,
+              "blobs": 1.399,
+              "file_edges": 0.213,
+              "indexed": 0.011
+            },
+            "blobs_new": 310,
+            "blobs_reused": 0,
+            "commits": 607,
+            "symbols": 5358,
+            "relations": 15610,
+            "coverage_gaps": 3,
+            "extraction_errors": 9,
+            "nodes": 6502,
+            "edges": 26956
+          }
+        },
+        "cleanup": {
+          "remove_exit_code": 0,
+          "remaining": []
+        },
+        "source_mismatches": [],
+        "finished_at": "2026-10-18T14:41:13.940068+00:00"
+      },
+      "completed_result_files": [
+        {
+          "case_arm": "DEV-LITE-AMBIGUOUS-graph",
+          "result_path": "artifacts/goal-quality-flash-lite/run-005-typed-reasoning/DEV-LITE-AMBIGUOUS-graph/result.json",
+          "status": "COMPLETE_UNSCORED",
+          "failure": null,
+          "answer_generated": true,
+          "usage": {
+            "budget_charges_include_uncertain_reservations": false,
+            "budget_input_tokens": 8788,
+            "budget_output_tokens": 497,
+            "calls": 3,
+            "cost_status": "UNMEASURED; token counts alone are not provider billing",
+            "elapsed_seconds": 19.002827999996953,
+            "limits": {
+              "calls": 16,
+              "context_tokens": 1048576,
+              "input_reserve": 64,
+              "input_tokens": 96000,
+              "output_tokens": 8000,
+              "per_call_output": 2000,
+              "seconds": 180
+            },
+            "model": "models/gemini-3.1-flash-lite",
+            "reported_input_tokens": 8788,
+            "reported_output_including_thinking": 497,
+            "reported_token_counts_complete": true,
+            "response_model_version": "gemini-3.1-flash-lite",
+            "usage_unknown": false
+          },
+          "reference_integrity": {
+            "answer_quality": "UNSCORED",
+            "errors": [],
+            "material_claim_grounding": "UNSCORED",
+            "references_checked": 2,
+            "schema": "reference-integrity-v1",
+            "valid": true
+          }
+        },
+        {
+          "case_arm": "DEV-LITE-AMBIGUOUS-plaintext",
+          "result_path": "artifacts/goal-quality-flash-lite/run-005-typed-reasoning/DEV-LITE-AMBIGUOUS-plaintext/result.json",
+          "status": "COMPLETE_UNSCORED",
+          "failure": null,
+          "answer_generated": true,
+          "usage": {
+            "budget_charges_include_uncertain_reservations": false,
+            "budget_input_tokens": 40530,
+            "budget_output_tokens": 797,
+            "calls": 7,
+            "cost_status": "UNMEASURED; token counts alone are not provider billing",
+            "elapsed_seconds": 45.370573416992556,
+            "limits": {
+              "calls": 16,
+              "context_tokens": 1048576,
+              "input_reserve": 64,
+              "input_tokens": 96000,
+              "output_tokens": 8000,
+              "per_call_output": 2000,
+              "seconds": 180
+            },
+            "model": "models/gemini-3.1-flash-lite",
+            "reported_input_tokens": 40530,
+            "reported_output_including_thinking": 797,
+            "reported_token_counts_complete": true,
+            "response_model_version": "gemini-3.1-flash-lite",
+            "usage_unknown": false
+          },
+          "reference_integrity": {
+            "answer_quality": "UNSCORED",
+            "errors": [],
+            "material_claim_grounding": "UNSCORED",
+            "references_checked": 2,
+            "schema": "reference-integrity-v1",
+            "valid": true
+          }
+        },
+        {
+          "case_arm": "DEV-LITE-MULTIHOP-graph",
+          "result_path": "artifacts/goal-quality-flash-lite/run-005-typed-reasoning/DEV-LITE-MULTIHOP-graph/result.json",
+          "status": "COMPLETE_UNSCORED",
+          "failure": null,
+          "answer_generated": true,
+          "usage": {
+            "budget_charges_include_uncertain_reservations": false,
+            "budget_input_tokens": 37441,
+            "budget_output_tokens": 1131,
+            "calls": 7,
+            "cost_status": "UNMEASURED; token counts alone are not provider billing",
+            "elapsed_seconds": 42.663738665985875,
+            "limits": {
+              "calls": 16,
+              "context_tokens": 1048576,
+              "input_reserve": 64,
+              "input_tokens": 96000,
+              "output_tokens": 8000,
+              "per_call_output": 2000,
+              "seconds": 180
+            },
+            "model": "models/gemini-3.1-flash-lite",
+            "reported_input_tokens": 37441,
+            "reported_output_including_thinking": 1131,
+            "reported_token_counts_complete": true,
+            "response_model_version": "gemini-3.1-flash-lite",
+            "usage_unknown": false
+          },
+          "reference_integrity": {
+            "answer_quality": "UNSCORED",
+            "errors": [],
+            "material_claim_grounding": "UNSCORED",
+            "references_checked": 4,
+            "schema": "reference-integrity-v1",
+            "valid": true
+          }
+        },
+        {
+          "case_arm": "DEV-LITE-MULTIHOP-plaintext",
+          "result_path": "artifacts/goal-quality-flash-lite/run-005-typed-reasoning/DEV-LITE-MULTIHOP-plaintext/result.json",
+          "status": "COMPLETE_UNSCORED",
+          "failure": null,
+          "answer_generated": true,
+          "usage": {
+            "budget_charges_include_uncertain_reservations": false,
+            "budget_input_tokens": 54904,
+            "budget_output_tokens": 1080,
+            "calls": 8,
+            "cost_status": "UNMEASURED; token counts alone are not provider billing",
+            "elapsed_seconds": 51.37657095800387,
+            "limits": {
+              "calls": 16,
+              "context_tokens": 1048576,
+              "input_reserve": 64,
+              "input_tokens": 96000,
+              "output_tokens": 8000,
+              "per_call_output": 2000,
+              "seconds": 180
+            },
+            "model": "models/gemini-3.1-flash-lite",
+            "reported_input_tokens": 54904,
+            "reported_output_including_thinking": 1080,
+            "reported_token_counts_complete": true,
+            "response_model_version": "gemini-3.1-flash-lite",
+            "usage_unknown": false
+          },
+          "reference_integrity": {
+            "answer_quality": "UNSCORED",
+            "errors": [],
+            "material_claim_grounding": "UNSCORED",
+            "references_checked": 3,
+            "schema": "reference-integrity-v1",
+            "valid": true
+          }
+        },
+        {
+          "case_arm": "DEV-LITE-STATIC-LIMIT-graph",
+          "result_path": "artifacts/goal-quality-flash-lite/run-005-typed-reasoning/DEV-LITE-STATIC-LIMIT-graph/result.json",
+          "status": "COMPLETE_UNSCORED",
+          "failure": null,
+          "answer_generated": true,
+          "usage": {
+            "budget_charges_include_uncertain_reservations": false,
+            "budget_input_tokens": 95640,
+            "budget_output_tokens": 1368,
+            "calls": 11,
+            "cost_status": "UNMEASURED; token counts alone are not provider billing",
+            "elapsed_seconds": 79.9242890420137,
+            "limits": {
+              "calls": 16,
+              "context_tokens": 1048576,
+              "input_reserve": 64,
+              "input_tokens": 96000,
+              "output_tokens": 8000,
+              "per_call_output": 2000,
+              "seconds": 180
+            },
+            "model": "models/gemini-3.1-flash-lite",
+            "reported_input_tokens": 95640,
+            "reported_output_including_thinking": 1368,
+            "reported_token_counts_complete": true,
+            "response_model_version": "gemini-3.1-flash-lite",
+            "usage_unknown": false
+          },
+          "reference_integrity": {
+            "answer_quality": "UNSCORED",
+            "errors": [],
+            "material_claim_grounding": "UNSCORED",
+            "references_checked": 3,
+            "schema": "reference-integrity-v1",
+            "valid": true
+          }
+        },
+        {
+          "case_arm": "DEV-LITE-STATIC-LIMIT-plaintext",
+          "result_path": "artifacts/goal-quality-flash-lite/run-005-typed-reasoning/DEV-LITE-STATIC-LIMIT-plaintext/result.json",
+          "status": "ERROR",
+          "failure": "MODEL_INPUT_BUDGET_EXHAUSTED",
+          "answer_generated": false,
+          "usage": {
+            "budget_charges_include_uncertain_reservations": false,
+            "budget_input_tokens": 90388,
+            "budget_output_tokens": 667,
+            "calls": 10,
+            "cost_status": "UNMEASURED; token counts alone are not provider billing",
+            "elapsed_seconds": 65.21303891699063,
+            "limits": {
+              "calls": 16,
+              "context_tokens": 1048576,
+              "input_reserve": 64,
+              "input_tokens": 96000,
+              "output_tokens": 8000,
+              "per_call_output": 2000,
+              "seconds": 180
+            },
+            "model": "models/gemini-3.1-flash-lite",
+            "reported_input_tokens": 90388,
+            "reported_output_including_thinking": 667,
+            "reported_token_counts_complete": true,
+            "response_model_version": "gemini-3.1-flash-lite",
+            "usage_unknown": false
+          },
+          "reference_integrity": null
+        }
+      ],
+      "unfinished_cells_are_not_passes": true
+    },
+    {
+      "attempt_version": "run-006-numbered-reserve",
+      "summary": {
+        "started_at": "2026-10-18T14:49:00.906108+00:00",
+        "model": "models/gemini-3.1-flash-lite",
+        "application_endpoint_mutations": 0,
+        "owned_database": "rw-quality-flash-lite-numbered-20261018",
+        "runs": [
+          {
+            "task": "DEV-LITE-STATIC-LIMIT",
+            "arm": "graph",
+            "status": "COMPLETE_UNSCORED",
+            "failure": null,
+            "answer_generated": true,
+            "seconds": 62.783132583019324,
+            "result_path": "artifacts/goal-quality-flash-lite/run-006-numbered-reserve/DEV-LITE-STATIC-LIMIT-graph/result.json"
+          },
+          {
+            "task": "DEV-LITE-STATIC-LIMIT",
+            "arm": "plaintext",
+            "status": "COMPLETE_UNSCORED",
+            "failure": null,
+            "answer_generated": true,
+            "seconds": 60.10268933302723,
+            "result_path": "artifacts/goal-quality-flash-lite/run-006-numbered-reserve/DEV-LITE-STATIC-LIMIT-plaintext/result.json"
+          }
+        ],
+        "acceptance_validated": false,
+        "index": {
+          "repo": "itsdangerous-development",
+          "graph_name": "quality_flash_lite",
+          "import_run_id": "00eb6537414a4404a5078f07e21c9e49",
+          "status": "COMPLETE",
+          "commits": 607,
+          "tags": 30,
+          "blobs": 310,
+          "blobs_new": 310,
+          "blobs_reused": 0,
+          "symbols": 5358,
+          "relations": 15610,
+          "extraction_errors": [
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 289)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 291)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 291)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 291)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 334)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 335)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 335)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 335)",
+            "itsdangerous.py: SyntaxError: multiple exception types must be parenthesized (itsdangerous.py, line 335)"
+          ],
+          "coverage_gaps": [
+            {
+              "kind": "UNSUPPORTED_LANGUAGE",
+              "detail": "CHANGES.rst"
+            },
+            {
+              "kind": "UNSUPPORTED_LANGUAGE",
+              "detail": "pyproject.toml"
+            },
+            {
+              "kind": "UNSUPPORTED_LANGUAGE",
+              "detail": "setup.cfg"
+            }
+          ],
+          "metrics": {
+            "seconds": 2.397,
+            "peak_memory_bytes": 12371404,
+            "peak_rss_bytes": 89980928,
+            "phase_seconds": {
+              "commits": 0.549,
+              "file_maps": 0.216,
+              "blobs": 1.39,
+              "file_edges": 0.214,
+              "indexed": 0.012
+            },
+            "blobs_new": 310,
+            "blobs_reused": 0,
+            "commits": 607,
+            "symbols": 5358,
+            "relations": 15610,
+            "coverage_gaps": 3,
+            "extraction_errors": 9,
+            "nodes": 6502,
+            "edges": 26956
+          }
+        },
+        "cleanup": {
+          "remove_exit_code": 0,
+          "remaining": []
+        },
+        "source_mismatches": [],
+        "finished_at": "2026-10-18T14:51:06.921517+00:00"
+      },
+      "completed_result_files": [
+        {
+          "case_arm": "DEV-LITE-STATIC-LIMIT-graph",
+          "result_path": "artifacts/goal-quality-flash-lite/run-006-numbered-reserve/DEV-LITE-STATIC-LIMIT-graph/result.json",
+          "status": "COMPLETE_UNSCORED",
+          "failure": null,
+          "answer_generated": true,
+          "usage": {
+            "budget_charges_include_uncertain_reservations": false,
+            "budget_input_tokens": 85207,
+            "budget_output_tokens": 1363,
+            "calls": 10,
+            "cost_status": "UNMEASURED; token counts alone are not provider billing",
+            "elapsed_seconds": 62.78301033296157,
+            "limits": {
+              "calls": 16,
+              "context_tokens": 1048576,
+              "input_reserve": 64,
+              "input_tokens": 96000,
+              "output_tokens": 8000,
+              "per_call_output": 2000,
+              "seconds": 180
+            },
+            "model": "models/gemini-3.1-flash-lite",
+            "reported_input_tokens": 85207,
+            "reported_output_including_thinking": 1363,
+            "reported_token_counts_complete": true,
+            "response_model_version": "gemini-3.1-flash-lite",
+            "usage_unknown": false
+          },
+          "reference_integrity": {
+            "answer_quality": "UNSCORED",
+            "errors": [],
+            "material_claim_grounding": "UNSCORED",
+            "references_checked": 3,
+            "schema": "reference-integrity-v1",
+            "valid": true
+          }
+        },
+        {
+          "case_arm": "DEV-LITE-STATIC-LIMIT-plaintext",
+          "result_path": "artifacts/goal-quality-flash-lite/run-006-numbered-reserve/DEV-LITE-STATIC-LIMIT-plaintext/result.json",
+          "status": "COMPLETE_UNSCORED",
+          "failure": null,
+          "answer_generated": true,
+          "usage": {
+            "budget_charges_include_uncertain_reservations": false,
+            "budget_input_tokens": 88105,
+            "budget_output_tokens": 1462,
+            "calls": 9,
+            "cost_status": "UNMEASURED; token counts alone are not provider billing",
+            "elapsed_seconds": 60.10207658301806,
+            "limits": {
+              "calls": 16,
+              "context_tokens": 1048576,
+              "input_reserve": 64,
+              "input_tokens": 96000,
+              "output_tokens": 8000,
+              "per_call_output": 2000,
+              "seconds": 180
+            },
+            "model": "models/gemini-3.1-flash-lite",
+            "reported_input_tokens": 88105,
+            "reported_output_including_thinking": 1462,
+            "reported_token_counts_complete": true,
+            "response_model_version": "gemini-3.1-flash-lite",
+            "usage_unknown": false
+          },
+          "reference_integrity": {
+            "answer_quality": "UNSCORED",
+            "errors": [],
+            "material_claim_grounding": "UNSCORED",
+            "references_checked": 3,
+            "schema": "reference-integrity-v1",
+            "valid": true
+          }
+        }
+      ],
+      "unfinished_cells_are_not_passes": true
+    }
+  ],
+  "support_calibrations": [
+    {
+      "version": "support-calibration-001",
+      "summary": {
+        "recorded_at": "2026-10-18T14:55:03.795881+00:00",
+        "reviews": [
+          {
+            "sample": "sample-A",
+            "status": "COMPLETE",
+            "grounding": "MODEL_REVIEW_SUPPORTED",
+            "errors": []
+          },
+          {
+            "sample": "sample-B",
+            "status": "COMPLETE",
+            "grounding": "MODEL_REVIEW_REJECTED",
+            "errors": []
+          },
+          {
+            "sample": "sample-C",
+            "status": "ERROR",
+            "grounding": "UNVALIDATED",
+            "errors": [
+              "MALFORMED_SUPPORT_REVIEW"
+            ]
+          }
+        ],
+        "acceptance_validated": false,
+        "reviewer_accuracy_unvalidated": true,
+        "provider_calls": 3
+      }
+    },
+    {
+      "version": "support-calibration-002",
+      "summary": {
+        "recorded_at": "2026-10-18T14:56:02.402317+00:00",
+        "reviews": [
+          {
+            "sample": "sample-C",
+            "status": "COMPLETE",
+            "grounding": "MODEL_REVIEW_REJECTED",
+            "errors": []
+          }
+        ],
+        "acceptance_validated": false,
+        "reviewer_accuracy_unvalidated": true,
+        "provider_calls": 1
+      }
+    }
+  ],
+  "independent_reviews": [
+    "artifacts/goal-quality-flash-lite/independent-review-001.json",
+    "artifacts/goal-quality-flash-lite/independent-review-002.json",
+    "artifacts/goal-quality-flash-lite/independent-review-003.json"
+  ],
+  "limitations": [
+    "Nonblind source review; development oracle and repairs informed by development failures.",
+    "No pooled win rate across different protocols/budgets/prompts; no three-repeat paired comparison.",
+    "Valid reference identity does not establish correct material claims or supporting spans.",
+    "Full T0\u2013T11 requirements remain incomplete."
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "schema": "development-evidence-files/v1",
+  "files": {
+    "count_requests_file.py": "10d80b32ec37b0b8593ecd0225bf4303e84a683b73484614df7a6592ecc7862a",
+    "count_requests_file_fixed.py": "e9caea6ecb1692e6b57d3f700fe37c2e62e376aa438aadb6f8263335b93d9dde",
+    "file-identity-diagnostic-001.json": "7fa6c6b6cdf702d6eb1c4de7d9421f8a404a9df2bc55712525f8e5c4d67da7bb",
+    "file-identity-tests.xml": "c353d2f7d8cc0ff9b14bee719deb66c7fafe455af25b9fc6db97bf0830b23e46",
+    "implementation-manifest.json": "6593ada269b7e09a1119b418d35c0462b2708b3f274e03b275d94f8032a816e4",
+    "itsdangerous-full-token-count-001.json": "a2608134e9c4d70433d57dd551baa7e35b7ffdd9cac2d261d9516acb143742f0",
+    "requests-file-count-001.log": "54e214bacbd580fc75caea147781932f1f52cf2a6a39a2059b0a9de2d4eff5c4",
+    "requests-file-count-002.log": "fd157b0750b48fdc4ce8bcfebaaddf89b291c7b48b3fc2e07e14bc7e107425e5",
+    "requests-full-file-token-count-001.json": "9fe8eb2b3459297c8ec5883abd43b4da879fd2cf693f3e3872a0d7c098477ae3",
+    "requests-full-file-token-count-002.json": "fc3e275823bb60e96c02cf380573bc5d33f90bf757f3d3040b7bf600f79027b1",
+    "source-snapshot.tar.gz": "1a2cb4b4f36a74cae231262ac1aff3510dd8ffda95aebeeb58a3a208885e70d2"
+  },
+  "acceptance_validated": false
+}

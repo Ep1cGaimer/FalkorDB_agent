@@ -33,6 +33,7 @@ import difflib
 
 from rw.repo.model import Citation, FixStatus, Gap, Page
 from rw.repo.budget import BudgetExhausted, ReadLimits, active_budget, read_scope
+from rw.repo.source import source_lines
 
 MAX_LIMIT = 200
 MAX_HOPS = 5
@@ -509,12 +510,17 @@ class RepoQuery:
         return out
 
     def _cite(self, sha: str, s: _Sym) -> Citation:
-        lines = self._source(sha, s.path, s.content_hash).decode("utf-8", "replace").splitlines()
-        if not (1 <= s.start_line <= s.end_line <= max(1, len(lines))):
+        lines = source_lines(self._source(sha, s.path, s.content_hash).decode("utf-8", "replace"))
+        # The extractor uses a 1:1 module marker for empty ASTs. It identifies
+        # the file, not a physical source line; never publish it as a line span.
+        empty_module = not lines and s.kind == "module" and s.start_line == s.end_line == 1
+        if not empty_module and not (1 <= s.start_line <= s.end_line <= len(lines)):
             raise EvidenceError("STALE_SOURCE", f"{s.path}: indexed symbol span is outside source at {sha}")
         actual = hashlib.sha256("\n".join(lines[s.start_line - 1:s.end_line]).encode("utf-8")).hexdigest()
         if actual != s.text_hash:
             raise EvidenceError("STALE_SOURCE", f"{s.path}: indexed symbol span hash disagrees with source at {sha}")
+        if empty_module:
+            return Citation(self.repo, sha, s.path, content_hash=s.content_hash)
         return Citation(self.repo, sha, s.path, s.start_line, s.end_line, s.content_hash)
 
     def _gap_page(self, gap: Gap) -> Page:
@@ -706,10 +712,10 @@ class RepoQuery:
 
         def whole(sha, path, files):
             h, n, _ = files[path]
-            lines = max(len(self._source(sha, path, h).decode("utf-8", "replace").splitlines()), 1)
-            if n is not None and n != lines:
+            lines = len(source_lines(self._source(sha, path, h).decode("utf-8", "replace")))
+            if n is not None and n != max(lines, 1):
                 raise EvidenceError("STALE_SOURCE", f"{path}: indexed line count disagrees with source at {sha}")
-            return Citation(self.repo, sha, path, 1, lines, h)
+            return Citation(self.repo, sha, path, 1 if lines else None, lines or None, h)
 
         def diff(old: dict, new: dict):
             add = sorted(q for q in new if q not in old)
@@ -788,10 +794,11 @@ class RepoQuery:
                 gaps.append(Gap("MISSING_SOURCE", f"cannot read {path} at {sha}"))
                 continue
             data = self._source(sha, path, h)
-            lines = data.decode("utf-8", "replace").splitlines()
+            lines = source_lines(data.decode("utf-8", "replace"))
             start, end = _section(lines, versions)
             text = "\n".join(lines[start - 1:end])
-            items.append(NoteItem(path, text, Citation(self.repo, sha, path, start, end, h)))
+            citation = Citation(self.repo, sha, path, start if lines else None, end if lines else None, h)
+            items.append(NoteItem(path, text, citation))
         return _page(items, limit, cursor, {"commit": sha, "gaps": gaps}, off=off, scope=scope, total=total)
 
     # ------------------------------------------------------------ history
@@ -904,11 +911,11 @@ class RepoQuery:
                 continue
             h, _, g = files[p]
             data = self._source(sha, p, h)
-            lines = data.decode("utf-8", "replace").splitlines()
-            file_cits[p] = Citation(self.repo, sha, p, 1, max(len(lines), 1), h)
+            lines = source_lines(data.decode("utf-8", "replace"))
+            file_cits[p] = Citation(self.repo, sha, p, 1 if lines else None, len(lines) or None, h)
             if any(x.strip() for x in removed):
                 fixed_data = self._source(fix, path, fix_files[path][0]) if path in fix_files else b""
-                fixed_lines = fixed_data.decode("utf-8", "replace").splitlines()
+                fixed_lines = source_lines(fixed_data.decode("utf-8", "replace"))
                 def occurrences(source):
                     return sum(source[i:i + len(removed)] == removed
                                for i in range(len(source) - len(removed) + 1))
@@ -931,7 +938,7 @@ class RepoQuery:
             if span is None:
                 missing.append(path)
                 pre_blob = self._source(parents[0][0], path, pre_files[path][0]) if path in pre_files else None
-                pre = pre_blob.decode("utf-8", "replace").splitlines() if pre_blob else []
+                pre = source_lines(pre_blob.decode("utf-8", "replace")) if pre_blob else []
                 similar = similar or _similar(lines, added, removed + pre)
             else:
                 found.append(Citation(self.repo, sha, p, span[0], span[1], h))
@@ -991,7 +998,7 @@ class RepoQuery:
 def _parse_patch(text: str) -> list[tuple[str, list[str], list[str]]]:
     """Hunks of a -U0 patch: (new path, removed lines, added lines)."""
     hunks, path, old_path, cur = [], None, None, None
-    for line in text.splitlines():
+    for line in source_lines(text):
         if line.startswith("diff "):
             cur = None
             old_path = None

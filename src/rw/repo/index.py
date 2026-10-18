@@ -38,6 +38,7 @@ from rw.repo.adapters import adapter_for
 from rw.repo.config import RepoConfig
 from rw.repo.git import GitRepo
 from rw.repo.model import Gap
+from rw.repo.source import LINE_SCHEMA, source_lines
 
 CHUNK = 1000
 BLOB_BATCH = 200
@@ -74,9 +75,10 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _matches(path: str, globs: list[str]) -> bool:
+def _matches(path: str, globs: list[str], profile: str = "path_or_basename") -> bool:
     base = path.rsplit("/", 1)[-1]
-    return any(fnmatch.fnmatchcase(path, g) or fnmatch.fnmatchcase(base, g) for g in globs)
+    return any(fnmatch.fnmatchcase(path, g) or
+               (profile == "path_or_basename" and fnmatch.fnmatchcase(base, g)) for g in globs)
 
 
 def _write(graph, cypher: str, rows: list[dict]) -> None:
@@ -204,7 +206,8 @@ def _index_repository(config: RepoConfig, graph_name: str, db, *,
 
     _ensure_indexes(graph)
     fingerprint = hashlib.sha256(json.dumps({
-        "schema": 2, "include": config.include, "exclude": config.exclude,
+        "schema": 3, "source_lines": LINE_SCHEMA, "include": config.include, "exclude": config.exclude,
+        "path_matching": config.path_matching, "regular_files_only": config.regular_files_only,
         "languages": config.languages, "release_notes": config.release_notes,
     }, sort_keys=True).encode()).hexdigest()
     previous = graph.query("MATCH (r:Repository {name:$name}) RETURN r.config_hash",
@@ -272,10 +275,14 @@ def _index_repository(config: RepoConfig, graph_name: str, db, *,
                 if status == "D" or mode == "160000" or set(bsha) == {"0"}:
                     cur.pop(path, None)
                     continue
-                if config.include and not _matches(path, config.include):
+                if config.regular_files_only and mode not in {"100644", "100755"}:
+                    cur.pop(path, None)
+                    report.coverage_gaps.append(Gap("UNSUPPORTED_FILE_KIND", f"{sha}:{path}: Git mode {mode}; regular files only"))
+                    continue
+                if config.include and not _matches(path, config.include, config.path_matching):
                     cur.pop(path, None)
                     continue
-                if config.exclude and _matches(path, config.exclude):
+                if config.exclude and _matches(path, config.exclude, config.path_matching):
                     cur.pop(path, None)
                     continue
                 cur[path] = bsha
@@ -295,15 +302,15 @@ def _index_repository(config: RepoConfig, graph_name: str, db, *,
 
         # ---- blobs: reuse those already extracted by the same extractor, read the rest in one stream
         tp = time.perf_counter()
-        known: dict[str, tuple[str, str | None]] = {
-            r[0]: (r[1], r[2]) for r in _read_all(
+        known: dict[str, tuple[str, str | None, str | None]] = {
+            r[0]: (r[1], r[2], r[3]) for r in _read_all(
                 graph, "MATCH (b:Blob) WHERE b.git_sha IS NOT NULL "
-                       "RETURN b.git_sha, b.content_hash, b.extracted_by ORDER BY b.git_sha")}
+                       "RETURN b.git_sha, b.content_hash, b.extracted_by, b.line_schema ORDER BY b.git_sha")}
         hash_of: dict[str, str] = {}
         to_read: list[str] = []
         for bsha, path in blob_first_path.items():
             extractor = _extractor(adapter_for(path, config.languages))
-            if bsha in known and known[bsha][1] == extractor:
+            if bsha in known and known[bsha][1] == extractor and known[bsha][2] == LINE_SCHEMA:
                 hash_of[bsha] = known[bsha][0]
                 report.blobs_reused += 1
             else:
@@ -338,7 +345,7 @@ def _index_repository(config: RepoConfig, graph_name: str, db, *,
                 for path, bsha in m.items():
                     chash = hash_of[bsha]
                     files.append({"sha": sha, "h": chash, "path": path})
-                    if _matches(path, config.release_notes):
+                    if _matches(path, config.release_notes, config.path_matching):
                         notes.append({"sha": sha, "id": f"{config.name}:{chash}:{path}", "path": path,
                                       "h": chash})
             _write(graph, "UNWIND $rows AS row MATCH (c:Commit {sha:row.sha}), (b:Blob {content_hash:row.h}) "
@@ -387,9 +394,9 @@ class _BlobBatch:
         self.rels: dict[str, list[dict]] = {}
 
     def add(self, chash, bsha, path, data, adapter, stale: bool = True) -> None:
-        lines = data.decode("utf-8", "replace").splitlines()
+        lines = source_lines(data.decode("utf-8", "replace"))
         row = {"h": chash, "g": bsha, "lang": adapter.language if adapter else None, "size": len(data),
-               "n": max(len(lines), 1), "x": _extractor(adapter), "errors": 0}
+               "n": max(len(lines), 1), "x": _extractor(adapter), "errors": 0, "line_schema": LINE_SCHEMA}
         self.blobs.append(row)
         if stale:  # a Blob node already exists: earlier symbols must go (deletes are costly; only then)
             self.stale.append({"h": chash})
@@ -452,7 +459,7 @@ class _BlobBatch:
                       "ON CREATE SET t.qualname=row.tq, t.external=true "
                       f"CREATE (s)-[:{kind} {{provenance:row.prov, extractor:row.ext, relative_target:row.relative}}]->(t)", ext)
         _write(g, "UNWIND $rows AS row MATCH (b:Blob {content_hash:row.h}) "
-                  "SET b.extracted_by=row.x, b.errors=row.errors", self.blobs)
+                  "SET b.extracted_by=row.x, b.errors=row.errors, b.line_schema=row.line_schema", self.blobs)
         self.blobs, self.stale, self.syms, self.rels = [], [], [], {}
 
 

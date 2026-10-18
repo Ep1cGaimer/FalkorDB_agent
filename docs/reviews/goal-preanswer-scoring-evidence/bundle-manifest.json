@@ -1,0 +1,12 @@
+{
+  "schema": "development-evidence-files/v1",
+  "acceptance_validated": false,
+  "files": {
+    "summary.json": "e01db68bdb75a94a0653fe3b78de005c3e45b0cc803108085cc661e71efaeb08",
+    "quality-preanswer-score-red.xml": "5cc0e4d1fbc5b8f567de7af2946c96f82aaf455c2ef7ee6cee3b7be49af703dd",
+    "implementation-source.tar.gz": "6449596a9ca8795e521c92c5eacc63edd3b3b5aa6c2f6b2e14b153806a287c8b",
+    "quality-preanswer-score-green.xml": "5b51c4cc16cdfa1b258fc8a65457736f83d19bfb06efe2b6396c1eb21ee3a5fb",
+    "implementation-manifest.json": "2f287a163e5b7b713fd8c5b7fd798caf2b45910a00b0a5ebfebe672d4cdb0e8a",
+    "goal-preanswer-scoring.md": "afe3bd62310006a96c65f9558e457add5df4afc4e625b5db8126b6f8c487e2d8"
+  }
+}

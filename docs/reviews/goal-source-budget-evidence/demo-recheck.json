@@ -1,0 +1,28 @@
+{
+  "classification": "ACTUAL_BROWSER_AND_FOCUSED_SMOKE_AFTER199FILE_REPAIR",
+  "recorded_at": "2026-10-18T14:11:37.380569+00:00",
+  "server_pid": 58971,
+  "server_port": 8127,
+  "db_port": 55688,
+  "smoke_status": "PASS",
+  "smoke_run_ids": [
+    "a3ab29963e1048958b4f7a45a3c251a5",
+    "bdf01fcec19743e3a82c1c95ed300548",
+    "389e19b2cfda401c882b61a50cb2c44c",
+    "e03191c3811c41f9a33e4874a7059082",
+    "e99428d02a954594a62a5e32520d5e11",
+    "e623a0c9b4694375a469bda469cafa37"
+  ],
+  "browser_live_question": "3fa3b31231bc45ffb2dd09a3bf0bb8c6",
+  "browser_hash_verified_source": "src/itsdangerous/timed.py;class TimedSerializer",
+  "browser_fix_present": "cdad663d240a46e7aa46dd49f6af88ce",
+  "browser_reverted_absent": "edbf33d1868a49f1804438e3f1964bf5",
+  "browser_truncation": "985f9169153b46f8813ae6f005c03969",
+  "browser_missing_gap": "036ef557d07d4c9099a64622d35ebbd8",
+  "harness_assertion_failure": "Expected literal NoSuchDemoSymbol in UI; actual correct gap wording observed separately. Original failure retained.",
+  "observed_missing_gap": "The requested symbol cannot be resolved uniquely.;No supporting citation returned; no source fact is invented.",
+  "explicit_replay": "REPLAY \u00b7 recorded development run \u00b7 NOT LIVE",
+  "browser_return_to_live": "e0a0279ab51a42b0ae75ae24f397e3da",
+  "full_rehearsals_on199build": 0,
+  "full_acceptance_validated": false
+}

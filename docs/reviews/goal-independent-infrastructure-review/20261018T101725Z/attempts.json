@@ -1,0 +1,25 @@
+{
+  "schema": "independent-review-attempts/v1",
+  "attempts": [
+    {
+      "attempt": 1,
+      "command": "/private/tmp/rw-independent-812ecf7-z_wmyild/venv/bin/python /private/tmp/rw-independent-infra-review-20261018/probe.py",
+      "result": "ERROR in probe fixture assertion, before results were saved",
+      "error": "ValueError: string argument should contain only ASCII characters",
+      "reason": "Default git commit-tree recoded intentionally invalid byte to UTF8; the probe assumed base64 encoding.",
+      "retained_repo": "/private/tmp/rw-independent-infra-review-20261018/synthetic",
+      "retained_export": "/private/tmp/rw-independent-infra-review-20261018/export"
+    },
+    {
+      "attempt": 2,
+      "command": "/private/tmp/rw-independent-812ecf7-z_wmyild/venv/bin/python /private/tmp/rw-independent-infra-review-20261018/probe.py",
+      "change": "Synthetic commit declares ISO-8859-1; fresh repository/output names. No reviewed source changes.",
+      "exit_code": 0,
+      "result_artifact": "probe-results.json",
+      "retained_repo": "/private/tmp/rw-independent-infra-review-20261018/synthetic-attempt2",
+      "retained_export": "/private/tmp/rw-independent-infra-review-20261018/export-attempt2"
+    }
+  ],
+  "live_handles": [],
+  "owned_reproduction_containers_remaining": []
+}

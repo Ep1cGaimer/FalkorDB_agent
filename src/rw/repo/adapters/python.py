@@ -6,7 +6,7 @@ import warnings
 
 from rw.repo.model import Relation, Symbol
 
-VERSION = "2"
+VERSION = "3"
 LIMITS = [
     "Dynamic imports (importlib, __import__, imports built from strings) are not extracted.",
     "Calls through getattr, dicts of callables, or other dynamic dispatch are not resolved.",
@@ -14,6 +14,9 @@ LIMITS = [
     "CALLS are resolved by simple name only (local definitions and imported names; attribute calls "
     "keep only the attribute name) and are marked provenance='inferred'.",
     "INHERITS targets are base-class expressions resolved through imports; no MRO computation.",
+    "Parameterized base origins (e.g. Base[T]) are static inferences from the subscript value; "
+    "__class_getitem__ and runtime inheritance are not evaluated. Bases containing calls or "
+    "other unresolved complex expressions are not extracted.",
     "Star imports are recorded as an import of the module; the names they bind are not tracked.",
     "Nested functions/classes inside functions are not emitted as separate symbols.",
     "Files that fail to parse produce an extraction error and only a module symbol.",
@@ -126,9 +129,12 @@ class PythonAdapter:
                     q = f"{prefix}.{node.name}"
                     ex.symbols.append(Symbol(q, "class", node.lineno, node.end_lineno or node.lineno))
                     for b in node.bases:
-                        t = dotted(b)
+                        origin, provenance = b, "parsed"
+                        while isinstance(origin, ast.Subscript):
+                            origin, provenance = origin.value, "inferred"
+                        t = dotted(origin)
                         if t:
-                            rel("INHERITS", q, t, "parsed")
+                            rel("INHERITS", q, t, provenance)
                     visit(node.body, q, True)
                 elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     q = f"{prefix}.{node.name}"

@@ -128,7 +128,51 @@ class GitRepo:
         return items
 
     def blob(self, sha: str) -> bytes:
+        from rw.repo.budget import active_budget
+        budget = active_budget()
+        if budget:
+            # Object identity is immutable: inspect its size before fetching payload.
+            # RepoQuery charges the actual returned bytes after fetching.
+            budget.check_source(self._blob_size(sha))
         return self._bytes("cat-file", "blob", sha)
+
+    def _blob_size(self, sha: str) -> int:
+        value = self._text("cat-file", "-s", sha).strip()
+        if not value.isdecimal():
+            raise GitError("invalid Git object size")
+        return int(value)
+
+    def _reserve_patch_sources(self, child: str, parent: str | None = None) -> None:
+        """Bound raw diff inputs before Git reads them; account a conservative reservation.
+
+        Metadata is read without source payload. Old/new changed blobs are charged
+        per path, including repeated objects, so this cannot undercount reused inputs.
+        A failed diff retains its reservation. No reservation applies during indexing,
+        which runs outside request read scopes.
+        """
+        from rw.repo.budget import active_budget
+        budget = active_budget()
+        if not budget:
+            return
+        revisions = (parent, child) if parent is not None else ("--root", child)
+        records = self._text("diff-tree", "-r", "--raw", "-z", "--no-abbrev", "--no-renames",
+                             "--no-commit-id", *revisions).split("\0")
+        total, sizes = 0, {}
+        for record in records[::2]:
+            if not record:
+                continue
+            fields = record.lstrip().removeprefix(":").split()
+            if len(fields) != 5:
+                raise GitError("invalid raw diff metadata")
+            old_mode, new_mode, old, new, _status = fields
+            for mode, oid in ((old_mode, old), (new_mode, new)):
+                if mode not in {"100644", "100755", "120000"} or set(oid) == {"0"}:
+                    continue
+                if oid not in sizes:
+                    sizes[oid] = self._blob_size(oid)
+                total += sizes[oid]
+                budget.check_source(total)
+        budget.consume_source(total)
 
     def changes(self, parent: str, child: str) -> list[Change]:
         parts = self._text("diff-tree", "-r", "-M", "-z", "--name-status", "--no-commit-id",
@@ -164,11 +208,13 @@ class GitRepo:
 
     def patch(self, parent: str, child: str) -> str:
         """Unified diff (no context, renames detected) of child against parent."""
+        self._reserve_patch_sources(child, parent)
         return self._text("diff-tree", "-p", "-M", "-U0", "--no-color", "--no-ext-diff",
                           "--no-textconv", "--no-commit-id", parent, child)
 
     def patch_id(self, sha: str) -> str | None:
         """`git patch-id --stable` of a commit against its first parent (None for root/empty)."""
+        self._reserve_patch_sources(sha)
         diff = self._bytes("diff-tree", "-p", "--no-color", "--no-ext-diff", "--no-textconv",
                            "--root", sha)
         out = self._bytes("patch-id", "--stable", stdin=diff).decode("utf-8", "replace").split()

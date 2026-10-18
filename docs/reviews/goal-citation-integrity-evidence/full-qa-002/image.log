@@ -1,0 +1,55 @@
+[
+    {
+        "Id": "sha256:441428baaabbb7dab3e60c5cdd5265e0329520a4613d7bbb829c405c520e5643",
+        "RepoTags": [
+            "rw-goal-qa:20261018"
+        ],
+        "RepoDigests": [
+            "rw-goal-qa@sha256:441428baaabbb7dab3e60c5cdd5265e0329520a4613d7bbb829c405c520e5643"
+        ],
+        "Comment": "buildkit.dockerfile.v0",
+        "Created": "2026-10-18T11:03:10.031949626Z",
+        "Config": {
+            "Env": [
+                "PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "LANG=C.UTF-8",
+                "GPG_KEY=7169605F62C751356D054A26A821E680E5FA6305",
+                "PYTHON_VERSION=3.12.9",
+                "PYTHON_SHA256=7220835d9f90b37c006e9842a8dff4580aaca4318674f947302b8d28f3f81112"
+            ],
+            "Cmd": [
+                "python3"
+            ]
+        },
+        "Architecture": "arm64",
+        "Os": "linux",
+        "Size": 550597758,
+        "RootFS": {
+            "Type": "layers",
+            "Layers": [
+                "sha256:c9b18059ed426422229b2c624582e54e7e32862378c9556b90a99c116ae10a04",
+                "sha256:72bbb1662472ad6910e83fcbd167e4e25a5ae7485cedc06ae347a6e77985dc30",
+                "sha256:e265360b64fd896333c6a748331480903f1b0bd625f10d40901f89e708101b1e",
+                "sha256:a91260a6af033b82455eca14c9fcc0d100a8467217375ff4ef4b17e2b965b6e7",
+                "sha256:569c8e29739ef644a61a5cb229dfc599aa3bfadd12fbf9a82e0cd72bfde0251b",
+                "sha256:4174647954297da65b13f79714d2597379025591d33f76d630ff7b0255d8a25d"
+            ]
+        },
+        "Metadata": {
+            "LastTagTime": "2026-10-18T11:03:12.220653793Z"
+        },
+        "Descriptor": {
+            "mediaType": "application/vnd.oci.image.index.v1+json",
+            "digest": "sha256:441428baaabbb7dab3e60c5cdd5265e0329520a4613d7bbb829c405c520e5643",
+            "size": 856
+        },
+        "Identity": {
+            "Build": [
+                {
+                    "Ref": "albi70erffxy64p64zzhcegtx",
+                    "CreatedAt": "2026-10-18T11:03:12.954656794Z"
+                }
+            ]
+        }
+    }
+]

@@ -1,0 +1,28 @@
+{
+  "schema": "development-evidence-files/v1",
+  "files": {
+    "01-clone.log": "1e1628cae3f689906e71fcdd12c01ab6bfb2b2aca99130f05552fbb202d3f0ce",
+    "Dockerfile": "30a87ba5e2d29215a1a935189a37fb7f958f2e56817afb83e26c7ab12b300c51",
+    "clone-itsdangerous.log": "e7bf7cbfa698f52206ebd4077575270163fbde66b6e8a281a42066dfdcf6de97",
+    "clone-requests.log": "acd01ff3dfa29d89b04aab1419fd33e9848d4d88c432ac4c16eafa01a3df7e62",
+    "db-start.log": "5ddb9d75736c13cf6706dc435e113424c8917ac23db041a198a3cc946bdb1013",
+    "environment.log": "4a51abfb6678a0c43ce973655e10ee46a061ca136110f619640a3f7c1288fa54",
+    "image-build-001.log": "1022f03a85f3d5147c0158d50a51579991b80e07c2c7110707f12ec2965284b5",
+    "image.log": "7e204b23bb1c79b096a06d4baa7b1fdc365607b0d2c6cd1ec8040b91f645b108",
+    "javascript.log": "d68f3068c08a0bc1fcbdfeb92f4c24c26b56a5693be96c97ec8f7b8603a9fc05",
+    "origin-itsdangerous.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "origin-requests.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "progress.json": "27938fb801c2e7b37795b48c3d3acaf1293ed1f9381d60b6cd62841fe02cb5e1",
+    "pytest.log": "77bfa979d164322dc3ff1c9f530e66505cd8eae08b62f42fbc1688148b8ffc53",
+    "pytest.xml": "d066a5cc9ff3b2e8463d90002a0b5fd1c23a05db955054b74b9184c9ee745038",
+    "qa-summary.json": "5f5a22eea5d143f0e846f6cfaba71222677e9f07111263c53f8fe6fafed113ba",
+    "run.py": "54e86f5c7329349cf575e3ac447064ba7537d7dea59ed245cc98c395e698ed56",
+    "smoke.log": "b4462165107056aaabee9b6846698ff25e722ce65332b78c5fa3e4e5714f6cd9",
+    "source-after.json": "c13b2b2043744f082200b9a5f19bbdc8254f72c404c8dc85e908bc025550ceba",
+    "source-before.json": "c13b2b2043744f082200b9a5f19bbdc8254f72c404c8dc85e908bc025550ceba",
+    "summary.json": "c605392d09cb67bdc893b5e44d550dbffa3763336f1853136bca2cff862240ef",
+    "supplement.json": "ba362977c1d61e1e3ca138ae6b22225936eeb3bc3fce0f02d38bbae1d5af7b10",
+    "supplement.py": "9ca42c4407f70540070f04f1bf28038db1d98c504497b2942fe4fce1b402755e"
+  },
+  "acceptance_validated": false
+}

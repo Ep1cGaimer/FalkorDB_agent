@@ -1,0 +1,19 @@
+{
+  "schema": "development-evidence-files/v1",
+  "files": {
+    "fixed-001.json": "de57c5627aba2128fe734f4e7a9d95b0a31a9cc2b96e3f662c94f09450146416",
+    "fixed-001.log": "d4fc5b43719aded1a92ddea33d34c0d2d49cfdcf4f8d8bad99152d20c3410cb1",
+    "fixed-001.xml": "d3ef262b96d44451c1ec6ae8ba502ccdbabf772827067b88a210a4e6776ea7e0",
+    "implementation-manifest.json": "d7011d0156d09174eca0f570ca81ee2c74a90eedeae20bb93a1c696f3bb35f4b",
+    "red-001.json": "6499eec95228aa600be117eca44553d0a7f9c3e9cdbe2eb8283fee37e18a3aed",
+    "red-001.log": "9aade118cc8a42f7d0e979869ffc0f12e03fb1718987bc5dda23daa92f7b2615",
+    "red-001.xml": "cff998b48dace98340a22102eb45728f117b47e1d9e827d84638669844489a3c",
+    "repository-suite-001.json": "84f449d00739dcf583b22afe6c024954955492c6bff5f4ec5d8f832b2d221cb0",
+    "repository-suite-001.log": "93a90d689d223420df1803b3eb0a8ef0338c924a4d4b4c58deadc2b1857217cb",
+    "repository-suite-001.xml": "e88f23902871f86cbbfa30c47c2cad784cd5bec7c5b8dd30047249dba2bd69a0",
+    "run-summary.json": "82a2e3bf5c17c603b6edba859a278fefd8adeaf76b39d8f065f35bdce990a7ba",
+    "run_owned.py": "893c434b6de63078a48d8255e6ceb774c1a270131c3bbcc77a28b61badc17138",
+    "source-snapshot.tar.gz": "4f64ea3a9bef274216a0252fd8552284a3fda070a10f0245c3da23366b74b360"
+  },
+  "acceptance_validated": false
+}

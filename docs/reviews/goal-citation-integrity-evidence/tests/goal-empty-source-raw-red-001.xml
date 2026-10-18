@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="2" time="0.277" timestamp="2026-10-18T16:59:56.053712+05:30" hostname="Vinays-MacBook-Air.local"><testcase classname="tests.test_confirmatory_citation_guard" name="test_empty_file_read_returns_membership_without_an_invented_source_span" time="0.136"><failure message="confirmatory.plaintext_tools.CorpusError: start line beyond source (including empty file)">tests/test_confirmatory_citation_guard.py:190: in test_empty_file_read_returns_membership_without_an_invented_source_span
+    evidence = raw.read_file(new, "empty.py")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+evals/confirmatory/tool_budget.py:111: in wrapped
+    return wrapped(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+evals/confirmatory/tool_budget.py:118: in wrapped
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+evals/confirmatory/plaintext_tools.py:258: in read_file
+    raise CorpusError("start line beyond source (including empty file)")
+E   confirmatory.plaintext_tools.CorpusError: start line beyond source (including empty file)</failure></testcase><testcase classname="tests.test_confirmatory_citation_guard" name="test_listed_included_files_expose_the_membership_identity_to_the_model" time="0.109"><failure message="KeyError: 'content_hash'">tests/test_confirmatory_citation_guard.py:207: in test_listed_included_files_expose_the_membership_identity_to_the_model
+    "path": entry["path"], "git_blob": entry["oid"], "content_hash": entry["content_hash"]}
+                                                                     ^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'content_hash'</failure></testcase></testsuite></testsuites>

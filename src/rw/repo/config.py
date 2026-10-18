@@ -5,6 +5,7 @@ import json
 import os
 import re
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -24,6 +25,8 @@ class RepoConfig(BaseModel):
     languages: list[str] = Field(default_factory=lambda: ["python"])
     include: list[str] = Field(default_factory=list)
     exclude: list[str] = Field(default_factory=list)
+    path_matching: Literal["path_or_basename", "path"] = "path_or_basename"
+    regular_files_only: bool = Field(default=False, strict=True)
     release_notes: list[str] = Field(default_factory=lambda: list(DEFAULT_RELEASE_NOTES))
     query_timeout_seconds: float = Field(default=120.0, gt=0, le=120.0, allow_inf_nan=False)
     query_max_rows: int = Field(default=250_000, gt=0, le=250_000, strict=True)

@@ -1,0 +1,28 @@
+{
+  "schema": "development-evidence-files/v1",
+  "acceptance_validated": false,
+  "files": {
+    "all-quality-attempts.tar.gz": "5d322ca9388a18f11ebc0a73c094f01d86fbe804628bbee5ca2454cb29f9c6b7",
+    "finalize.py": "b059f5164e040d448d9bd1effd8bb434afe60dde0738537c906851576aabdd9a",
+    "goal-citation-support-repair-review.md": "451ac8369d517b9c1f536dbea30d7bb7135e1c3b0616be7887d67745684240c3",
+    "goal-citation-support-repair.md": "a43692544284d111285f2d0a6735f3f482efad8f863114e55cdb58f5ee25d8d2",
+    "goal-flash-lite-agent-repair-review.md": "69dcf07530297924a6412167e74d93d8c998146acb94cc322a7ff9a46cd41dff",
+    "goal-flash-lite-agent-repair.md": "e79553c80c0159630143827ba0aeab5716adf0e91d971c0e7147be895c1cc16a",
+    "goal-flash-lite-quality-review.md": "91ca4298e9576be5e08b7c969446501b1190f47f251230bdb48455859cecb979",
+    "goal-paired-score-checks.xml": "c2e054c50664c1492f7ae04a67eaa89c37610f2ea2d8470176032249ab77e2a4",
+    "goal-paired-scoring-tooling.md": "8ea30d2e1eebc37f721092bea6183d9d515e304d9e0ff2e24a79b0e7622f560b",
+    "implementation-manifest.json": "7e0fdd8d7f157b8e7e81276d6023a23321477393aff92429caa4b3aaf44a54d7",
+    "implementation-source.tar.gz": "efa260b949a5088e4472e48f2af18bb19fd6baf6386829f260ec259bcd56a991",
+    "quality-answer-reserve-final.xml": "4ae3e363a7a9bc957a8d8f3fb0fe1a4c1009cb5d2aa1bf88c7e0acbf2f5e3374",
+    "quality-answer-reserve-green.xml": "06f527aeade1bb16919f51552b63cc0c00ff385a59563790cf4736701f013f16",
+    "quality-answer-reserve-red.xml": "fdf99ddd4b1507b27fc4f13e0ea3a8455b92f98b4e1669a926adbea0732cc206",
+    "quality-claim-support-component.xml": "8bc9ba280040a31998bf33fbdd0ae35f4078299975f67c87302dbd738b17bd35",
+    "quality-claim-support-final.xml": "32d0f460f02a3759bb6cfa55d07bf8c1759bff4f1eebdda1471a4e133fae3442",
+    "quality-followup-green.xml": "558fdd3f499633a7085061fbb2fe6db35563559020f4c2496fbc37e0769031a4",
+    "quality-followup-red.xml": "4854a84d343d87b305d03269a65020c532993bd84a02bc7bd92d2c8c272a5da7",
+    "quality-typed-tools-final.xml": "40efe2e02e908d533f118cadfdcccafa68eedfb1d9f069013093ab18600f0c9c",
+    "quality-typed-tools-green.xml": "ecf3147c664bcc5f9308ed318645b47f1acb2663f188c922cf0aaed51f3889cb",
+    "quality-typed-tools-red.xml": "17e1402cf120d589c866466015cd026616046186a449321bc741ed643f8fdb11",
+    "scorecard.json": "a8f94c1ddb7cc2b9bdd6a12ef25dc198f696ed74e644d79ff0439dbbd770a5b3"
+  }
+}

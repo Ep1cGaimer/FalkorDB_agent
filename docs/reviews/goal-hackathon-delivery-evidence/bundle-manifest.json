@@ -1,0 +1,28 @@
+{
+  "schema": "development-evidence-bundle/v1",
+  "acceptance_validated": false,
+  "files": {
+    "full-qa-003/01-clone.log": "732fb4b53488b56cd310ce80ac1551d334a8657de31b2f542e09e501a4f56dea",
+    "full-qa-003/clone-itsdangerous.log": "e230365a4452b4cbcb23ef1530a199be63019b0d2ce5569e9585fa62affafa08",
+    "full-qa-003/clone-requests.log": "91407269ec64801b5a68d886bc4fb58cc7a124491734228d42eca1475628eead",
+    "full-qa-003/db-start.log": "457f7b0381c3a0b75c2c5c6643698edbae31ccc13871f82b31fe2e841f1487d4",
+    "full-qa-003/environment.log": "4a51abfb6678a0c43ce973655e10ee46a061ca136110f619640a3f7c1288fa54",
+    "full-qa-003/image.log": "806a9ee682f6cb609ecd917115fcf7ee72915352f7d2060176a87d1564e49d9b",
+    "full-qa-003/origin-itsdangerous.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "full-qa-003/origin-requests.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "full-qa-003/progress.json": "0789c78b6b4dcb7d7a65b8e799ffc25964190e30be4b11d38e77a5a2877fb6af",
+    "full-qa-003/pytest.log": "45f805fc403074203a575d0c929d12802bac30e9a9f8ef4cd7fc7c2b5637f437",
+    "full-qa-003/pytest.xml": "ec03e999392503cf6910c899a682ea7e89b1b6664984e88e027f40290c327ce2",
+    "full-qa-003/source-after.json": "44c938a061e4da447e414d410586f113a6c84f2d1fe9b8fb47fd3c675b3abd2b",
+    "full-qa-003/source-before.json": "44c938a061e4da447e414d410586f113a6c84f2d1fe9b8fb47fd3c675b3abd2b",
+    "full-qa-003/summary.json": "51853f87ebf8ebcb5aebc136afafb578ac2a364886d0cc18cc2becbbbee77a7f",
+    "implementation-manifest.json": "a22928952a2d877f5a4c31c2a3e8c2d63bad24b4743cb70fb98206e9a0edd1ad",
+    "implementation-source.tar.gz": "32fdd030cdeeb13e6243d4a0b4401bb3b3237469db505001ddf86ed692c50de9",
+    "model-protocol-attempts.tar.gz": "7aa52c0e5594b542dd3ca80fad674d3172c8fcf46955d970d80588f98245083b",
+    "os-ingestion-audit.tar.gz": "4b32d75cbcfaef3f9358d23f5046717ff615193987ae163077f7578eb4a4200e",
+    "primary-demo.tar.gz": "7a913edf228b9c5080f8a3ae8fc2dd9ca7cab9f8eac8d8cefd089a4f0d3559cb",
+    "run-summary.json": "22efee21b9cf82819db426f17489e808d3e1bdf89f8d050a3e84ff470feed170",
+    "unseen-onboarding.tar.gz": "1a858a1ec61b849eee7ca2bf3ba9bd453b20b0faa85051e1525921ca7397a61d",
+    "working-source.diff": "694196a3954066ca6a71e573365389416db2a263857f9dcd6f2aee4347de53bf"
+  }
+}

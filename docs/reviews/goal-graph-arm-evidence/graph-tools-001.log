@@ -1,0 +1,13 @@
+..........F......                                                        [100%]
+=================================== FAILURES ===================================
+______ test_default_basename_profile_remains_explicit_and_reconfigurable _______
+tests/repo/test_corpus_path_matching.py:28: in test_default_basename_profile_remains_explicit_and_reconfigurable
+    assert set(q._files(sha)) == {"setup.py"}
+E   AssertionError: assert {'nested/setu...', 'setup.py'} == {'setup.py'}
+E     
+E     Extra items in the left set:
+E     'nested/setup.py'
+E     Use -v to get more diff
+=========================== short test summary info ============================
+FAILED tests/repo/test_corpus_path_matching.py::test_default_basename_profile_remains_explicit_and_reconfigurable
+1 failed, 16 passed in 4.45s

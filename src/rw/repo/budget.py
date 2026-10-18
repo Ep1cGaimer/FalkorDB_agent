@@ -55,11 +55,16 @@ class ReadBudget:
         if self.rows > self.limits.rows:
             raise BudgetExhausted(self, "rows")
 
-    def consume_source(self, size: int):
+    def check_source(self, size: int):
         self.remaining()
-        self.source_bytes += size
-        if self.source_bytes > self.limits.source_bytes:
+        if type(size) is not int or size < 0:
+            raise ValueError("source byte count must be a nonnegative integer")
+        if size > self.limits.source_bytes - self.source_bytes:
             raise BudgetExhausted(self, "source_bytes")
+
+    def consume_source(self, size: int):
+        self.check_source(size)
+        self.source_bytes += size
 
     def snapshot(self, *, include_elapsed: bool = False) -> dict:
         out = {"limits": {"seconds": self.limits.seconds, "rows": self.limits.rows,
