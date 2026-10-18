@@ -12,9 +12,13 @@ An on-call engineer asks for a behavioral rollback — *"Undo the basket rollout
 
 Only a `BOUNDED_PASS` can be approved for an idempotent **local simulation**. Nothing is ever deployed. The grounding agent and the MCP tools cannot approve; the local HTTP API is unauthenticated and trusts whoever can reach it, so the approver label is a local operator name, not a verified identity.
 
-> All data is a **synthetic fixture** (Cart and Checkout services, two releases each, one cache, retained saved carts). Replayed agent runs are labeled as replays.
+> The rollback workflow uses a **synthetic fixture** (Cart and Checkout services, two releases each, one cache, retained saved carts). The separate repository-evidence demo uses real pinned ItsDangerous source and an explicitly synthetic Git-revert example. Replayed runs are labeled as replays.
 
 New to the codebase? Read the [project guide with examples and Mermaid diagrams](docs/PROJECT_GUIDE.md). The [initial issue #3 analysis](docs/ISSUE_3_ANALYSIS.md) preserves the investigation and solution options before implementation.
+
+The separate repository-evidence demo runs on port 8127. Its setup and graph
+model are documented below, with implementation details in the
+[query and algorithm reference](docs/GRAPH_QUERIES.md).
 
 The [issue #3 implementation report](docs/ISSUE_3_FIX_REPORT.md) explains the tool-call and rate-limit changes, why each was needed, and their verification results. The [historical live comparison](docs/ISSUE_3_COMPARISON.md) contains author-reported results; its raw artifacts are not committed and those numbers are not independently verifiable acceptance evidence.
 
@@ -41,6 +45,84 @@ For the free-tier operating choice and the browser check of the sanitized quota 
 
 ## Quickstart
 
+Prerequisites: Git, Docker with Compose v2 and a running Docker daemon, and
+[`uv`](https://docs.astral.sh/uv/). The setup script creates `.venv`, selects
+Python 3.12 and installs pinned dependencies. Run commands from the repository
+root. No frontend build is required.
+
+```sh
+git clone https://github.com/Ep1cGaimer/FalkorDB_agent.git rollbackwitness
+cd rollbackwitness
+```
+
+Choose the workflow you want to run:
+
+| Workflow | Open | Model key needed? | Data |
+| --- | --- | --- | --- |
+| Repository evidence demo | `http://127.0.0.1:8127` | No | Real pinned Python source plus synthetic Git history |
+| Rollback console | `http://127.0.0.1:8000` | Yes for live grounding; no for operator-specified fleet or deterministic smoke | Synthetic shop releases and retained records |
+
+### Repository evidence demo — Linux / WSL
+
+Use a dedicated database on local port 55688, separate from the fixture database
+on 6379. The container creation command below is for a **first launch**; if that
+container already exists, use `docker start rw-hackathon-demo-20261018` and check
+its port mapping instead. Choose another fixed port if 55688 is occupied and
+update every `RW_FALKORDB_PORT` value accordingly.
+
+```sh
+sh scripts/setup.sh
+mkdir -p artifacts/repos
+# Skip this clone if the bare repository already exists:
+git clone --bare https://github.com/pallets/itsdangerous.git artifacts/repos/itsdangerous
+docker run -d --name rw-hackathon-demo-20261018 --memory=2g \
+  -p 127.0.0.1:55688:6379 \
+  falkordb/falkordb:6.0.2@sha256:107455e862a824e45e8e9f5a7fbfdf5e00a08b14e13eae2577c72fd9e3f59ba6
+# Wait for PONG before continuing:
+docker exec rw-hackathon-demo-20261018 redis-cli ping
+RW_FALKORDB_PORT=55688 .venv/bin/python scripts/hackathon_demo.py setup
+RW_FALKORDB_PORT=55688 .venv/bin/python scripts/hackathon_demo.py smoke
+RW_FALKORDB_PORT=55688 .venv/bin/python scripts/hackathon_demo.py serve --port 8127
+```
+
+Open `http://127.0.0.1:8127` and ask **What does TimedSerializer depend on?**
+Then try **Explore a real dependency chain**, open a source citation, and compare
+**Inspect the fix** with **Catch the reverted fix**. The smoke command should
+report `PASS` and prepares an explicitly labeled recorded backup. This is live
+**deterministic retrieval**, not an LLM-generated conversation. The real source is
+pinned to ItsDangerous commit `096c8d42545d3b68ea21a4f890fb2b2d8979c0bd`.
+
+Setup generates local indexes and artifacts; they are not included in a fresh
+clone. Keep the bare clone for source verification. Stop the server with Ctrl+C;
+stop this dedicated database with `docker stop rw-hackathon-demo-20261018`.
+For the underlying queries, a read-only example and evidence boundaries, see the
+[query and algorithm reference](docs/GRAPH_QUERIES.md).
+
+### Rollback workflow — Linux / WSL
+
+```sh
+sh scripts/setup.sh
+docker compose up -d --wait
+.venv/bin/python scripts/smoke.py
+# Deterministic operator-specified fleet; no model call:
+.venv/bin/python scripts/investigate.py --fleet cart=1.4 --confirm-as you
+# Console; live grounding requires the optional key configuration below:
+.venv/bin/python scripts/serve.py
+```
+
+The fleet example is expected to be `BLOCKED`: cart 1.4 cannot decode a retained
+`cart/v2` record. The smoke script exercises real graph queries and fixture-reader
+probes with fixed grounding; it does not call a model. The console listens at
+`http://127.0.0.1:8000`. Stop it with Ctrl+C; `docker compose stop` stops the fixture
+database. Do not stop another workflow's database during a recording.
+
+For optional live grounding, copy `.env.example` to the ignored `.env` and set
+`GROQ_API_KEY` locally. Do not commit that file. See
+[provider configuration](docs/QUICKSTART.md#6-live-grounding-optional) for model
+selection and provider limits. Keep the local UI bound to loopback.
+
+### Windows and further checks
+
 Full instructions: [docs/QUICKSTART.md](docs/QUICKSTART.md). Short version (Windows shown; `sh scripts/setup.sh` on Linux/macOS/Git Bash):
 
 ```powershell
@@ -62,6 +144,108 @@ Try it:
 # Web UI on http://127.0.0.1:8000 (live or replay of saved runs; snapshot selector for NEEDS_EVIDENCE cases):
 .venv\Scripts\python.exe scripts\serve.py
 ```
+
+## Graph data model
+
+The two workflows use separate graphs. FalkorDB stores evidence and relationships;
+it does not store or execute the agent's workflow. Queries and graph algorithms
+are documented in [GRAPH_QUERIES.md](docs/GRAPH_QUERIES.md), with implementation
+links, parameters, examples and limitations.
+
+### Repository evidence graph
+
+Implemented by [`src/rw/repo/index.py`](src/rw/repo/index.py) and
+[`src/rw/repo/query.py`](src/rw/repo/query.py). The dedicated demo uses graphs
+`rw_hackathon_demo_real` and `rw_hackathon_demo_trap`. Generic repository imports
+default to `rw_repo_<config.name>` unless explicitly overridden.
+
+```mermaid
+flowchart LR
+    T[Tag] -->|POINTS_TO| C[Commit]
+    C -->|PARENT| P[Parent commit]
+    C -->|HAS_FILE: path| B[Blob]
+    B -->|DEFINES| S[Symbol]
+    S -->|IMPORTS / CALLS / INHERITS| D[Target symbol]
+    C -->|HAS_NOTE| N[ReleaseNote]
+    I[ImportRun] -->|INDEXED| C
+```
+
+| Node | Important properties / purpose |
+| --- | --- |
+| `Repository` | Name, local Git path, status, generation and published import ID; metadata governs which import is usable |
+| `ImportRun` | ID, repository, status, timestamps and metrics; only the current complete publication is queried |
+| `Commit` | Full SHA, repository and commit metadata; `PARENT` points to earlier commits |
+| `Tag` | Name and message; alias pointing to a commit, not immutable identity |
+| `Blob` | SHA-256 content hash, Git blob identity and extraction metadata; `HAS_FILE.path` supplies the revision-specific path |
+| `Symbol` | ID, qualified name, kind and source span for definitions; unresolved external targets can lack a local definition |
+| `ReleaseNote` | ID, path and content hash for configured release-note files |
+
+`IMPORTS`, `CALLS` and `INHERITS` edges record provenance and extractor identity.
+Parsed and statically inferred relationships are labeled separately. A citation
+contains repository, commit, path, line range and content hash; opening it verifies
+the Git bytes. Example: follow `URLSafeTimedSerializer → TimedSerializer →
+Serializer` at the pinned ItsDangerous revision. Python performs the bounded
+relationship walk over facts retrieved from FalkorDB; this is not a claim about
+runtime dispatch or behavioral compatibility.
+
+### Rollback evidence graph
+
+Implemented by [`src/rw/graph.py`](src/rw/graph.py). The diagram shows the principal
+evidence paths; the complete property and relationship reference is in
+[ARCHITECTURE.md](docs/ARCHITECTURE.md#graph-schema).
+
+```mermaid
+flowchart LR
+    SN[Snapshot] -->|HAS_DEPLOYMENT| D[Deployment]
+    P[Plan] -->|HAS_DEPLOYMENT| D
+    P -->|BASED_ON| SN
+    D -->|OF_SERVICE| SV[Service]
+    D -->|RUNS| R[Release]
+    R -->|PREVIOUS| OLD[Previous release]
+    R -->|HAS_SOURCE| E[SourceExcerpt]
+    R -->|EXECUTES_ROUTE| RT[ReaderRoute]
+    RT -->|READS_FROM| ST[StateStore]
+    B[Batch / retained record] -->|IN_STORE| ST
+    B -->|WRITTEN_BY| W[Writer release]
+    ST -->|HAS_COVERAGE| CV[Coverage]
+    PR[ProbeRun] -->|TESTS_READER| R
+    PR -->|TESTS_BATCH| B
+```
+
+| Node group | Identity and evidence |
+| --- | --- |
+| `Service`, `Deployment`, `Release` | Exact service/release selection, flags, artifact and codec hashes; candidate deployments belong to a plan |
+| `SourceExcerpt`, `ReaderRoute` | Release-bound source spans and content hashes; reader entry point, domain and route-contract hash |
+| `Snapshot`, `StateStore`, `Batch`, `Coverage` | Snapshot manifest, store, record/payload identity, known format, writer relationship and inventory completeness |
+| `Plan`, `ProbeRun` | Fleet/plan identity, obligation-bound probe receipts and `PASS` / `FAIL` / `UNKNOWN` results |
+
+Fixture nodes have server-controlled scope and logical IDs. Release versions and
+record display names alone are not sufficient identity. `Batch` is the graph
+label used for a retained record. Missing writer/format/coverage facts remain
+unknown; they are not inferred from a service call graph.
+
+For example, a candidate plan selects cart 1.4, whose reader reaches the cache
+containing a record written by cart 1.5. The multi-hop obligation query identifies
+that reader × record pair; the actual reader probe fails on `cart/v2`, giving
+`BLOCKED`. Graph traversal selects evidence and obligations; trusted code and
+probe receipts determine the disposition.
+
+## Cypher queries and graph algorithms
+
+Read [the query and algorithm reference](docs/GRAPH_QUERIES.md) for the actual
+queries the product depends on. It includes:
+
+- Rollback obligations: `Plan → Deployment → Release → ReaderRoute → StateStore
+  ← Batch → writer Release`, with snapshot filtering and optional writer evidence.
+- Version-linked source retrieval through a bounded `PREVIOUS` release chain.
+- Published repository revision lookup and provenance-bearing symbol relationships.
+- Bounded Python dependency/dependent traversal, Git ancestry and content-based
+  fix-presence checking, plus completeness and receipt validation.
+- A runnable read-only example against the initialized demo graphs.
+
+These are implemented operations, not proposed schema or generated Cypher.
+The model does not supply arbitrary queries. A truncated result or absent
+relationship is not sufficient evidence of completeness or safety.
 
 ## Local MCP tools
 
