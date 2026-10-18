@@ -1,6 +1,6 @@
 {
   "schema": "goal-curated-evidence-integrity/v1",
-  "recorded_at": "2026-10-18T09:57:24.368274+00:00",
+  "recorded_at": "2026-10-18T10:16:10.906383+00:00",
   "artifact_manifests": [
     {
       "manifest": "docs/reviews/goal-budget-evidence/bundle-manifest.json",
@@ -38,5 +38,11 @@
   ],
   "acceptance_validated": false,
   "interpretation": "Byte/link integrity only, not correctness, independent scoring, performance or advantage validation",
-  "errors": []
+  "errors": [],
+  "independent_reproduction_handoff": {
+    "path": "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/HANDOFF.json",
+    "sha256": "015475a9cb845e1cb6c61f22a851b7e5c18df1983f9ea1a9073ad66b901a0a5d",
+    "files": 103,
+    "mismatches": []
+  }
 }

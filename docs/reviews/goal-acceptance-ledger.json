@@ -1,6 +1,6 @@
 {
   "schema": "goal-acceptance-ledger/v1",
-  "updated_at": "2026-10-18T09:56:43.646635+00:00",
+  "updated_at": "2026-10-18T10:15:11.540543+00:00",
   "authority": {
     "path": "remquirements-v1.md",
     "sha256": "a177653c4096f885cad1e129f77331cffe59fe13f608bac924232e632c1dd627"
@@ -43,7 +43,8 @@
         "goal-source-freshness-development-2026-10-18",
         "goal-query-budgets-development-2026-10-18",
         "goal-control-flags-development-2026-10-18",
-        "goal-graft-development-2026-10-18"
+        "goal-graft-development-2026-10-18",
+        "goal-independent-development-reproduction-2026-10-18"
       ],
       "artifact_links": [
         "docs/reviews/goal-branch-review.md",
@@ -61,7 +62,10 @@
         "docs/reviews/goal-control-flags.md",
         "docs/reviews/goal-control-flags-evidence/run-summary.json",
         "docs/reviews/goal-git-grafts.md",
-        "docs/reviews/goal-graft-evidence/run-summary.json"
+        "docs/reviews/goal-graft-evidence/run-summary.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/README.md",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/HANDOFF.json"
       ],
       "observed_metrics": {
         "development_regression_only": true,
@@ -117,7 +121,23 @@
             "aborted": false,
             "validation_errors": []
           }
-        ]
+        ],
+        "independent_development_reproduction": {
+          "implementation_commit": "f8faa67f5b9c9d0d2682ecff7d10d3ac084cf242",
+          "passed": 1068,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 6,
+          "live_deselected": 3,
+          "pytest_summary_seconds": 277.87,
+          "javascript_passed": 16,
+          "deterministic_smoke": "PASS",
+          "source_files": 168,
+          "source_hash_mismatches": 0,
+          "heldout_questions_run": 0,
+          "artifact": "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+          "acceptance_inference": "none; development deterministic reproduction only"
+        }
       },
       "thresholds": {
         "T0": {
@@ -266,6 +286,42 @@
           "run_id": "goal-graft-development-2026-10-18",
           "historical": true,
           "detail": "Initial ancestry overlays and stale-parent retry failed; interim missing-todo edit failed; final37case subset passed. Attempts preserved."
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_e2_history_outputs[none]",
+          "reason": "no E2 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_eval_outputs[none]",
+          "reason": "no E2/E4 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e3_protocol.test_scale_output_records_required_fields[None]",
+          "reason": "no artifacts/repo_scale/*.json output yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_scale]",
+          "reason": "no runs recorded under artifacts/repo_scale"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_benefit]",
+          "reason": "no runs recorded under artifacts/repo_benefit"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_run_record_is_reproducible[NOTSET]",
+          "reason": "got empty parameter set for (cat, path)"
         }
       ],
       "limitations": [
@@ -275,8 +331,7 @@
         "Independent clean reproduction, score recomputation, 12-question live rerun, three reset demos, claim card and official submission deliverables remain incomplete.",
         "Independent AI evaluation draft is unsigned; Click corpus/source expectations remain sealed from implementer. No fresh T0/T2/T10 validation.",
         "Request-local evidence work limits tested in development; cooperative deadlines do not prove hard OS wall-time/memory or model-token bounds. Independent 120-case draft prepared, no frozen signature or blind-scored results.",
-        "Latest source812ecf7 has affected-subset/live-control checks; full1059-test run is historical8058032. Independent clean full reproduction pending.",
-        "Latest sourcef8faa67 has Git graft/parent-refresh focused checks; independent clean full reproduction is running separately. Sealed heldout package remains unused."
+        "Independent clean deterministic reproduction on f8faa67 passed1068 tests with6 missing-artifact skips and3 live exclusions; heldout generation/scoring, live12 reruns and3 demos remain unperformed. New evaluation infrastructure is tested separately and is not part of that168-file source pin."
       ],
       "reviewer": null,
       "validated_at": null
@@ -318,7 +373,8 @@
         "goal-source-freshness-development-2026-10-18",
         "goal-query-budgets-development-2026-10-18",
         "goal-control-flags-development-2026-10-18",
-        "goal-graft-development-2026-10-18"
+        "goal-graft-development-2026-10-18",
+        "goal-independent-development-reproduction-2026-10-18"
       ],
       "artifact_links": [
         "docs/reviews/goal-branch-review.md",
@@ -336,7 +392,10 @@
         "docs/reviews/goal-control-flags.md",
         "docs/reviews/goal-control-flags-evidence/run-summary.json",
         "docs/reviews/goal-git-grafts.md",
-        "docs/reviews/goal-graft-evidence/run-summary.json"
+        "docs/reviews/goal-graft-evidence/run-summary.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/README.md",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/HANDOFF.json"
       ],
       "observed_metrics": {
         "development_regression_only": true,
@@ -392,7 +451,23 @@
             "aborted": false,
             "validation_errors": []
           }
-        ]
+        ],
+        "independent_development_reproduction": {
+          "implementation_commit": "f8faa67f5b9c9d0d2682ecff7d10d3ac084cf242",
+          "passed": 1068,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 6,
+          "live_deselected": 3,
+          "pytest_summary_seconds": 277.87,
+          "javascript_passed": 16,
+          "deterministic_smoke": "PASS",
+          "source_files": 168,
+          "source_hash_mismatches": 0,
+          "heldout_questions_run": 0,
+          "artifact": "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+          "acceptance_inference": "none; development deterministic reproduction only"
+        }
       },
       "thresholds": {
         "T2": {
@@ -548,6 +623,42 @@
           "run_id": "goal-graft-development-2026-10-18",
           "historical": true,
           "detail": "Initial ancestry overlays and stale-parent retry failed; interim missing-todo edit failed; final37case subset passed. Attempts preserved."
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_e2_history_outputs[none]",
+          "reason": "no E2 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_eval_outputs[none]",
+          "reason": "no E2/E4 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e3_protocol.test_scale_output_records_required_fields[None]",
+          "reason": "no artifacts/repo_scale/*.json output yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_scale]",
+          "reason": "no runs recorded under artifacts/repo_scale"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_benefit]",
+          "reason": "no runs recorded under artifacts/repo_benefit"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_run_record_is_reproducible[NOTSET]",
+          "reason": "got empty parameter set for (cat, path)"
         }
       ],
       "limitations": [
@@ -557,8 +668,7 @@
         "Independent clean reproduction, score recomputation, 12-question live rerun, three reset demos, claim card and official submission deliverables remain incomplete.",
         "Independent AI evaluation draft is unsigned; Click corpus/source expectations remain sealed from implementer. No fresh T0/T2/T10 validation.",
         "Request-local evidence work limits tested in development; cooperative deadlines do not prove hard OS wall-time/memory or model-token bounds. Independent 120-case draft prepared, no frozen signature or blind-scored results.",
-        "Latest source812ecf7 has affected-subset/live-control checks; full1059-test run is historical8058032. Independent clean full reproduction pending.",
-        "Latest sourcef8faa67 has Git graft/parent-refresh focused checks; independent clean full reproduction is running separately. Sealed heldout package remains unused."
+        "Independent clean deterministic reproduction on f8faa67 passed1068 tests with6 missing-artifact skips and3 live exclusions; heldout generation/scoring, live12 reruns and3 demos remain unperformed. New evaluation infrastructure is tested separately and is not part of that168-file source pin."
       ],
       "reviewer": null,
       "validated_at": null
@@ -607,7 +717,8 @@
         "goal-source-freshness-development-2026-10-18",
         "goal-query-budgets-development-2026-10-18",
         "goal-control-flags-development-2026-10-18",
-        "goal-graft-development-2026-10-18"
+        "goal-graft-development-2026-10-18",
+        "goal-independent-development-reproduction-2026-10-18"
       ],
       "artifact_links": [
         "docs/reviews/goal-branch-review.md",
@@ -625,7 +736,10 @@
         "docs/reviews/goal-control-flags.md",
         "docs/reviews/goal-control-flags-evidence/run-summary.json",
         "docs/reviews/goal-git-grafts.md",
-        "docs/reviews/goal-graft-evidence/run-summary.json"
+        "docs/reviews/goal-graft-evidence/run-summary.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/README.md",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/HANDOFF.json"
       ],
       "observed_metrics": {
         "development_regression_only": true,
@@ -681,7 +795,23 @@
             "aborted": false,
             "validation_errors": []
           }
-        ]
+        ],
+        "independent_development_reproduction": {
+          "implementation_commit": "f8faa67f5b9c9d0d2682ecff7d10d3ac084cf242",
+          "passed": 1068,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 6,
+          "live_deselected": 3,
+          "pytest_summary_seconds": 277.87,
+          "javascript_passed": 16,
+          "deterministic_smoke": "PASS",
+          "source_files": 168,
+          "source_hash_mismatches": 0,
+          "heldout_questions_run": 0,
+          "artifact": "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+          "acceptance_inference": "none; development deterministic reproduction only"
+        }
       },
       "thresholds": {
         "T2": {
@@ -840,6 +970,42 @@
           "run_id": "goal-graft-development-2026-10-18",
           "historical": true,
           "detail": "Initial ancestry overlays and stale-parent retry failed; interim missing-todo edit failed; final37case subset passed. Attempts preserved."
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_e2_history_outputs[none]",
+          "reason": "no E2 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_eval_outputs[none]",
+          "reason": "no E2/E4 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e3_protocol.test_scale_output_records_required_fields[None]",
+          "reason": "no artifacts/repo_scale/*.json output yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_scale]",
+          "reason": "no runs recorded under artifacts/repo_scale"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_benefit]",
+          "reason": "no runs recorded under artifacts/repo_benefit"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_run_record_is_reproducible[NOTSET]",
+          "reason": "got empty parameter set for (cat, path)"
         }
       ],
       "limitations": [
@@ -850,8 +1016,7 @@
         "Typed MCP and regression parity are implemented. Full live transport failure/cancellation/restart/parallel/follow-up matrix on real repositories remains incomplete.",
         "Independent AI evaluation draft is unsigned; Click corpus/source expectations remain sealed from implementer. No fresh T0/T2/T10 validation.",
         "Request-local evidence work limits tested in development; cooperative deadlines do not prove hard OS wall-time/memory or model-token bounds. Independent 120-case draft prepared, no frozen signature or blind-scored results.",
-        "Latest source812ecf7 has affected-subset/live-control checks; full1059-test run is historical8058032. Independent clean full reproduction pending.",
-        "Latest sourcef8faa67 has Git graft/parent-refresh focused checks; independent clean full reproduction is running separately. Sealed heldout package remains unused."
+        "Independent clean deterministic reproduction on f8faa67 passed1068 tests with6 missing-artifact skips and3 live exclusions; heldout generation/scoring, live12 reruns and3 demos remain unperformed. New evaluation infrastructure is tested separately and is not part of that168-file source pin."
       ],
       "reviewer": null,
       "validated_at": null
@@ -894,7 +1059,8 @@
         "goal-source-freshness-development-2026-10-18",
         "goal-query-budgets-development-2026-10-18",
         "goal-control-flags-development-2026-10-18",
-        "goal-graft-development-2026-10-18"
+        "goal-graft-development-2026-10-18",
+        "goal-independent-development-reproduction-2026-10-18"
       ],
       "artifact_links": [
         "docs/reviews/goal-branch-review.md",
@@ -912,7 +1078,10 @@
         "docs/reviews/goal-control-flags.md",
         "docs/reviews/goal-control-flags-evidence/run-summary.json",
         "docs/reviews/goal-git-grafts.md",
-        "docs/reviews/goal-graft-evidence/run-summary.json"
+        "docs/reviews/goal-graft-evidence/run-summary.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/README.md",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/HANDOFF.json"
       ],
       "observed_metrics": {
         "development_regression_only": true,
@@ -968,7 +1137,23 @@
             "aborted": false,
             "validation_errors": []
           }
-        ]
+        ],
+        "independent_development_reproduction": {
+          "implementation_commit": "f8faa67f5b9c9d0d2682ecff7d10d3ac084cf242",
+          "passed": 1068,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 6,
+          "live_deselected": 3,
+          "pytest_summary_seconds": 277.87,
+          "javascript_passed": 16,
+          "deterministic_smoke": "PASS",
+          "source_files": 168,
+          "source_hash_mismatches": 0,
+          "heldout_questions_run": 0,
+          "artifact": "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+          "acceptance_inference": "none; development deterministic reproduction only"
+        }
       },
       "thresholds": {
         "T0": {
@@ -1122,6 +1307,42 @@
           "run_id": "goal-graft-development-2026-10-18",
           "historical": true,
           "detail": "Initial ancestry overlays and stale-parent retry failed; interim missing-todo edit failed; final37case subset passed. Attempts preserved."
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_e2_history_outputs[none]",
+          "reason": "no E2 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_eval_outputs[none]",
+          "reason": "no E2/E4 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e3_protocol.test_scale_output_records_required_fields[None]",
+          "reason": "no artifacts/repo_scale/*.json output yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_scale]",
+          "reason": "no runs recorded under artifacts/repo_scale"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_benefit]",
+          "reason": "no runs recorded under artifacts/repo_benefit"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_run_record_is_reproducible[NOTSET]",
+          "reason": "got empty parameter set for (cat, path)"
         }
       ],
       "limitations": [
@@ -1132,8 +1353,7 @@
         "Independent clean reproduction, score recomputation, 12-question live rerun, three reset demos, claim card and official submission deliverables remain incomplete.",
         "Independent AI evaluation draft is unsigned; Click corpus/source expectations remain sealed from implementer. No fresh T0/T2/T10 validation.",
         "Request-local evidence work limits tested in development; cooperative deadlines do not prove hard OS wall-time/memory or model-token bounds. Independent 120-case draft prepared, no frozen signature or blind-scored results.",
-        "Latest source812ecf7 has affected-subset/live-control checks; full1059-test run is historical8058032. Independent clean full reproduction pending.",
-        "Latest sourcef8faa67 has Git graft/parent-refresh focused checks; independent clean full reproduction is running separately. Sealed heldout package remains unused."
+        "Independent clean deterministic reproduction on f8faa67 passed1068 tests with6 missing-artifact skips and3 live exclusions; heldout generation/scoring, live12 reruns and3 demos remain unperformed. New evaluation infrastructure is tested separately and is not part of that168-file source pin."
       ],
       "reviewer": null,
       "validated_at": null
@@ -1178,7 +1398,8 @@
         "goal-source-freshness-development-2026-10-18",
         "goal-query-budgets-development-2026-10-18",
         "goal-control-flags-development-2026-10-18",
-        "goal-graft-development-2026-10-18"
+        "goal-graft-development-2026-10-18",
+        "goal-independent-development-reproduction-2026-10-18"
       ],
       "artifact_links": [
         "docs/reviews/goal-branch-review.md",
@@ -1196,7 +1417,10 @@
         "docs/reviews/goal-control-flags.md",
         "docs/reviews/goal-control-flags-evidence/run-summary.json",
         "docs/reviews/goal-git-grafts.md",
-        "docs/reviews/goal-graft-evidence/run-summary.json"
+        "docs/reviews/goal-graft-evidence/run-summary.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/README.md",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/HANDOFF.json"
       ],
       "observed_metrics": {
         "development_regression_only": true,
@@ -1252,7 +1476,23 @@
             "aborted": false,
             "validation_errors": []
           }
-        ]
+        ],
+        "independent_development_reproduction": {
+          "implementation_commit": "f8faa67f5b9c9d0d2682ecff7d10d3ac084cf242",
+          "passed": 1068,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 6,
+          "live_deselected": 3,
+          "pytest_summary_seconds": 277.87,
+          "javascript_passed": 16,
+          "deterministic_smoke": "PASS",
+          "source_files": 168,
+          "source_hash_mismatches": 0,
+          "heldout_questions_run": 0,
+          "artifact": "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+          "acceptance_inference": "none; development deterministic reproduction only"
+        }
       },
       "thresholds": {
         "T1": {
@@ -1410,6 +1650,42 @@
           "run_id": "goal-graft-development-2026-10-18",
           "historical": true,
           "detail": "Initial ancestry overlays and stale-parent retry failed; interim missing-todo edit failed; final37case subset passed. Attempts preserved."
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_e2_history_outputs[none]",
+          "reason": "no E2 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_eval_outputs[none]",
+          "reason": "no E2/E4 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e3_protocol.test_scale_output_records_required_fields[None]",
+          "reason": "no artifacts/repo_scale/*.json output yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_scale]",
+          "reason": "no runs recorded under artifacts/repo_scale"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_benefit]",
+          "reason": "no runs recorded under artifacts/repo_benefit"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_run_record_is_reproducible[NOTSET]",
+          "reason": "got empty parameter set for (cat, path)"
         }
       ],
       "limitations": [
@@ -1419,8 +1695,7 @@
         "Independent clean reproduction, score recomputation, 12-question live rerun, three reset demos, claim card and official submission deliverables remain incomplete.",
         "Independent AI evaluation draft is unsigned; Click corpus/source expectations remain sealed from implementer. No fresh T0/T2/T10 validation.",
         "Request-local evidence work limits tested in development; cooperative deadlines do not prove hard OS wall-time/memory or model-token bounds. Independent 120-case draft prepared, no frozen signature or blind-scored results.",
-        "Latest source812ecf7 has affected-subset/live-control checks; full1059-test run is historical8058032. Independent clean full reproduction pending.",
-        "Latest sourcef8faa67 has Git graft/parent-refresh focused checks; independent clean full reproduction is running separately. Sealed heldout package remains unused."
+        "Independent clean deterministic reproduction on f8faa67 passed1068 tests with6 missing-artifact skips and3 live exclusions; heldout generation/scoring, live12 reruns and3 demos remain unperformed. New evaluation infrastructure is tested separately and is not part of that168-file source pin."
       ],
       "reviewer": null,
       "validated_at": null
@@ -1458,7 +1733,8 @@
         "goal-source-freshness-development-2026-10-18",
         "goal-query-budgets-development-2026-10-18",
         "goal-control-flags-development-2026-10-18",
-        "goal-graft-development-2026-10-18"
+        "goal-graft-development-2026-10-18",
+        "goal-independent-development-reproduction-2026-10-18"
       ],
       "artifact_links": [
         "docs/reviews/goal-branch-review.md",
@@ -1476,7 +1752,10 @@
         "docs/reviews/goal-control-flags.md",
         "docs/reviews/goal-control-flags-evidence/run-summary.json",
         "docs/reviews/goal-git-grafts.md",
-        "docs/reviews/goal-graft-evidence/run-summary.json"
+        "docs/reviews/goal-graft-evidence/run-summary.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/README.md",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/HANDOFF.json"
       ],
       "observed_metrics": {
         "development_regression_only": true,
@@ -1532,7 +1811,23 @@
             "aborted": false,
             "validation_errors": []
           }
-        ]
+        ],
+        "independent_development_reproduction": {
+          "implementation_commit": "f8faa67f5b9c9d0d2682ecff7d10d3ac084cf242",
+          "passed": 1068,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 6,
+          "live_deselected": 3,
+          "pytest_summary_seconds": 277.87,
+          "javascript_passed": 16,
+          "deterministic_smoke": "PASS",
+          "source_files": 168,
+          "source_hash_mismatches": 0,
+          "heldout_questions_run": 0,
+          "artifact": "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+          "acceptance_inference": "none; development deterministic reproduction only"
+        }
       },
       "thresholds": {
         "T1": {
@@ -1677,6 +1972,42 @@
           "run_id": "goal-graft-development-2026-10-18",
           "historical": true,
           "detail": "Initial ancestry overlays and stale-parent retry failed; interim missing-todo edit failed; final37case subset passed. Attempts preserved."
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_e2_history_outputs[none]",
+          "reason": "no E2 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_eval_outputs[none]",
+          "reason": "no E2/E4 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e3_protocol.test_scale_output_records_required_fields[None]",
+          "reason": "no artifacts/repo_scale/*.json output yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_scale]",
+          "reason": "no runs recorded under artifacts/repo_scale"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_benefit]",
+          "reason": "no runs recorded under artifacts/repo_benefit"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_run_record_is_reproducible[NOTSET]",
+          "reason": "got empty parameter set for (cat, path)"
         }
       ],
       "limitations": [
@@ -1685,8 +2016,7 @@
         "Independent clean reproduction, score recomputation, 12-question live rerun, three reset demos, claim card and official submission deliverables remain incomplete.",
         "Independent AI evaluation draft is unsigned; Click corpus/source expectations remain sealed from implementer. No fresh T0/T2/T10 validation.",
         "Request-local evidence work limits tested in development; cooperative deadlines do not prove hard OS wall-time/memory or model-token bounds. Independent 120-case draft prepared, no frozen signature or blind-scored results.",
-        "Latest source812ecf7 has affected-subset/live-control checks; full1059-test run is historical8058032. Independent clean full reproduction pending.",
-        "Latest sourcef8faa67 has Git graft/parent-refresh focused checks; independent clean full reproduction is running separately. Sealed heldout package remains unused."
+        "Independent clean deterministic reproduction on f8faa67 passed1068 tests with6 missing-artifact skips and3 live exclusions; heldout generation/scoring, live12 reruns and3 demos remain unperformed. New evaluation infrastructure is tested separately and is not part of that168-file source pin."
       ],
       "reviewer": null,
       "validated_at": null
@@ -1738,7 +2068,8 @@
         "goal-source-freshness-development-2026-10-18",
         "goal-query-budgets-development-2026-10-18",
         "goal-control-flags-development-2026-10-18",
-        "goal-graft-development-2026-10-18"
+        "goal-graft-development-2026-10-18",
+        "goal-independent-development-reproduction-2026-10-18"
       ],
       "artifact_links": [
         "docs/reviews/goal-branch-review.md",
@@ -1756,7 +2087,10 @@
         "docs/reviews/goal-control-flags.md",
         "docs/reviews/goal-control-flags-evidence/run-summary.json",
         "docs/reviews/goal-git-grafts.md",
-        "docs/reviews/goal-graft-evidence/run-summary.json"
+        "docs/reviews/goal-graft-evidence/run-summary.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/README.md",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/HANDOFF.json"
       ],
       "observed_metrics": {
         "development_regression_only": true,
@@ -1812,7 +2146,23 @@
             "aborted": false,
             "validation_errors": []
           }
-        ]
+        ],
+        "independent_development_reproduction": {
+          "implementation_commit": "f8faa67f5b9c9d0d2682ecff7d10d3ac084cf242",
+          "passed": 1068,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 6,
+          "live_deselected": 3,
+          "pytest_summary_seconds": 277.87,
+          "javascript_passed": 16,
+          "deterministic_smoke": "PASS",
+          "source_files": 168,
+          "source_hash_mismatches": 0,
+          "heldout_questions_run": 0,
+          "artifact": "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+          "acceptance_inference": "none; development deterministic reproduction only"
+        }
       },
       "thresholds": {
         "T0": {
@@ -1979,6 +2329,42 @@
           "run_id": "goal-graft-development-2026-10-18",
           "historical": true,
           "detail": "Initial ancestry overlays and stale-parent retry failed; interim missing-todo edit failed; final37case subset passed. Attempts preserved."
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_e2_history_outputs[none]",
+          "reason": "no E2 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_eval_outputs[none]",
+          "reason": "no E2/E4 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e3_protocol.test_scale_output_records_required_fields[None]",
+          "reason": "no artifacts/repo_scale/*.json output yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_scale]",
+          "reason": "no runs recorded under artifacts/repo_scale"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_benefit]",
+          "reason": "no runs recorded under artifacts/repo_benefit"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_run_record_is_reproducible[NOTSET]",
+          "reason": "got empty parameter set for (cat, path)"
         }
       ],
       "limitations": [
@@ -1990,8 +2376,7 @@
         "Independent clean reproduction, score recomputation, 12-question live rerun, three reset demos, claim card and official submission deliverables remain incomplete.",
         "Independent AI evaluation draft is unsigned; Click corpus/source expectations remain sealed from implementer. No fresh T0/T2/T10 validation.",
         "Request-local evidence work limits tested in development; cooperative deadlines do not prove hard OS wall-time/memory or model-token bounds. Independent 120-case draft prepared, no frozen signature or blind-scored results.",
-        "Latest source812ecf7 has affected-subset/live-control checks; full1059-test run is historical8058032. Independent clean full reproduction pending.",
-        "Latest sourcef8faa67 has Git graft/parent-refresh focused checks; independent clean full reproduction is running separately. Sealed heldout package remains unused."
+        "Independent clean deterministic reproduction on f8faa67 passed1068 tests with6 missing-artifact skips and3 live exclusions; heldout generation/scoring, live12 reruns and3 demos remain unperformed. New evaluation infrastructure is tested separately and is not part of that168-file source pin."
       ],
       "reviewer": null,
       "validated_at": null
@@ -2045,7 +2430,8 @@
         "goal-source-freshness-development-2026-10-18",
         "goal-query-budgets-development-2026-10-18",
         "goal-control-flags-development-2026-10-18",
-        "goal-graft-development-2026-10-18"
+        "goal-graft-development-2026-10-18",
+        "goal-independent-development-reproduction-2026-10-18"
       ],
       "artifact_links": [
         "docs/reviews/goal-branch-review.md",
@@ -2063,7 +2449,10 @@
         "docs/reviews/goal-control-flags.md",
         "docs/reviews/goal-control-flags-evidence/run-summary.json",
         "docs/reviews/goal-git-grafts.md",
-        "docs/reviews/goal-graft-evidence/run-summary.json"
+        "docs/reviews/goal-graft-evidence/run-summary.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/README.md",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/HANDOFF.json"
       ],
       "observed_metrics": {
         "development_regression_only": true,
@@ -2119,7 +2508,23 @@
             "aborted": false,
             "validation_errors": []
           }
-        ]
+        ],
+        "independent_development_reproduction": {
+          "implementation_commit": "f8faa67f5b9c9d0d2682ecff7d10d3ac084cf242",
+          "passed": 1068,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 6,
+          "live_deselected": 3,
+          "pytest_summary_seconds": 277.87,
+          "javascript_passed": 16,
+          "deterministic_smoke": "PASS",
+          "source_files": 168,
+          "source_hash_mismatches": 0,
+          "heldout_questions_run": 0,
+          "artifact": "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+          "acceptance_inference": "none; development deterministic reproduction only"
+        }
       },
       "thresholds": {
         "T2": {
@@ -2287,6 +2692,42 @@
           "run_id": "goal-graft-development-2026-10-18",
           "historical": true,
           "detail": "Initial ancestry overlays and stale-parent retry failed; interim missing-todo edit failed; final37case subset passed. Attempts preserved."
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_e2_history_outputs[none]",
+          "reason": "no E2 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_eval_outputs[none]",
+          "reason": "no E2/E4 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e3_protocol.test_scale_output_records_required_fields[None]",
+          "reason": "no artifacts/repo_scale/*.json output yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_scale]",
+          "reason": "no runs recorded under artifacts/repo_scale"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_benefit]",
+          "reason": "no runs recorded under artifacts/repo_benefit"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_run_record_is_reproducible[NOTSET]",
+          "reason": "got empty parameter set for (cat, path)"
         }
       ],
       "limitations": [
@@ -2299,8 +2740,7 @@
         "Independent clean reproduction, score recomputation, 12-question live rerun, three reset demos, claim card and official submission deliverables remain incomplete.",
         "Independent AI evaluation draft is unsigned; Click corpus/source expectations remain sealed from implementer. No fresh T0/T2/T10 validation.",
         "Request-local evidence work limits tested in development; cooperative deadlines do not prove hard OS wall-time/memory or model-token bounds. Independent 120-case draft prepared, no frozen signature or blind-scored results.",
-        "Latest source812ecf7 has affected-subset/live-control checks; full1059-test run is historical8058032. Independent clean full reproduction pending.",
-        "Latest sourcef8faa67 has Git graft/parent-refresh focused checks; independent clean full reproduction is running separately. Sealed heldout package remains unused."
+        "Independent clean deterministic reproduction on f8faa67 passed1068 tests with6 missing-artifact skips and3 live exclusions; heldout generation/scoring, live12 reruns and3 demos remain unperformed. New evaluation infrastructure is tested separately and is not part of that168-file source pin."
       ],
       "reviewer": null,
       "validated_at": null
@@ -2343,7 +2783,8 @@
         "goal-source-freshness-development-2026-10-18",
         "goal-query-budgets-development-2026-10-18",
         "goal-control-flags-development-2026-10-18",
-        "goal-graft-development-2026-10-18"
+        "goal-graft-development-2026-10-18",
+        "goal-independent-development-reproduction-2026-10-18"
       ],
       "artifact_links": [
         "docs/reviews/goal-branch-review.md",
@@ -2361,7 +2802,10 @@
         "docs/reviews/goal-control-flags.md",
         "docs/reviews/goal-control-flags-evidence/run-summary.json",
         "docs/reviews/goal-git-grafts.md",
-        "docs/reviews/goal-graft-evidence/run-summary.json"
+        "docs/reviews/goal-graft-evidence/run-summary.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/README.md",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/HANDOFF.json"
       ],
       "observed_metrics": {
         "development_regression_only": true,
@@ -2417,7 +2861,23 @@
             "aborted": false,
             "validation_errors": []
           }
-        ]
+        ],
+        "independent_development_reproduction": {
+          "implementation_commit": "f8faa67f5b9c9d0d2682ecff7d10d3ac084cf242",
+          "passed": 1068,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 6,
+          "live_deselected": 3,
+          "pytest_summary_seconds": 277.87,
+          "javascript_passed": 16,
+          "deterministic_smoke": "PASS",
+          "source_files": 168,
+          "source_hash_mismatches": 0,
+          "heldout_questions_run": 0,
+          "artifact": "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+          "acceptance_inference": "none; development deterministic reproduction only"
+        }
       },
       "thresholds": {
         "T0": {
@@ -2571,6 +3031,42 @@
           "run_id": "goal-graft-development-2026-10-18",
           "historical": true,
           "detail": "Initial ancestry overlays and stale-parent retry failed; interim missing-todo edit failed; final37case subset passed. Attempts preserved."
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_e2_history_outputs[none]",
+          "reason": "no E2 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_eval_outputs[none]",
+          "reason": "no E2/E4 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e3_protocol.test_scale_output_records_required_fields[None]",
+          "reason": "no artifacts/repo_scale/*.json output yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_scale]",
+          "reason": "no runs recorded under artifacts/repo_scale"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_benefit]",
+          "reason": "no runs recorded under artifacts/repo_benefit"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_run_record_is_reproducible[NOTSET]",
+          "reason": "got empty parameter set for (cat, path)"
         }
       ],
       "limitations": [
@@ -2581,8 +3077,7 @@
         "Independent clean reproduction, score recomputation, 12-question live rerun, three reset demos, claim card and official submission deliverables remain incomplete.",
         "Independent AI evaluation draft is unsigned; Click corpus/source expectations remain sealed from implementer. No fresh T0/T2/T10 validation.",
         "Request-local evidence work limits tested in development; cooperative deadlines do not prove hard OS wall-time/memory or model-token bounds. Independent 120-case draft prepared, no frozen signature or blind-scored results.",
-        "Latest source812ecf7 has affected-subset/live-control checks; full1059-test run is historical8058032. Independent clean full reproduction pending.",
-        "Latest sourcef8faa67 has Git graft/parent-refresh focused checks; independent clean full reproduction is running separately. Sealed heldout package remains unused."
+        "Independent clean deterministic reproduction on f8faa67 passed1068 tests with6 missing-artifact skips and3 live exclusions; heldout generation/scoring, live12 reruns and3 demos remain unperformed. New evaluation infrastructure is tested separately and is not part of that168-file source pin."
       ],
       "reviewer": null,
       "validated_at": null
@@ -2628,7 +3123,8 @@
         "goal-source-freshness-development-2026-10-18",
         "goal-query-budgets-development-2026-10-18",
         "goal-control-flags-development-2026-10-18",
-        "goal-graft-development-2026-10-18"
+        "goal-graft-development-2026-10-18",
+        "goal-independent-development-reproduction-2026-10-18"
       ],
       "artifact_links": [
         "docs/reviews/goal-branch-review.md",
@@ -2646,7 +3142,10 @@
         "docs/reviews/goal-control-flags.md",
         "docs/reviews/goal-control-flags-evidence/run-summary.json",
         "docs/reviews/goal-git-grafts.md",
-        "docs/reviews/goal-graft-evidence/run-summary.json"
+        "docs/reviews/goal-graft-evidence/run-summary.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/README.md",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/HANDOFF.json"
       ],
       "observed_metrics": {
         "development_regression_only": true,
@@ -2702,7 +3201,23 @@
             "aborted": false,
             "validation_errors": []
           }
-        ]
+        ],
+        "independent_development_reproduction": {
+          "implementation_commit": "f8faa67f5b9c9d0d2682ecff7d10d3ac084cf242",
+          "passed": 1068,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 6,
+          "live_deselected": 3,
+          "pytest_summary_seconds": 277.87,
+          "javascript_passed": 16,
+          "deterministic_smoke": "PASS",
+          "source_files": 168,
+          "source_hash_mismatches": 0,
+          "heldout_questions_run": 0,
+          "artifact": "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+          "acceptance_inference": "none; development deterministic reproduction only"
+        }
       },
       "thresholds": {
         "T0": {
@@ -2883,6 +3398,42 @@
           "run_id": "goal-graft-development-2026-10-18",
           "historical": true,
           "detail": "Initial ancestry overlays and stale-parent retry failed; interim missing-todo edit failed; final37case subset passed. Attempts preserved."
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_e2_history_outputs[none]",
+          "reason": "no E2 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_eval_outputs[none]",
+          "reason": "no E2/E4 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e3_protocol.test_scale_output_records_required_fields[None]",
+          "reason": "no artifacts/repo_scale/*.json output yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_scale]",
+          "reason": "no runs recorded under artifacts/repo_scale"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_benefit]",
+          "reason": "no runs recorded under artifacts/repo_benefit"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_run_record_is_reproducible[NOTSET]",
+          "reason": "got empty parameter set for (cat, path)"
         }
       ],
       "limitations": [
@@ -2894,8 +3445,7 @@
         "Independent clean reproduction, score recomputation, 12-question live rerun, three reset demos, claim card and official submission deliverables remain incomplete.",
         "Independent AI evaluation draft is unsigned; Click corpus/source expectations remain sealed from implementer. No fresh T0/T2/T10 validation.",
         "Request-local evidence work limits tested in development; cooperative deadlines do not prove hard OS wall-time/memory or model-token bounds. Independent 120-case draft prepared, no frozen signature or blind-scored results.",
-        "Latest source812ecf7 has affected-subset/live-control checks; full1059-test run is historical8058032. Independent clean full reproduction pending.",
-        "Latest sourcef8faa67 has Git graft/parent-refresh focused checks; independent clean full reproduction is running separately. Sealed heldout package remains unused."
+        "Independent clean deterministic reproduction on f8faa67 passed1068 tests with6 missing-artifact skips and3 live exclusions; heldout generation/scoring, live12 reruns and3 demos remain unperformed. New evaluation infrastructure is tested separately and is not part of that168-file source pin."
       ],
       "reviewer": null,
       "validated_at": null
@@ -2964,7 +3514,8 @@
         "goal-source-freshness-development-2026-10-18",
         "goal-query-budgets-development-2026-10-18",
         "goal-control-flags-development-2026-10-18",
-        "goal-graft-development-2026-10-18"
+        "goal-graft-development-2026-10-18",
+        "goal-independent-development-reproduction-2026-10-18"
       ],
       "artifact_links": [
         "docs/reviews/goal-branch-review.md",
@@ -2982,7 +3533,10 @@
         "docs/reviews/goal-control-flags.md",
         "docs/reviews/goal-control-flags-evidence/run-summary.json",
         "docs/reviews/goal-git-grafts.md",
-        "docs/reviews/goal-graft-evidence/run-summary.json"
+        "docs/reviews/goal-graft-evidence/run-summary.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/README.md",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/HANDOFF.json"
       ],
       "observed_metrics": {
         "development_regression_only": true,
@@ -3038,7 +3592,23 @@
             "aborted": false,
             "validation_errors": []
           }
-        ]
+        ],
+        "independent_development_reproduction": {
+          "implementation_commit": "f8faa67f5b9c9d0d2682ecff7d10d3ac084cf242",
+          "passed": 1068,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 6,
+          "live_deselected": 3,
+          "pytest_summary_seconds": 277.87,
+          "javascript_passed": 16,
+          "deterministic_smoke": "PASS",
+          "source_files": 168,
+          "source_hash_mismatches": 0,
+          "heldout_questions_run": 0,
+          "artifact": "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+          "acceptance_inference": "none; development deterministic reproduction only"
+        }
       },
       "thresholds": {
         "T0": {
@@ -3246,6 +3816,42 @@
           "run_id": "goal-graft-development-2026-10-18",
           "historical": true,
           "detail": "Initial ancestry overlays and stale-parent retry failed; interim missing-todo edit failed; final37case subset passed. Attempts preserved."
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_e2_history_outputs[none]",
+          "reason": "no E2 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_eval_outputs[none]",
+          "reason": "no E2/E4 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e3_protocol.test_scale_output_records_required_fields[None]",
+          "reason": "no artifacts/repo_scale/*.json output yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_scale]",
+          "reason": "no runs recorded under artifacts/repo_scale"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_benefit]",
+          "reason": "no runs recorded under artifacts/repo_benefit"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_run_record_is_reproducible[NOTSET]",
+          "reason": "got empty parameter set for (cat, path)"
         }
       ],
       "limitations": [
@@ -3263,8 +3869,7 @@
         "Independent clean reproduction, score recomputation, 12-question live rerun, three reset demos, claim card and official submission deliverables remain incomplete.",
         "Independent AI evaluation draft is unsigned; Click corpus/source expectations remain sealed from implementer. No fresh T0/T2/T10 validation.",
         "Request-local evidence work limits tested in development; cooperative deadlines do not prove hard OS wall-time/memory or model-token bounds. Independent 120-case draft prepared, no frozen signature or blind-scored results.",
-        "Latest source812ecf7 has affected-subset/live-control checks; full1059-test run is historical8058032. Independent clean full reproduction pending.",
-        "Latest sourcef8faa67 has Git graft/parent-refresh focused checks; independent clean full reproduction is running separately. Sealed heldout package remains unused."
+        "Independent clean deterministic reproduction on f8faa67 passed1068 tests with6 missing-artifact skips and3 live exclusions; heldout generation/scoring, live12 reruns and3 demos remain unperformed. New evaluation infrastructure is tested separately and is not part of that168-file source pin."
       ],
       "reviewer": null,
       "validated_at": null
@@ -3294,7 +3899,8 @@
         "goal-source-freshness-development-2026-10-18",
         "goal-query-budgets-development-2026-10-18",
         "goal-control-flags-development-2026-10-18",
-        "goal-graft-development-2026-10-18"
+        "goal-graft-development-2026-10-18",
+        "goal-independent-development-reproduction-2026-10-18"
       ],
       "artifact_links": [
         "docs/reviews/goal-branch-review.md",
@@ -3312,7 +3918,10 @@
         "docs/reviews/goal-control-flags.md",
         "docs/reviews/goal-control-flags-evidence/run-summary.json",
         "docs/reviews/goal-git-grafts.md",
-        "docs/reviews/goal-graft-evidence/run-summary.json"
+        "docs/reviews/goal-graft-evidence/run-summary.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/README.md",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/HANDOFF.json"
       ],
       "observed_metrics": {
         "development_regression_only": true,
@@ -3368,7 +3977,23 @@
             "aborted": false,
             "validation_errors": []
           }
-        ]
+        ],
+        "independent_development_reproduction": {
+          "implementation_commit": "f8faa67f5b9c9d0d2682ecff7d10d3ac084cf242",
+          "passed": 1068,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 6,
+          "live_deselected": 3,
+          "pytest_summary_seconds": 277.87,
+          "javascript_passed": 16,
+          "deterministic_smoke": "PASS",
+          "source_files": 168,
+          "source_hash_mismatches": 0,
+          "heldout_questions_run": 0,
+          "artifact": "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+          "acceptance_inference": "none; development deterministic reproduction only"
+        }
       },
       "thresholds": {
         "T0": {
@@ -3501,14 +4126,49 @@
           "run_id": "goal-graft-development-2026-10-18",
           "historical": true,
           "detail": "Initial ancestry overlays and stale-parent retry failed; interim missing-todo edit failed; final37case subset passed. Attempts preserved."
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_e2_history_outputs[none]",
+          "reason": "no E2 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_eval_outputs[none]",
+          "reason": "no E2/E4 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e3_protocol.test_scale_output_records_required_fields[None]",
+          "reason": "no artifacts/repo_scale/*.json output yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_scale]",
+          "reason": "no runs recorded under artifacts/repo_scale"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_benefit]",
+          "reason": "no runs recorded under artifacts/repo_benefit"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_run_record_is_reproducible[NOTSET]",
+          "reason": "got empty parameter set for (cat, path)"
         }
       ],
       "limitations": [
         "No new independently signed evaluation plan or fresh frozen holdout is available. Old inspected questions are development data.",
         "Independent AI evaluation draft is unsigned; Click corpus/source expectations remain sealed from implementer. No fresh T0/T2/T10 validation.",
         "Request-local evidence work limits tested in development; cooperative deadlines do not prove hard OS wall-time/memory or model-token bounds. Independent 120-case draft prepared, no frozen signature or blind-scored results.",
-        "Latest source812ecf7 has affected-subset/live-control checks; full1059-test run is historical8058032. Independent clean full reproduction pending.",
-        "Latest sourcef8faa67 has Git graft/parent-refresh focused checks; independent clean full reproduction is running separately. Sealed heldout package remains unused."
+        "Independent clean deterministic reproduction on f8faa67 passed1068 tests with6 missing-artifact skips and3 live exclusions; heldout generation/scoring, live12 reruns and3 demos remain unperformed. New evaluation infrastructure is tested separately and is not part of that168-file source pin."
       ],
       "reviewer": null,
       "validated_at": null
@@ -3539,7 +4199,8 @@
         "goal-source-freshness-development-2026-10-18",
         "goal-query-budgets-development-2026-10-18",
         "goal-control-flags-development-2026-10-18",
-        "goal-graft-development-2026-10-18"
+        "goal-graft-development-2026-10-18",
+        "goal-independent-development-reproduction-2026-10-18"
       ],
       "artifact_links": [
         "docs/reviews/goal-branch-review.md",
@@ -3557,7 +4218,10 @@
         "docs/reviews/goal-control-flags.md",
         "docs/reviews/goal-control-flags-evidence/run-summary.json",
         "docs/reviews/goal-git-grafts.md",
-        "docs/reviews/goal-graft-evidence/run-summary.json"
+        "docs/reviews/goal-graft-evidence/run-summary.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/README.md",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/HANDOFF.json"
       ],
       "observed_metrics": {
         "development_regression_only": true,
@@ -3613,7 +4277,23 @@
             "aborted": false,
             "validation_errors": []
           }
-        ]
+        ],
+        "independent_development_reproduction": {
+          "implementation_commit": "f8faa67f5b9c9d0d2682ecff7d10d3ac084cf242",
+          "passed": 1068,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 6,
+          "live_deselected": 3,
+          "pytest_summary_seconds": 277.87,
+          "javascript_passed": 16,
+          "deterministic_smoke": "PASS",
+          "source_files": 168,
+          "source_hash_mismatches": 0,
+          "heldout_questions_run": 0,
+          "artifact": "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+          "acceptance_inference": "none; development deterministic reproduction only"
+        }
       },
       "thresholds": {
         "T1": {
@@ -3748,14 +4428,49 @@
           "run_id": "goal-graft-development-2026-10-18",
           "historical": true,
           "detail": "Initial ancestry overlays and stale-parent retry failed; interim missing-todo edit failed; final37case subset passed. Attempts preserved."
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_e2_history_outputs[none]",
+          "reason": "no E2 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_eval_outputs[none]",
+          "reason": "no E2/E4 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e3_protocol.test_scale_output_records_required_fields[None]",
+          "reason": "no artifacts/repo_scale/*.json output yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_scale]",
+          "reason": "no runs recorded under artifacts/repo_scale"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_benefit]",
+          "reason": "no runs recorded under artifacts/repo_benefit"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_run_record_is_reproducible[NOTSET]",
+          "reason": "got empty parameter set for (cat, path)"
         }
       ],
       "limitations": [
         "Previous unseen freeze is historical and does not match repaired core. Fresh configuration-only unseen trial and real-repository regressions remain required.",
         "Independent AI evaluation draft is unsigned; Click corpus/source expectations remain sealed from implementer. No fresh T0/T2/T10 validation.",
         "Request-local evidence work limits tested in development; cooperative deadlines do not prove hard OS wall-time/memory or model-token bounds. Independent 120-case draft prepared, no frozen signature or blind-scored results.",
-        "Latest source812ecf7 has affected-subset/live-control checks; full1059-test run is historical8058032. Independent clean full reproduction pending.",
-        "Latest sourcef8faa67 has Git graft/parent-refresh focused checks; independent clean full reproduction is running separately. Sealed heldout package remains unused."
+        "Independent clean deterministic reproduction on f8faa67 passed1068 tests with6 missing-artifact skips and3 live exclusions; heldout generation/scoring, live12 reruns and3 demos remain unperformed. New evaluation infrastructure is tested separately and is not part of that168-file source pin."
       ],
       "reviewer": null,
       "validated_at": null
@@ -3787,7 +4502,8 @@
         "goal-source-freshness-development-2026-10-18",
         "goal-query-budgets-development-2026-10-18",
         "goal-control-flags-development-2026-10-18",
-        "goal-graft-development-2026-10-18"
+        "goal-graft-development-2026-10-18",
+        "goal-independent-development-reproduction-2026-10-18"
       ],
       "artifact_links": [
         "docs/reviews/goal-branch-review.md",
@@ -3805,7 +4521,10 @@
         "docs/reviews/goal-control-flags.md",
         "docs/reviews/goal-control-flags-evidence/run-summary.json",
         "docs/reviews/goal-git-grafts.md",
-        "docs/reviews/goal-graft-evidence/run-summary.json"
+        "docs/reviews/goal-graft-evidence/run-summary.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/README.md",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/HANDOFF.json"
       ],
       "observed_metrics": {
         "development_regression_only": true,
@@ -3861,7 +4580,23 @@
             "aborted": false,
             "validation_errors": []
           }
-        ]
+        ],
+        "independent_development_reproduction": {
+          "implementation_commit": "f8faa67f5b9c9d0d2682ecff7d10d3ac084cf242",
+          "passed": 1068,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 6,
+          "live_deselected": 3,
+          "pytest_summary_seconds": 277.87,
+          "javascript_passed": 16,
+          "deterministic_smoke": "PASS",
+          "source_files": 168,
+          "source_hash_mismatches": 0,
+          "heldout_questions_run": 0,
+          "artifact": "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+          "acceptance_inference": "none; development deterministic reproduction only"
+        }
       },
       "thresholds": {
         "T2": {
@@ -4004,14 +4739,49 @@
           "run_id": "goal-graft-development-2026-10-18",
           "historical": true,
           "detail": "Initial ancestry overlays and stale-parent retry failed; interim missing-todo edit failed; final37case subset passed. Attempts preserved."
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_e2_history_outputs[none]",
+          "reason": "no E2 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_eval_outputs[none]",
+          "reason": "no E2/E4 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e3_protocol.test_scale_output_records_required_fields[None]",
+          "reason": "no artifacts/repo_scale/*.json output yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_scale]",
+          "reason": "no runs recorded under artifacts/repo_scale"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_benefit]",
+          "reason": "no runs recorded under artifacts/repo_benefit"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_run_record_is_reproducible[NOTSET]",
+          "reason": "got empty parameter set for (cat, path)"
         }
       ],
       "limitations": [
         "No compliant 120-question real-repository suite, blind double scoring or three-paired-repeat model experiment has run. Keyword/span checks are development diagnostics.",
         "Independent AI evaluation draft is unsigned; Click corpus/source expectations remain sealed from implementer. No fresh T0/T2/T10 validation.",
         "Request-local evidence work limits tested in development; cooperative deadlines do not prove hard OS wall-time/memory or model-token bounds. Independent 120-case draft prepared, no frozen signature or blind-scored results.",
-        "Latest source812ecf7 has affected-subset/live-control checks; full1059-test run is historical8058032. Independent clean full reproduction pending.",
-        "Latest sourcef8faa67 has Git graft/parent-refresh focused checks; independent clean full reproduction is running separately. Sealed heldout package remains unused."
+        "Independent clean deterministic reproduction on f8faa67 passed1068 tests with6 missing-artifact skips and3 live exclusions; heldout generation/scoring, live12 reruns and3 demos remain unperformed. New evaluation infrastructure is tested separately and is not part of that168-file source pin."
       ],
       "reviewer": null,
       "validated_at": null
@@ -4043,7 +4813,8 @@
         "goal-source-freshness-development-2026-10-18",
         "goal-query-budgets-development-2026-10-18",
         "goal-control-flags-development-2026-10-18",
-        "goal-graft-development-2026-10-18"
+        "goal-graft-development-2026-10-18",
+        "goal-independent-development-reproduction-2026-10-18"
       ],
       "artifact_links": [
         "docs/reviews/goal-branch-review.md",
@@ -4061,7 +4832,10 @@
         "docs/reviews/goal-control-flags.md",
         "docs/reviews/goal-control-flags-evidence/run-summary.json",
         "docs/reviews/goal-git-grafts.md",
-        "docs/reviews/goal-graft-evidence/run-summary.json"
+        "docs/reviews/goal-graft-evidence/run-summary.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/README.md",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/HANDOFF.json"
       ],
       "observed_metrics": {
         "development_regression_only": true,
@@ -4117,7 +4891,23 @@
             "aborted": false,
             "validation_errors": []
           }
-        ]
+        ],
+        "independent_development_reproduction": {
+          "implementation_commit": "f8faa67f5b9c9d0d2682ecff7d10d3ac084cf242",
+          "passed": 1068,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 6,
+          "live_deselected": 3,
+          "pytest_summary_seconds": 277.87,
+          "javascript_passed": 16,
+          "deterministic_smoke": "PASS",
+          "source_files": 168,
+          "source_hash_mismatches": 0,
+          "heldout_questions_run": 0,
+          "artifact": "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+          "acceptance_inference": "none; development deterministic reproduction only"
+        }
       },
       "thresholds": {
         "T3": {
@@ -4250,14 +5040,49 @@
           "run_id": "goal-graft-development-2026-10-18",
           "historical": true,
           "detail": "Initial ancestry overlays and stale-parent retry failed; interim missing-todo edit failed; final37case subset passed. Attempts preserved."
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_e2_history_outputs[none]",
+          "reason": "no E2 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_eval_outputs[none]",
+          "reason": "no E2/E4 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e3_protocol.test_scale_output_records_required_fields[None]",
+          "reason": "no artifacts/repo_scale/*.json output yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_scale]",
+          "reason": "no runs recorded under artifacts/repo_scale"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_benefit]",
+          "reason": "no runs recorded under artifacts/repo_benefit"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_run_record_is_reproducible[NOTSET]",
+          "reason": "got empty parameter set for (cat, path)"
         }
       ],
       "limitations": [
         "100 seeded mini histories and sharp regressions cover a subset, not the entire required independent Git DAG matrix or real heldouts.",
         "Independent AI evaluation draft is unsigned; Click corpus/source expectations remain sealed from implementer. No fresh T0/T2/T10 validation.",
         "Request-local evidence work limits tested in development; cooperative deadlines do not prove hard OS wall-time/memory or model-token bounds. Independent 120-case draft prepared, no frozen signature or blind-scored results.",
-        "Latest source812ecf7 has affected-subset/live-control checks; full1059-test run is historical8058032. Independent clean full reproduction pending.",
-        "Latest sourcef8faa67 has Git graft/parent-refresh focused checks; independent clean full reproduction is running separately. Sealed heldout package remains unused."
+        "Independent clean deterministic reproduction on f8faa67 passed1068 tests with6 missing-artifact skips and3 live exclusions; heldout generation/scoring, live12 reruns and3 demos remain unperformed. New evaluation infrastructure is tested separately and is not part of that168-file source pin."
       ],
       "reviewer": null,
       "validated_at": null
@@ -4288,7 +5113,8 @@
         "goal-source-freshness-development-2026-10-18",
         "goal-query-budgets-development-2026-10-18",
         "goal-control-flags-development-2026-10-18",
-        "goal-graft-development-2026-10-18"
+        "goal-graft-development-2026-10-18",
+        "goal-independent-development-reproduction-2026-10-18"
       ],
       "artifact_links": [
         "docs/reviews/goal-branch-review.md",
@@ -4306,7 +5132,10 @@
         "docs/reviews/goal-control-flags.md",
         "docs/reviews/goal-control-flags-evidence/run-summary.json",
         "docs/reviews/goal-git-grafts.md",
-        "docs/reviews/goal-graft-evidence/run-summary.json"
+        "docs/reviews/goal-graft-evidence/run-summary.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/README.md",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/HANDOFF.json"
       ],
       "observed_metrics": {
         "development_regression_only": true,
@@ -4362,7 +5191,23 @@
             "aborted": false,
             "validation_errors": []
           }
-        ]
+        ],
+        "independent_development_reproduction": {
+          "implementation_commit": "f8faa67f5b9c9d0d2682ecff7d10d3ac084cf242",
+          "passed": 1068,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 6,
+          "live_deselected": 3,
+          "pytest_summary_seconds": 277.87,
+          "javascript_passed": 16,
+          "deterministic_smoke": "PASS",
+          "source_files": 168,
+          "source_hash_mismatches": 0,
+          "heldout_questions_run": 0,
+          "artifact": "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+          "acceptance_inference": "none; development deterministic reproduction only"
+        }
       },
       "thresholds": {
         "T4": {
@@ -4495,14 +5340,49 @@
           "run_id": "goal-graft-development-2026-10-18",
           "historical": true,
           "detail": "Initial ancestry overlays and stale-parent retry failed; interim missing-todo edit failed; final37case subset passed. Attempts preserved."
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_e2_history_outputs[none]",
+          "reason": "no E2 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_eval_outputs[none]",
+          "reason": "no E2/E4 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e3_protocol.test_scale_output_records_required_fields[None]",
+          "reason": "no artifacts/repo_scale/*.json output yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_scale]",
+          "reason": "no runs recorded under artifacts/repo_scale"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_benefit]",
+          "reason": "no runs recorded under artifacts/repo_benefit"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_run_record_is_reproducible[NOTSET]",
+          "reason": "got empty parameter set for (cat, path)"
         }
       ],
       "limitations": [
         "Persistence-boundary/process-crash/fencing regressions are implemented; the complete discovery/random-fault/configuration/DB-outage matrix and normalized full-entity comparisons remain incomplete.",
         "Independent AI evaluation draft is unsigned; Click corpus/source expectations remain sealed from implementer. No fresh T0/T2/T10 validation.",
         "Request-local evidence work limits tested in development; cooperative deadlines do not prove hard OS wall-time/memory or model-token bounds. Independent 120-case draft prepared, no frozen signature or blind-scored results.",
-        "Latest source812ecf7 has affected-subset/live-control checks; full1059-test run is historical8058032. Independent clean full reproduction pending.",
-        "Latest sourcef8faa67 has Git graft/parent-refresh focused checks; independent clean full reproduction is running separately. Sealed heldout package remains unused."
+        "Independent clean deterministic reproduction on f8faa67 passed1068 tests with6 missing-artifact skips and3 live exclusions; heldout generation/scoring, live12 reruns and3 demos remain unperformed. New evaluation infrastructure is tested separately and is not part of that168-file source pin."
       ],
       "reviewer": null,
       "validated_at": null
@@ -4534,7 +5414,8 @@
         "goal-source-freshness-development-2026-10-18",
         "goal-query-budgets-development-2026-10-18",
         "goal-control-flags-development-2026-10-18",
-        "goal-graft-development-2026-10-18"
+        "goal-graft-development-2026-10-18",
+        "goal-independent-development-reproduction-2026-10-18"
       ],
       "artifact_links": [
         "docs/reviews/goal-branch-review.md",
@@ -4552,7 +5433,10 @@
         "docs/reviews/goal-control-flags.md",
         "docs/reviews/goal-control-flags-evidence/run-summary.json",
         "docs/reviews/goal-git-grafts.md",
-        "docs/reviews/goal-graft-evidence/run-summary.json"
+        "docs/reviews/goal-graft-evidence/run-summary.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/README.md",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/HANDOFF.json"
       ],
       "observed_metrics": {
         "development_regression_only": true,
@@ -4608,7 +5492,23 @@
             "aborted": false,
             "validation_errors": []
           }
-        ]
+        ],
+        "independent_development_reproduction": {
+          "implementation_commit": "f8faa67f5b9c9d0d2682ecff7d10d3ac084cf242",
+          "passed": 1068,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 6,
+          "live_deselected": 3,
+          "pytest_summary_seconds": 277.87,
+          "javascript_passed": 16,
+          "deterministic_smoke": "PASS",
+          "source_files": 168,
+          "source_hash_mismatches": 0,
+          "heldout_questions_run": 0,
+          "artifact": "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+          "acceptance_inference": "none; development deterministic reproduction only"
+        }
       },
       "thresholds": {
         "T5": {
@@ -4741,14 +5641,49 @@
           "run_id": "goal-graft-development-2026-10-18",
           "historical": true,
           "detail": "Initial ancestry overlays and stale-parent retry failed; interim missing-todo edit failed; final37case subset passed. Attempts preserved."
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_e2_history_outputs[none]",
+          "reason": "no E2 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_eval_outputs[none]",
+          "reason": "no E2/E4 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e3_protocol.test_scale_output_records_required_fields[None]",
+          "reason": "no artifacts/repo_scale/*.json output yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_scale]",
+          "reason": "no runs recorded under artifacts/repo_scale"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_benefit]",
+          "reason": "no runs recorded under artifacts/repo_benefit"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_run_record_is_reproducible[NOTSET]",
+          "reason": "got empty parameter set for (cat, path)"
         }
       ],
       "limitations": [
         "Controlled row/hop/cursor tests are development regressions; hard time/token/resource completeness across all investigation readers remains unverified.",
         "Independent AI evaluation draft is unsigned; Click corpus/source expectations remain sealed from implementer. No fresh T0/T2/T10 validation.",
         "Request-local evidence work limits tested in development; cooperative deadlines do not prove hard OS wall-time/memory or model-token bounds. Independent 120-case draft prepared, no frozen signature or blind-scored results.",
-        "Latest source812ecf7 has affected-subset/live-control checks; full1059-test run is historical8058032. Independent clean full reproduction pending.",
-        "Latest sourcef8faa67 has Git graft/parent-refresh focused checks; independent clean full reproduction is running separately. Sealed heldout package remains unused."
+        "Independent clean deterministic reproduction on f8faa67 passed1068 tests with6 missing-artifact skips and3 live exclusions; heldout generation/scoring, live12 reruns and3 demos remain unperformed. New evaluation infrastructure is tested separately and is not part of that168-file source pin."
       ],
       "reviewer": null,
       "validated_at": null
@@ -4778,7 +5713,8 @@
         "goal-source-freshness-development-2026-10-18",
         "goal-query-budgets-development-2026-10-18",
         "goal-control-flags-development-2026-10-18",
-        "goal-graft-development-2026-10-18"
+        "goal-graft-development-2026-10-18",
+        "goal-independent-development-reproduction-2026-10-18"
       ],
       "artifact_links": [
         "docs/reviews/goal-branch-review.md",
@@ -4796,7 +5732,10 @@
         "docs/reviews/goal-control-flags.md",
         "docs/reviews/goal-control-flags-evidence/run-summary.json",
         "docs/reviews/goal-git-grafts.md",
-        "docs/reviews/goal-graft-evidence/run-summary.json"
+        "docs/reviews/goal-graft-evidence/run-summary.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/README.md",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/HANDOFF.json"
       ],
       "observed_metrics": {
         "development_regression_only": true,
@@ -4852,7 +5791,23 @@
             "aborted": false,
             "validation_errors": []
           }
-        ]
+        ],
+        "independent_development_reproduction": {
+          "implementation_commit": "f8faa67f5b9c9d0d2682ecff7d10d3ac084cf242",
+          "passed": 1068,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 6,
+          "live_deselected": 3,
+          "pytest_summary_seconds": 277.87,
+          "javascript_passed": 16,
+          "deterministic_smoke": "PASS",
+          "source_files": 168,
+          "source_hash_mismatches": 0,
+          "heldout_questions_run": 0,
+          "artifact": "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+          "acceptance_inference": "none; development deterministic reproduction only"
+        }
       },
       "thresholds": {
         "T6": {
@@ -4989,14 +5944,49 @@
           "run_id": "goal-graft-development-2026-10-18",
           "historical": true,
           "detail": "Initial ancestry overlays and stale-parent retry failed; interim missing-todo edit failed; final37case subset passed. Attempts preserved."
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_e2_history_outputs[none]",
+          "reason": "no E2 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_eval_outputs[none]",
+          "reason": "no E2/E4 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e3_protocol.test_scale_output_records_required_fields[None]",
+          "reason": "no artifacts/repo_scale/*.json output yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_scale]",
+          "reason": "no runs recorded under artifacts/repo_scale"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_benefit]",
+          "reason": "no runs recorded under artifacts/repo_benefit"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_run_record_is_reproducible[NOTSET]",
+          "reason": "got empty parameter set for (cat, path)"
         }
       ],
       "limitations": [
         "No fresh controlled three-slice, three-cold-import/update, 100-query, concurrency benchmark under a newly signed numerical budget has run.",
         "Independent AI evaluation draft is unsigned; Click corpus/source expectations remain sealed from implementer. No fresh T0/T2/T10 validation.",
         "Request-local evidence work limits tested in development; cooperative deadlines do not prove hard OS wall-time/memory or model-token bounds. Independent 120-case draft prepared, no frozen signature or blind-scored results.",
-        "Latest source812ecf7 has affected-subset/live-control checks; full1059-test run is historical8058032. Independent clean full reproduction pending.",
-        "Latest sourcef8faa67 has Git graft/parent-refresh focused checks; independent clean full reproduction is running separately. Sealed heldout package remains unused."
+        "Independent clean deterministic reproduction on f8faa67 passed1068 tests with6 missing-artifact skips and3 live exclusions; heldout generation/scoring, live12 reruns and3 demos remain unperformed. New evaluation infrastructure is tested separately and is not part of that168-file source pin."
       ],
       "reviewer": null,
       "validated_at": null
@@ -5029,7 +6019,8 @@
         "goal-source-freshness-development-2026-10-18",
         "goal-query-budgets-development-2026-10-18",
         "goal-control-flags-development-2026-10-18",
-        "goal-graft-development-2026-10-18"
+        "goal-graft-development-2026-10-18",
+        "goal-independent-development-reproduction-2026-10-18"
       ],
       "artifact_links": [
         "docs/reviews/goal-branch-review.md",
@@ -5047,7 +6038,10 @@
         "docs/reviews/goal-control-flags.md",
         "docs/reviews/goal-control-flags-evidence/run-summary.json",
         "docs/reviews/goal-git-grafts.md",
-        "docs/reviews/goal-graft-evidence/run-summary.json"
+        "docs/reviews/goal-graft-evidence/run-summary.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/README.md",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/HANDOFF.json"
       ],
       "observed_metrics": {
         "development_regression_only": true,
@@ -5103,7 +6097,23 @@
             "aborted": false,
             "validation_errors": []
           }
-        ]
+        ],
+        "independent_development_reproduction": {
+          "implementation_commit": "f8faa67f5b9c9d0d2682ecff7d10d3ac084cf242",
+          "passed": 1068,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 6,
+          "live_deselected": 3,
+          "pytest_summary_seconds": 277.87,
+          "javascript_passed": 16,
+          "deterministic_smoke": "PASS",
+          "source_files": 168,
+          "source_hash_mismatches": 0,
+          "heldout_questions_run": 0,
+          "artifact": "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+          "acceptance_inference": "none; development deterministic reproduction only"
+        }
       },
       "thresholds": {
         "T7": {
@@ -5236,14 +6246,49 @@
           "run_id": "goal-graft-development-2026-10-18",
           "historical": true,
           "detail": "Initial ancestry overlays and stale-parent retry failed; interim missing-todo edit failed; final37case subset passed. Attempts preserved."
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_e2_history_outputs[none]",
+          "reason": "no E2 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_eval_outputs[none]",
+          "reason": "no E2/E4 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e3_protocol.test_scale_output_records_required_fields[None]",
+          "reason": "no artifacts/repo_scale/*.json output yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_scale]",
+          "reason": "no runs recorded under artifacts/repo_scale"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_benefit]",
+          "reason": "no runs recorded under artifacts/repo_benefit"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_run_record_is_reproducible[NOTSET]",
+          "reason": "got empty parameter set for (cat, path)"
         }
       ],
       "limitations": [
         "Typed MCP and regression parity are implemented. Full live transport failure/cancellation/restart/parallel/follow-up matrix on real repositories remains incomplete.",
         "Independent AI evaluation draft is unsigned; Click corpus/source expectations remain sealed from implementer. No fresh T0/T2/T10 validation.",
         "Request-local evidence work limits tested in development; cooperative deadlines do not prove hard OS wall-time/memory or model-token bounds. Independent 120-case draft prepared, no frozen signature or blind-scored results.",
-        "Latest source812ecf7 has affected-subset/live-control checks; full1059-test run is historical8058032. Independent clean full reproduction pending.",
-        "Latest sourcef8faa67 has Git graft/parent-refresh focused checks; independent clean full reproduction is running separately. Sealed heldout package remains unused."
+        "Independent clean deterministic reproduction on f8faa67 passed1068 tests with6 missing-artifact skips and3 live exclusions; heldout generation/scoring, live12 reruns and3 demos remain unperformed. New evaluation infrastructure is tested separately and is not part of that168-file source pin."
       ],
       "reviewer": null,
       "validated_at": null
@@ -5275,7 +6320,8 @@
         "goal-source-freshness-development-2026-10-18",
         "goal-query-budgets-development-2026-10-18",
         "goal-control-flags-development-2026-10-18",
-        "goal-graft-development-2026-10-18"
+        "goal-graft-development-2026-10-18",
+        "goal-independent-development-reproduction-2026-10-18"
       ],
       "artifact_links": [
         "docs/reviews/goal-branch-review.md",
@@ -5293,7 +6339,10 @@
         "docs/reviews/goal-control-flags.md",
         "docs/reviews/goal-control-flags-evidence/run-summary.json",
         "docs/reviews/goal-git-grafts.md",
-        "docs/reviews/goal-graft-evidence/run-summary.json"
+        "docs/reviews/goal-graft-evidence/run-summary.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/README.md",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/HANDOFF.json"
       ],
       "observed_metrics": {
         "development_regression_only": true,
@@ -5349,7 +6398,23 @@
             "aborted": false,
             "validation_errors": []
           }
-        ]
+        ],
+        "independent_development_reproduction": {
+          "implementation_commit": "f8faa67f5b9c9d0d2682ecff7d10d3ac084cf242",
+          "passed": 1068,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 6,
+          "live_deselected": 3,
+          "pytest_summary_seconds": 277.87,
+          "javascript_passed": 16,
+          "deterministic_smoke": "PASS",
+          "source_files": 168,
+          "source_hash_mismatches": 0,
+          "heldout_questions_run": 0,
+          "artifact": "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+          "acceptance_inference": "none; development deterministic reproduction only"
+        }
       },
       "thresholds": {
         "T8": {
@@ -5483,14 +6548,49 @@
           "run_id": "goal-graft-development-2026-10-18",
           "historical": true,
           "detail": "Initial ancestry overlays and stale-parent retry failed; interim missing-todo edit failed; final37case subset passed. Attempts preserved."
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_e2_history_outputs[none]",
+          "reason": "no E2 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_eval_outputs[none]",
+          "reason": "no E2/E4 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e3_protocol.test_scale_output_records_required_fields[None]",
+          "reason": "no artifacts/repo_scale/*.json output yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_scale]",
+          "reason": "no runs recorded under artifacts/repo_scale"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_benefit]",
+          "reason": "no runs recorded under artifacts/repo_benefit"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_run_record_is_reproducible[NOTSET]",
+          "reason": "got empty parameter set for (cat, path)"
         }
       ],
       "limitations": [
         "The signature-program canary and fixture boundary regressions do not establish the full required process/filesystem/network audit matrix. Non-fixture runtime execution remains outside claim scope.",
         "Independent AI evaluation draft is unsigned; Click corpus/source expectations remain sealed from implementer. No fresh T0/T2/T10 validation.",
         "Request-local evidence work limits tested in development; cooperative deadlines do not prove hard OS wall-time/memory or model-token bounds. Independent 120-case draft prepared, no frozen signature or blind-scored results.",
-        "Latest source812ecf7 has affected-subset/live-control checks; full1059-test run is historical8058032. Independent clean full reproduction pending.",
-        "Latest sourcef8faa67 has Git graft/parent-refresh focused checks; independent clean full reproduction is running separately. Sealed heldout package remains unused."
+        "Independent clean deterministic reproduction on f8faa67 passed1068 tests with6 missing-artifact skips and3 live exclusions; heldout generation/scoring, live12 reruns and3 demos remain unperformed. New evaluation infrastructure is tested separately and is not part of that168-file source pin."
       ],
       "reviewer": null,
       "validated_at": null
@@ -5520,7 +6620,8 @@
         "goal-source-freshness-development-2026-10-18",
         "goal-query-budgets-development-2026-10-18",
         "goal-control-flags-development-2026-10-18",
-        "goal-graft-development-2026-10-18"
+        "goal-graft-development-2026-10-18",
+        "goal-independent-development-reproduction-2026-10-18"
       ],
       "artifact_links": [
         "docs/reviews/goal-branch-review.md",
@@ -5538,7 +6639,10 @@
         "docs/reviews/goal-control-flags.md",
         "docs/reviews/goal-control-flags-evidence/run-summary.json",
         "docs/reviews/goal-git-grafts.md",
-        "docs/reviews/goal-graft-evidence/run-summary.json"
+        "docs/reviews/goal-graft-evidence/run-summary.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/README.md",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/HANDOFF.json"
       ],
       "observed_metrics": {
         "development_regression_only": true,
@@ -5594,7 +6698,23 @@
             "aborted": false,
             "validation_errors": []
           }
-        ]
+        ],
+        "independent_development_reproduction": {
+          "implementation_commit": "f8faa67f5b9c9d0d2682ecff7d10d3ac084cf242",
+          "passed": 1068,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 6,
+          "live_deselected": 3,
+          "pytest_summary_seconds": 277.87,
+          "javascript_passed": 16,
+          "deterministic_smoke": "PASS",
+          "source_files": 168,
+          "source_hash_mismatches": 0,
+          "heldout_questions_run": 0,
+          "artifact": "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+          "acceptance_inference": "none; development deterministic reproduction only"
+        }
       },
       "thresholds": {
         "T9": {
@@ -5727,14 +6847,49 @@
           "run_id": "goal-graft-development-2026-10-18",
           "historical": true,
           "detail": "Initial ancestry overlays and stale-parent retry failed; interim missing-todo edit failed; final37case subset passed. Attempts preserved."
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_e2_history_outputs[none]",
+          "reason": "no E2 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_eval_outputs[none]",
+          "reason": "no E2/E4 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e3_protocol.test_scale_output_records_required_fields[None]",
+          "reason": "no artifacts/repo_scale/*.json output yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_scale]",
+          "reason": "no runs recorded under artifacts/repo_scale"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_benefit]",
+          "reason": "no runs recorded under artifacts/repo_benefit"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_run_record_is_reproducible[NOTSET]",
+          "reason": "got empty parameter set for (cat, path)"
         }
       ],
       "limitations": [
         "Historical graph traces are not revalidation of repaired code. Fresh both-repository query-to-answer traces and all stale/interrupted-edge ablations are still required.",
         "Independent AI evaluation draft is unsigned; Click corpus/source expectations remain sealed from implementer. No fresh T0/T2/T10 validation.",
         "Request-local evidence work limits tested in development; cooperative deadlines do not prove hard OS wall-time/memory or model-token bounds. Independent 120-case draft prepared, no frozen signature or blind-scored results.",
-        "Latest source812ecf7 has affected-subset/live-control checks; full1059-test run is historical8058032. Independent clean full reproduction pending.",
-        "Latest sourcef8faa67 has Git graft/parent-refresh focused checks; independent clean full reproduction is running separately. Sealed heldout package remains unused."
+        "Independent clean deterministic reproduction on f8faa67 passed1068 tests with6 missing-artifact skips and3 live exclusions; heldout generation/scoring, live12 reruns and3 demos remain unperformed. New evaluation infrastructure is tested separately and is not part of that168-file source pin."
       ],
       "reviewer": null,
       "validated_at": null
@@ -5765,7 +6920,8 @@
         "goal-source-freshness-development-2026-10-18",
         "goal-query-budgets-development-2026-10-18",
         "goal-control-flags-development-2026-10-18",
-        "goal-graft-development-2026-10-18"
+        "goal-graft-development-2026-10-18",
+        "goal-independent-development-reproduction-2026-10-18"
       ],
       "artifact_links": [
         "docs/reviews/goal-branch-review.md",
@@ -5783,7 +6939,10 @@
         "docs/reviews/goal-control-flags.md",
         "docs/reviews/goal-control-flags-evidence/run-summary.json",
         "docs/reviews/goal-git-grafts.md",
-        "docs/reviews/goal-graft-evidence/run-summary.json"
+        "docs/reviews/goal-graft-evidence/run-summary.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/README.md",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/HANDOFF.json"
       ],
       "observed_metrics": {
         "development_regression_only": true,
@@ -5839,7 +6998,23 @@
             "aborted": false,
             "validation_errors": []
           }
-        ]
+        ],
+        "independent_development_reproduction": {
+          "implementation_commit": "f8faa67f5b9c9d0d2682ecff7d10d3ac084cf242",
+          "passed": 1068,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 6,
+          "live_deselected": 3,
+          "pytest_summary_seconds": 277.87,
+          "javascript_passed": 16,
+          "deterministic_smoke": "PASS",
+          "source_files": 168,
+          "source_hash_mismatches": 0,
+          "heldout_questions_run": 0,
+          "artifact": "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+          "acceptance_inference": "none; development deterministic reproduction only"
+        }
       },
       "thresholds": {
         "T10": {
@@ -5985,14 +7160,49 @@
           "run_id": "goal-graft-development-2026-10-18",
           "historical": true,
           "detail": "Initial ancestry overlays and stale-parent retry failed; interim missing-todo edit failed; final37case subset passed. Attempts preserved."
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_e2_history_outputs[none]",
+          "reason": "no E2 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_eval_outputs[none]",
+          "reason": "no E2/E4 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e3_protocol.test_scale_output_records_required_fields[None]",
+          "reason": "no artifacts/repo_scale/*.json output yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_scale]",
+          "reason": "no runs recorded under artifacts/repo_scale"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_benefit]",
+          "reason": "no runs recorded under artifacts/repo_benefit"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_run_record_is_reproducible[NOTSET]",
+          "reason": "got empty parameter set for (cat, path)"
         }
       ],
       "limitations": [
         "Bootstrap/gate arithmetic is tested on synthetic scores only. No actual compliant paired/blind comparison, T2 absolute-quality proof, cost accounting or measured break-even is available.",
         "Independent AI evaluation draft is unsigned; Click corpus/source expectations remain sealed from implementer. No fresh T0/T2/T10 validation.",
         "Request-local evidence work limits tested in development; cooperative deadlines do not prove hard OS wall-time/memory or model-token bounds. Independent 120-case draft prepared, no frozen signature or blind-scored results.",
-        "Latest source812ecf7 has affected-subset/live-control checks; full1059-test run is historical8058032. Independent clean full reproduction pending.",
-        "Latest sourcef8faa67 has Git graft/parent-refresh focused checks; independent clean full reproduction is running separately. Sealed heldout package remains unused."
+        "Independent clean deterministic reproduction on f8faa67 passed1068 tests with6 missing-artifact skips and3 live exclusions; heldout generation/scoring, live12 reruns and3 demos remain unperformed. New evaluation infrastructure is tested separately and is not part of that168-file source pin."
       ],
       "reviewer": null,
       "validated_at": null
@@ -6022,7 +7232,8 @@
         "goal-source-freshness-development-2026-10-18",
         "goal-query-budgets-development-2026-10-18",
         "goal-control-flags-development-2026-10-18",
-        "goal-graft-development-2026-10-18"
+        "goal-graft-development-2026-10-18",
+        "goal-independent-development-reproduction-2026-10-18"
       ],
       "artifact_links": [
         "docs/reviews/goal-branch-review.md",
@@ -6040,7 +7251,10 @@
         "docs/reviews/goal-control-flags.md",
         "docs/reviews/goal-control-flags-evidence/run-summary.json",
         "docs/reviews/goal-git-grafts.md",
-        "docs/reviews/goal-graft-evidence/run-summary.json"
+        "docs/reviews/goal-graft-evidence/run-summary.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/README.md",
+        "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/HANDOFF.json"
       ],
       "observed_metrics": {
         "development_regression_only": true,
@@ -6096,7 +7310,23 @@
             "aborted": false,
             "validation_errors": []
           }
-        ]
+        ],
+        "independent_development_reproduction": {
+          "implementation_commit": "f8faa67f5b9c9d0d2682ecff7d10d3ac084cf242",
+          "passed": 1068,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 6,
+          "live_deselected": 3,
+          "pytest_summary_seconds": 277.87,
+          "javascript_passed": 16,
+          "deterministic_smoke": "PASS",
+          "source_files": 168,
+          "source_hash_mismatches": 0,
+          "heldout_questions_run": 0,
+          "artifact": "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+          "acceptance_inference": "none; development deterministic reproduction only"
+        }
       },
       "thresholds": {
         "T11": {
@@ -6230,14 +7460,49 @@
           "run_id": "goal-graft-development-2026-10-18",
           "historical": true,
           "detail": "Initial ancestry overlays and stale-parent retry failed; interim missing-todo edit failed; final37case subset passed. Attempts preserved."
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_e2_history_outputs[none]",
+          "reason": "no E2 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e2_e4_protocol.test_eval_outputs[none]",
+          "reason": "no E2/E4 outputs yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e3_protocol.test_scale_output_records_required_fields[None]",
+          "reason": "no artifacts/repo_scale/*.json output yet"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_scale]",
+          "reason": "no runs recorded under artifacts/repo_scale"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_benefit]",
+          "reason": "no runs recorded under artifacts/repo_benefit"
+        },
+        {
+          "run_id": "goal-independent-development-reproduction-2026-10-18",
+          "historical": false,
+          "test": "tests.repo.test_e5_reproducibility.test_run_record_is_reproducible[NOTSET]",
+          "reason": "got empty parameter set for (cat, path)"
         }
       ],
       "limitations": [
-        "Independent clean reproduction, score recomputation, 12-question live rerun, three reset demos, claim card and official submission deliverables remain incomplete.",
+        "Independent clean deterministic reproduction completed; score recomputation, 12-question live rerun, three reset demos, claim card and official submission deliverables remain incomplete.",
         "Independent AI evaluation draft is unsigned; Click corpus/source expectations remain sealed from implementer. No fresh T0/T2/T10 validation.",
         "Request-local evidence work limits tested in development; cooperative deadlines do not prove hard OS wall-time/memory or model-token bounds. Independent 120-case draft prepared, no frozen signature or blind-scored results.",
-        "Latest source812ecf7 has affected-subset/live-control checks; full1059-test run is historical8058032. Independent clean full reproduction pending.",
-        "Latest sourcef8faa67 has Git graft/parent-refresh focused checks; independent clean full reproduction is running separately. Sealed heldout package remains unused."
+        "Independent clean deterministic reproduction on f8faa67 passed1068 tests with6 missing-artifact skips and3 live exclusions; heldout generation/scoring, live12 reruns and3 demos remain unperformed. New evaluation infrastructure is tested separately and is not part of that168-file source pin."
       ],
       "reviewer": null,
       "validated_at": null
@@ -6263,6 +7528,12 @@
     "goal-graft-development-2026-10-18": {
       "artifact": "docs/reviews/goal-graft-evidence/run-summary.json",
       "classification": "synthetic Git ancestry/recovery regression"
+    },
+    "goal-independent-development-reproduction-2026-10-18": {
+      "artifact": "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/report.json",
+      "classification": "independent AI clean development deterministic reproduction; not full T11 or acceptance",
+      "report_sha256": "e78aaa7356e502837252cc71672b62ae9aa3c3924dfda643db8a85b67c0d3db5",
+      "handoff_sha256": "015475a9cb845e1cb6c61f22a851b7e5c18df1983f9ea1a9073ad66b901a0a5d"
     }
   },
   "independent_evaluation_draft": {

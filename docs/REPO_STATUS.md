@@ -20,13 +20,18 @@ that informed repairs are development data for the next confirmatory evaluation.
 The [control flag follow-up](reviews/goal-control-flags.md) records a real failed
 live control attempt, its validity-rule correction and a separately successful
 fresh attempt. An independent AI evaluator prepared 120 source/Git-derived sealed
-questions in [an unsigned draft package](../evals/confirmatory/README.md), and is
-reproducing the implementation from a clean environment. Neither activity releases
+questions in [an unsigned draft package](../evals/confirmatory/README.md), and has
+reproduced the deterministic implementation checks from a clean environment. Neither activity releases
 the pending acceptance or advantage claims.
 
 The [Git graft follow-up](reviews/goal-git-grafts.md) records ancestry-overlay
 hardening and normal-retry recovery of stale parent edges. The independent full
-reproduction uses its newer implementation commit, `f8faa67`.
+reproduction used its newer implementation commit, `f8faa67`. The
+[independent report](reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/README.md)
+records **1,068 Python tests passed, 6 missing-artifact skips, 3 live exclusions**,
+JavaScript 16/16 and the deterministic fixture smoke. All 168 source hashes matched
+before and after. This is development reproduction; held-out scoring, performance,
+comparison and live demo gates remain incomplete.
 
 The implementation remains Python-only repository evidence retrieval, with fixture-only runtime
 verification and local simulation. No substantial FalkorDB advantage, v1 acceptance pass,
