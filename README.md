@@ -49,11 +49,12 @@ For the free-tier operating choice and the browser check of the sanitized quota 
 
 Run it: `$env:RW_FIXTURE="astronomy-shop"; .venv\Scripts\python.exe scripts\serve.py`, then open http://127.0.0.1:8000.
 
-Live results, same model (`gemini-3-flash`) on both sides, small samples on synthetic data. These are indications, not statistically meaningful benchmarks:
+Live results, same model (`gemini-3-flash`) on both sides, small samples on synthetic data. These are indications, not statistically meaningful benchmarks (details and raw files: [docs/results/RESULTS.md](docs/results/RESULTS.md)):
 
 | Comparison | RollbackWitness (graph + checker) | Control without the graph |
 |---|---|---|
-| Shop rollback, equal-information LLM control with the same probe tool (3 runs each) | 3/3 correct, evidence-backed; 0 unsupported "safe" claims | 1/3 correct; 1 "safe" claim without probing a required reader; 1 no answer |
+| Remove the graph's relationships, keep every record (Astronomy Shop, no model) | full graph: unsafe, 32 failing reads found, 80 evidence paths | without reader/store/record links: 0 checks derived, the failures are never found; the verdict falls back to "can't confirm", never to "safe" |
+| Shop rollback, equal-information LLM control with the same probe tool | 13/14 investigations correct and evidence-backed; 0 unsupported "safe" claims | 9/13 correct; 3 "safe" claims without probing a required reader; 1 wrong "safe" |
 | Astronomy Shop, LLM given every file as plain text (6 cases × 3 runs) | 6/6 cases correct | 15/18; on an incomplete order inventory it said "safe" 2/3 times |
 | Request grounding (5 cases × 3 runs) | 13/15 matched the expected proposal/clarification | n/a |
 | SQL joins over the same raw facts (8 hand-derived cases) | 8/8 | 8/8 (a tie: the graph is not exclusive; it drives the agent and supplies the visible evidence path) |
@@ -156,6 +157,23 @@ LIMIT $limit
 
 Store inventory (`store_inventory`, `:857`) and receipt read-back (`receipts_by_id`, `:1066`) complete the loop. Probe receipts are written with `MERGE (pr:ProbeRun …)-[:TESTS_READER]->(release)` / `-[:TESTS_BATCH]->(batch)` (`write_receipt`, `:1009`). Queries 3–4 are shown slightly abbreviated in their `RETURN` lists; the source has the full column set.
 
+**Full query and algorithm reference** (both workflows):
+
+Read [the query and algorithm reference](docs/GRAPH_QUERIES.md) for the actual
+queries the product depends on. It includes:
+
+- Rollback obligations: `Plan → Deployment → Release → ReaderRoute → StateStore
+  ← Batch → writer Release`, with snapshot filtering and optional writer evidence.
+- Version-linked source retrieval through a bounded `PREVIOUS` release chain.
+- Published repository revision lookup and provenance-bearing symbol relationships.
+- Bounded Python dependency/dependent traversal, Git ancestry and content-based
+  fix-presence checking, plus completeness and receipt validation.
+- A runnable read-only example against the initialized demo graphs.
+
+These are implemented operations, not proposed schema or generated Cypher.
+The model does not supply arbitrary queries. A truncated result or absent
+relationship is not sufficient evidence of completeness or safety.
+
 ## Quickstart
 
 Prerequisites: Git, Docker with Compose v2 and a running Docker daemon, and
@@ -174,42 +192,6 @@ Choose the workflow you want to run:
 | --- | --- | --- | --- |
 | Repository evidence demo | `http://127.0.0.1:8127` | No | Real pinned Python source plus synthetic Git history |
 | Rollback console | `http://127.0.0.1:8000` | Yes for live grounding; no for operator-specified fleet or deterministic smoke | Synthetic shop releases and retained records |
-
-### Repository evidence demo — Linux / WSL
-
-Use a dedicated database on local port 55688, separate from the fixture database
-on 6379. The container creation command below is for a **first launch**; if that
-container already exists, use `docker start rw-hackathon-demo-20261018` and check
-its port mapping instead. Choose another fixed port if 55688 is occupied and
-update every `RW_FALKORDB_PORT` value accordingly.
-
-```sh
-sh scripts/setup.sh
-mkdir -p artifacts/repos
-# Skip this clone if the bare repository already exists:
-git clone --bare https://github.com/pallets/itsdangerous.git artifacts/repos/itsdangerous
-docker run -d --name rw-hackathon-demo-20261018 --memory=2g \
-  -p 127.0.0.1:55688:6379 \
-  falkordb/falkordb:6.0.2@sha256:107455e862a824e45e8e9f5a7fbfdf5e00a08b14e13eae2577c72fd9e3f59ba6
-# Wait for PONG before continuing:
-docker exec rw-hackathon-demo-20261018 redis-cli ping
-RW_FALKORDB_PORT=55688 .venv/bin/python scripts/hackathon_demo.py setup
-RW_FALKORDB_PORT=55688 .venv/bin/python scripts/hackathon_demo.py smoke
-RW_FALKORDB_PORT=55688 .venv/bin/python scripts/hackathon_demo.py serve --port 8127
-```
-
-Open `http://127.0.0.1:8127` and ask **What does TimedSerializer depend on?**
-Then try **Explore a real dependency chain**, open a source citation, and compare
-**Inspect the fix** with **Catch the reverted fix**. The smoke command should
-report `PASS` and prepares an explicitly labeled recorded backup. This is live
-**deterministic retrieval**, not an LLM-generated conversation. The real source is
-pinned to ItsDangerous commit `096c8d42545d3b68ea21a4f890fb2b2d8979c0bd`.
-
-Setup generates local indexes and artifacts; they are not included in a fresh
-clone. Keep the bare clone for source verification. Stop the server with Ctrl+C;
-stop this dedicated database with `docker stop rw-hackathon-demo-20261018`.
-For the underlying queries, a read-only example and evidence boundaries, see the
-[query and algorithm reference](docs/GRAPH_QUERIES.md).
 
 ### Rollback workflow — Linux / WSL
 
@@ -258,14 +240,65 @@ Try it:
 .venv\Scripts\python.exe scripts\serve.py
 ```
 
-## Graph data model
+### Astronomy Shop demo (the scenario in the video)
 
-The two workflows use separate graphs. FalkorDB stores evidence and relationships;
-it does not store or execute the agent's workflow. Queries and graph algorithms
-are documented in [GRAPH_QUERIES.md](docs/GRAPH_QUERIES.md), with implementation
-links, parameters, examples and limitations.
+```powershell
+$env:RW_FIXTURE = "astronomy-shop"                                # sh: export RW_FIXTURE=astronomy-shop
+.venv\Scripts\python.exe scripts\serve.py                          # http://127.0.0.1:8000
+```
 
-### Repository evidence graph
+Try the sample request **"Put checkout, accounting and fraud-detection back on 3.1.0."**: every build
+starts, but 32 of 80 reader checks fail on non-USD orders already in the `orders` topic, so it is
+unsafe. Ask for an alternative and the agent proposes rolling back only checkout (or asks which
+services to keep), which passes 80/80. Live grounding needs a model key (below). Without one, run the
+same two checks with operator-specified fleets; no model is called:
+
+```powershell
+$env:RW_FIXTURE = "astronomy-shop"
+.venv\Scripts\python.exe scripts\investigate.py --fleet checkout=3.1.0 --fleet accounting=3.1.0 --fleet fraud-detection=3.1.0 --confirm-as you   # BLOCKED, with the graph path
+.venv\Scripts\python.exe scripts\investigate.py --fleet checkout=3.1.0 --confirm-as you                                                    # BOUNDED_PASS
+```
+
+The same flow is available to Claude Code through MCP (see [Local MCP tools](#local-mcp-tools)).
+To see the relationship-removal experiment: `.venv\Scripts\python.exe evals\ablation_relationships.py`.
+
+### Second workflow: repository evidence demo — Linux / WSL
+
+Use a dedicated database on local port 55688, separate from the fixture database
+on 6379. The container creation command below is for a **first launch**; if that
+container already exists, use `docker start rw-hackathon-demo-20261018` and check
+its port mapping instead. Choose another fixed port if 55688 is occupied and
+update every `RW_FALKORDB_PORT` value accordingly.
+
+```sh
+sh scripts/setup.sh
+mkdir -p artifacts/repos
+# Skip this clone if the bare repository already exists:
+git clone --bare https://github.com/pallets/itsdangerous.git artifacts/repos/itsdangerous
+docker run -d --name rw-hackathon-demo-20261018 --memory=2g \
+  -p 127.0.0.1:55688:6379 \
+  falkordb/falkordb:6.0.2@sha256:107455e862a824e45e8e9f5a7fbfdf5e00a08b14e13eae2577c72fd9e3f59ba6
+# Wait for PONG before continuing:
+docker exec rw-hackathon-demo-20261018 redis-cli ping
+RW_FALKORDB_PORT=55688 .venv/bin/python scripts/hackathon_demo.py setup
+RW_FALKORDB_PORT=55688 .venv/bin/python scripts/hackathon_demo.py smoke
+RW_FALKORDB_PORT=55688 .venv/bin/python scripts/hackathon_demo.py serve --port 8127
+```
+
+Open `http://127.0.0.1:8127` and ask **What does TimedSerializer depend on?**
+Then try **Explore a real dependency chain**, open a source citation, and compare
+**Inspect the fix** with **Catch the reverted fix**. The smoke command should
+report `PASS` and prepares an explicitly labeled recorded backup. This is live
+**deterministic retrieval**, not an LLM-generated conversation. The real source is
+pinned to ItsDangerous commit `096c8d42545d3b68ea21a4f890fb2b2d8979c0bd`.
+
+Setup generates local indexes and artifacts; they are not included in a fresh
+clone. Keep the bare clone for source verification. Stop the server with Ctrl+C;
+stop this dedicated database with `docker stop rw-hackathon-demo-20261018`.
+For the underlying queries, a read-only example and evidence boundaries, see the
+[query and algorithm reference](docs/GRAPH_QUERIES.md).
+
+## Second workflow: repository evidence graph
 
 Implemented by [`src/rw/repo/index.py`](src/rw/repo/index.py) and
 [`src/rw/repo/query.py`](src/rw/repo/query.py). The dedicated demo uses graphs
@@ -301,65 +334,6 @@ Serializer` at the pinned ItsDangerous revision. Python performs the bounded
 relationship walk over facts retrieved from FalkorDB; this is not a claim about
 runtime dispatch or behavioral compatibility.
 
-### Rollback evidence graph
-
-Implemented by [`src/rw/graph.py`](src/rw/graph.py). The diagram shows the principal
-evidence paths; the complete property and relationship reference is in
-[ARCHITECTURE.md](docs/ARCHITECTURE.md#graph-schema).
-
-```mermaid
-flowchart LR
-    SN[Snapshot] -->|HAS_DEPLOYMENT| D[Deployment]
-    P[Plan] -->|HAS_DEPLOYMENT| D
-    P -->|BASED_ON| SN
-    D -->|OF_SERVICE| SV[Service]
-    D -->|RUNS| R[Release]
-    R -->|PREVIOUS| OLD[Previous release]
-    R -->|HAS_SOURCE| E[SourceExcerpt]
-    R -->|EXECUTES_ROUTE| RT[ReaderRoute]
-    RT -->|READS_FROM| ST[StateStore]
-    B[Batch / retained record] -->|IN_STORE| ST
-    B -->|WRITTEN_BY| W[Writer release]
-    ST -->|HAS_COVERAGE| CV[Coverage]
-    PR[ProbeRun] -->|TESTS_READER| R
-    PR -->|TESTS_BATCH| B
-```
-
-| Node group | Identity and evidence |
-| --- | --- |
-| `Service`, `Deployment`, `Release` | Exact service/release selection, flags, artifact and codec hashes; candidate deployments belong to a plan |
-| `SourceExcerpt`, `ReaderRoute` | Release-bound source spans and content hashes; reader entry point, domain and route-contract hash |
-| `Snapshot`, `StateStore`, `Batch`, `Coverage` | Snapshot manifest, store, record/payload identity, known format, writer relationship and inventory completeness |
-| `Plan`, `ProbeRun` | Fleet/plan identity, obligation-bound probe receipts and `PASS` / `FAIL` / `UNKNOWN` results |
-
-Fixture nodes have server-controlled scope and logical IDs. Release versions and
-record display names alone are not sufficient identity. `Batch` is the graph
-label used for a retained record. Missing writer/format/coverage facts remain
-unknown; they are not inferred from a service call graph.
-
-For example, a candidate plan selects cart 1.4, whose reader reaches the cache
-containing a record written by cart 1.5. The multi-hop obligation query identifies
-that reader × record pair; the actual reader probe fails on `cart/v2`, giving
-`BLOCKED`. Graph traversal selects evidence and obligations; trusted code and
-probe receipts determine the disposition.
-
-## Cypher queries and graph algorithms
-
-Read [the query and algorithm reference](docs/GRAPH_QUERIES.md) for the actual
-queries the product depends on. It includes:
-
-- Rollback obligations: `Plan → Deployment → Release → ReaderRoute → StateStore
-  ← Batch → writer Release`, with snapshot filtering and optional writer evidence.
-- Version-linked source retrieval through a bounded `PREVIOUS` release chain.
-- Published repository revision lookup and provenance-bearing symbol relationships.
-- Bounded Python dependency/dependent traversal, Git ancestry and content-based
-  fix-presence checking, plus completeness and receipt validation.
-- A runnable read-only example against the initialized demo graphs.
-
-These are implemented operations, not proposed schema or generated Cypher.
-The model does not supply arbitrary queries. A truncated result or absent
-relationship is not sufficient evidence of completeness or safety.
-
 ## Local MCP tools
 
 Install the optional bridge with `sh scripts/setup.sh --mcp` (PowerShell: `scripts\setup.ps1 -Mcp`).
@@ -373,7 +347,7 @@ for host configuration, strict inputs, size/time limits and restart/retry behavi
 
 - **Independent oracle:** 8 hand-derived cases (`evals/expected/`) — the real pipeline on real FalkorDB matches all 8 (disposition, exact obligations, probe results, gaps).
 - **Relational control:** SQL joins over the same raw facts reproduce the same obligation sets in 8/8 cases — a **tie**. The graph's contribution here is the connected query that drives what the agent checks and the inspectable evidence path, not exclusivity.
-- **Live grounding:** the full live eval for issue #2 matched the expected outcome kind in **11/15** observations (case-level detail in [docs/STATUS.md](docs/STATUS.md)); the vague "from last week" request still guesses instead of clarifying (issue #17). The equal-information LLM control comparison has only author-reported live results so far — see the [issue #3 implementation report](docs/ISSUE_3_FIX_REPORT.md).
+- **Live comparisons (18–19 Oct):** same-model product vs control, plain-text LLM vs graph checker, request grounding and the relationship-removal experiment are in [docs/results/RESULTS.md](docs/results/RESULTS.md) with raw files. Vague time references are still sometimes guessed instead of clarified (issue #17).
 - **Scope:** synthetic fixture; BOUNDED_PASS is byte/shape readability of modeled records only; readers are trusted, reviewed fixture code (the probe harness is failure containment, not a sandbox); local simulation only.
 
 ## Repository layout

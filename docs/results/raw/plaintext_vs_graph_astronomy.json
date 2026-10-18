@@ -1,0 +1,593 @@
+{
+  "model": "gemini-3-flash",
+  "cases": [
+    {
+      "case": "documented",
+      "about": "USD-only limit stated in changelogs",
+      "expected": "BLOCKED",
+      "expected_failing": 32,
+      "graph": {
+        "disposition": "BLOCKED",
+        "failing": [
+          [
+            "accounting",
+            "orders-0@1048"
+          ],
+          [
+            "accounting",
+            "orders-0@1049"
+          ],
+          [
+            "accounting",
+            "orders-0@1050"
+          ],
+          [
+            "accounting",
+            "orders-0@1051"
+          ],
+          [
+            "accounting",
+            "orders-0@1052"
+          ],
+          [
+            "accounting",
+            "orders-0@1053"
+          ],
+          [
+            "accounting",
+            "orders-1@1065"
+          ],
+          [
+            "accounting",
+            "orders-1@1066"
+          ],
+          [
+            "accounting",
+            "orders-1@1067"
+          ],
+          [
+            "accounting",
+            "orders-1@1068"
+          ],
+          [
+            "accounting",
+            "orders-1@1069"
+          ],
+          [
+            "accounting",
+            "orders-2@1082"
+          ],
+          [
+            "accounting",
+            "orders-2@1083"
+          ],
+          [
+            "accounting",
+            "orders-2@1084"
+          ],
+          [
+            "accounting",
+            "orders-2@1085"
+          ],
+          [
+            "accounting",
+            "orders-2@1086"
+          ],
+          [
+            "fraud-detection",
+            "orders-0@1048"
+          ],
+          [
+            "fraud-detection",
+            "orders-0@1049"
+          ],
+          [
+            "fraud-detection",
+            "orders-0@1050"
+          ],
+          [
+            "fraud-detection",
+            "orders-0@1051"
+          ],
+          [
+            "fraud-detection",
+            "orders-0@1052"
+          ],
+          [
+            "fraud-detection",
+            "orders-0@1053"
+          ],
+          [
+            "fraud-detection",
+            "orders-1@1065"
+          ],
+          [
+            "fraud-detection",
+            "orders-1@1066"
+          ],
+          [
+            "fraud-detection",
+            "orders-1@1067"
+          ],
+          [
+            "fraud-detection",
+            "orders-1@1068"
+          ],
+          [
+            "fraud-detection",
+            "orders-1@1069"
+          ],
+          [
+            "fraud-detection",
+            "orders-2@1082"
+          ],
+          [
+            "fraud-detection",
+            "orders-2@1083"
+          ],
+          [
+            "fraud-detection",
+            "orders-2@1084"
+          ],
+          [
+            "fraud-detection",
+            "orders-2@1085"
+          ],
+          [
+            "fraud-detection",
+            "orders-2@1086"
+          ]
+        ],
+        "gaps": [],
+        "probes": 80,
+        "verdict_ok": true,
+        "failing_found": 32,
+        "failing_expected": 32,
+        "false_failing": 0,
+        "exact": true
+      },
+      "plaintext": [
+        {
+          "disposition": "BLOCKED",
+          "verdict_ok": true,
+          "failing_found": 32,
+          "failing_expected": 32,
+          "false_failing": 0,
+          "exact": true,
+          "reason": "Accounting 3.1.0 and fraud-detection 3.1.0 only support USD and will fail when reading non-USD local-currency orders written by checkout 3.2.0.",
+          "raw": "```json\n{\"disposition\": \"BLOCKED\",\n \"failing\": {\"accounting\": [\"orders-0@1048\", \"orders-1@1065\", \"orders-2@1082\", \"orders-0@1049\", \"orders-1@1066\", \"orders-2@1083\", \"orders-0@1050\", \"orders-1@1067\", \"orders-2@1084\", \"orders-0@1051\", \"orders-1@1068\", \"orders-2@1085\", \"orders-0@1052\", \"orders-1@1069\", \"orders-2@1086\", \"orders-0@1053\"],\n             \"fraud-detection\": [\"orders-0@1048\", \"orders-1@1065\", \"orders-2@1082\", \"orders-0@1049\", \"orders-1@1066\", \"orders-2@1083\", \"orders-0@1050\", \"orders-1@1067\", \"orders-2@1084\", \"orders-0@1051\", \"orders-1@1068\", \"orders-2@1085\", \"orders-0@1052\", \"orders-1@1069\", \"orders-2@1086\", \"orders-0@1053\"]},\n \"reason\": \"Accounting 3.1.0 and fraud-detection 3.1.0 only support USD and will fail when reading non-USD local-currency orders written by checkout 3.2.0.\"}\n```"
+        },
+        {
+          "disposition": "BLOCKED",
+          "verdict_ok": true,
+          "failing_found": 32,
+          "failing_expected": 32,
+          "false_failing": 0,
+          "exact": true,
+          "reason": "Accounting 3.1.0 and fraud-detection 3.1.0 only support USD and will fail to parse non-USD records written to the orders topic by checkout 3.2.0.",
+          "raw": "{\n \"disposition\": \"BLOCKED\",\n \"failing\": {\n  \"accounting\": [\n   \"orders-0@1048\",\n   \"orders-1@1065\",\n   \"orders-2@1082\",\n   \"orders-0@1049\",\n   \"orders-1@1066\",\n   \"orders-2@1083\",\n   \"orders-0@1050\",\n   \"orders-1@1067\",\n   \"orders-2@1084\",\n   \"orders-0@1051\",\n   \"orders-1@1068\",\n   \"orders-2@1085\",\n   \"orders-0@1052\",\n   \"orders-1@1069\",\n   \"orders-2@1086\",\n   \"orders-0@1053\"\n  ],\n  \"fraud-detection\": [\n   \"orders-0@1048\",\n   \"orders-1@1065\",\n   \"orders-2@1082\",\n   \"orders-0@1049\",\n   \"orders-1@1066\",\n   \"orders-2@1083\",\n   \"orders-0@1050\",\n   \"orders-1@1067\",\n   \"orders-2@1084\",\n   \"orders-0@1051\",\n   \"orders-1@1068\",\n   \"orders-2@1085\",\n   \"orders-0@1052\",\n   \"orders-1@1069\",\n   \"orders-2@1086\",\n   \"orders-0@1053\"\n  ]\n },\n \"reason\": \"Accounting 3.1.0 and fraud-detection 3.1.0 only support USD and will fail to parse non-USD records written to the orders topic by checkout 3.2.0.\"\n}"
+        },
+        {
+          "disposition": "BLOCKED",
+          "verdict_ok": true,
+          "failing_found": 32,
+          "failing_expected": 32,
+          "false_failing": 0,
+          "exact": true,
+          "reason": "Versions 3.1.0 of accounting and fraud-detection only support USD and will raise UnsupportedCurrencyError when consuming local-currency orders written by checkout 3.2.0.",
+          "raw": "```json\n{\"disposition\": \"BLOCKED\",\n \"failing\": {\"accounting\": [\"orders-0@1048\", \"orders-1@1065\", \"orders-2@1082\", \"orders-0@1049\", \"orders-1@1066\", \"orders-2@1083\", \"orders-0@1050\", \"orders-1@1067\", \"orders-2@1084\", \"orders-0@1051\", \"orders-1@1068\", \"orders-2@1085\", \"orders-0@1052\", \"orders-1@1069\", \"orders-2@1086\", \"orders-0@1053\"],\n             \"fraud-detection\": [\"orders-0@1048\", \"orders-1@1065\", \"orders-2@1082\", \"orders-0@1049\", \"orders-1@1066\", \"orders-2@1083\", \"orders-0@1050\", \"orders-1@1067\", \"orders-2@1084\", \"orders-0@1051\", \"orders-1@1068\", \"orders-2@1085\", \"orders-0@1052\", \"orders-1@1069\", \"orders-2@1086\", \"orders-0@1053\"]},\n \"reason\": \"Versions 3.1.0 of accounting and fraud-detection only support USD and will raise UnsupportedCurrencyError when consuming local-currency orders written by checkout 3.2.0.\"}\n```"
+        }
+      ],
+      "context_chars": 19874
+    },
+    {
+      "case": "code-only",
+      "about": "limit only visible in reader code",
+      "expected": "BLOCKED",
+      "expected_failing": 32,
+      "graph": {
+        "disposition": "BLOCKED",
+        "failing": [
+          [
+            "accounting",
+            "orders-0@1048"
+          ],
+          [
+            "accounting",
+            "orders-0@1049"
+          ],
+          [
+            "accounting",
+            "orders-0@1050"
+          ],
+          [
+            "accounting",
+            "orders-0@1051"
+          ],
+          [
+            "accounting",
+            "orders-0@1052"
+          ],
+          [
+            "accounting",
+            "orders-0@1053"
+          ],
+          [
+            "accounting",
+            "orders-1@1065"
+          ],
+          [
+            "accounting",
+            "orders-1@1066"
+          ],
+          [
+            "accounting",
+            "orders-1@1067"
+          ],
+          [
+            "accounting",
+            "orders-1@1068"
+          ],
+          [
+            "accounting",
+            "orders-1@1069"
+          ],
+          [
+            "accounting",
+            "orders-2@1082"
+          ],
+          [
+            "accounting",
+            "orders-2@1083"
+          ],
+          [
+            "accounting",
+            "orders-2@1084"
+          ],
+          [
+            "accounting",
+            "orders-2@1085"
+          ],
+          [
+            "accounting",
+            "orders-2@1086"
+          ],
+          [
+            "fraud-detection",
+            "orders-0@1048"
+          ],
+          [
+            "fraud-detection",
+            "orders-0@1049"
+          ],
+          [
+            "fraud-detection",
+            "orders-0@1050"
+          ],
+          [
+            "fraud-detection",
+            "orders-0@1051"
+          ],
+          [
+            "fraud-detection",
+            "orders-0@1052"
+          ],
+          [
+            "fraud-detection",
+            "orders-0@1053"
+          ],
+          [
+            "fraud-detection",
+            "orders-1@1065"
+          ],
+          [
+            "fraud-detection",
+            "orders-1@1066"
+          ],
+          [
+            "fraud-detection",
+            "orders-1@1067"
+          ],
+          [
+            "fraud-detection",
+            "orders-1@1068"
+          ],
+          [
+            "fraud-detection",
+            "orders-1@1069"
+          ],
+          [
+            "fraud-detection",
+            "orders-2@1082"
+          ],
+          [
+            "fraud-detection",
+            "orders-2@1083"
+          ],
+          [
+            "fraud-detection",
+            "orders-2@1084"
+          ],
+          [
+            "fraud-detection",
+            "orders-2@1085"
+          ],
+          [
+            "fraud-detection",
+            "orders-2@1086"
+          ]
+        ],
+        "gaps": [],
+        "probes": 80,
+        "verdict_ok": true,
+        "failing_found": 32,
+        "failing_expected": 32,
+        "false_failing": 0,
+        "exact": true
+      },
+      "plaintext": [
+        {
+          "disposition": "BLOCKED",
+          "verdict_ok": true,
+          "failing_found": 32,
+          "failing_expected": 32,
+          "false_failing": 0,
+          "exact": true,
+          "reason": "Versions 3.1.0 of accounting and fraud-detection only support USD and raise UnsupportedCurrencyError when reading non-USD orders written by checkout 3.2.0 that are retained in the Kafka topic.",
+          "raw": "```json\n{\"disposition\": \"BLOCKED\",\n \"failing\": {\"accounting\": [\"orders-0@1048\", \"orders-1@1065\", \"orders-2@1082\", \"orders-0@1049\", \"orders-1@1066\", \"orders-2@1083\", \"orders-0@1050\", \"orders-1@1067\", \"orders-2@1084\", \"orders-0@1051\", \"orders-1@1068\", \"orders-2@1085\", \"orders-0@1052\", \"orders-1@1069\", \"orders-2@1086\", \"orders-0@1053\"],\n             \"fraud-detection\": [\"orders-0@1048\", \"orders-1@1065\", \"orders-2@1082\", \"orders-0@1049\", \"orders-1@1066\", \"orders-2@1083\", \"orders-0@1050\", \"orders-1@1067\", \"orders-2@1084\", \"orders-0@1051\", \"orders-1@1068\", \"orders-2@1085\", \"orders-0@1052\", \"orders-1@1069\", \"orders-2@1086\", \"orders-0@1053\"]},\n \"reason\": \"Versions 3.1.0 of accounting and fraud-detection only support USD and raise UnsupportedCurrencyError when reading non-USD orders written by checkout 3.2.0 that are retained in the Kafka topic.\"}\n```"
+        },
+        {
+          "disposition": "BLOCKED",
+          "verdict_ok": true,
+          "failing_found": 32,
+          "failing_expected": 32,
+          "false_failing": 0,
+          "exact": true,
+          "reason": "Accounting and fraud-detection 3.1.0 only support USD currency and will raise UnsupportedCurrencyError when reading non-USD records written by checkout 3.2.0.",
+          "raw": "```json\n{\"disposition\": \"BLOCKED\", \"failing\": {\"accounting\": [\"orders-0@1048\", \"orders-1@1065\", \"orders-2@1082\", \"orders-0@1049\", \"orders-1@1066\", \"orders-2@1083\", \"orders-0@1050\", \"orders-1@1067\", \"orders-2@1084\", \"orders-0@1051\", \"orders-1@1068\", \"orders-2@1085\", \"orders-0@1052\", \"orders-1@1069\", \"orders-2@1086\", \"orders-0@1053\"], \"fraud-detection\": [\"orders-0@1048\", \"orders-1@1065\", \"orders-2@1082\", \"orders-0@1049\", \"orders-1@1066\", \"orders-2@1083\", \"orders-0@1050\", \"orders-1@1067\", \"orders-2@1084\", \"orders-0@1051\", \"orders-1@1068\", \"orders-2@1085\", \"orders-0@1052\", \"orders-1@1069\", \"orders-2@1086\", \"orders-0@1053\"]}, \"reason\": \"Accounting and fraud-detection 3.1.0 only support USD currency and will raise UnsupportedCurrencyError when reading non-USD records written by checkout 3.2.0.\"}\n```"
+        },
+        {
+          "disposition": "BLOCKED",
+          "verdict_ok": true,
+          "failing_found": 32,
+          "failing_expected": 32,
+          "false_failing": 0,
+          "exact": true,
+          "reason": "Versions 3.1.0 of accounting and fraud-detection only support USD and raise UnsupportedCurrencyError when reading orders priced in local currencies written by checkout 3.2.0.",
+          "raw": "```json\n{\"disposition\": \"BLOCKED\",\n \"failing\": {\"accounting\": [\"orders-0@1048\", \"orders-1@1065\", \"orders-2@1082\", \"orders-0@1049\", \"orders-1@1066\", \"orders-2@1083\", \"orders-0@1050\", \"orders-1@1067\", \"orders-2@1084\", \"orders-0@1051\", \"orders-1@1068\", \"orders-2@1085\", \"orders-0@1052\", \"orders-1@1069\", \"orders-2@1086\", \"orders-0@1053\"],\n             \"fraud-detection\": [\"orders-0@1048\", \"orders-1@1065\", \"orders-2@1082\", \"orders-0@1049\", \"orders-1@1066\", \"orders-2@1083\", \"orders-0@1050\", \"orders-1@1067\", \"orders-2@1084\", \"orders-0@1051\", \"orders-1@1068\", \"orders-2@1085\", \"orders-0@1052\", \"orders-1@1069\", \"orders-2@1086\", \"orders-0@1053\"]},\n \"reason\": \"Versions 3.1.0 of accounting and fraud-detection only support USD and raise UnsupportedCurrencyError when reading orders priced in local currencies written by checkout 3.2.0.\"}\n```"
+        }
+      ],
+      "context_chars": 19519
+    },
+    {
+      "case": "needle",
+      "about": "3 non-USD orders among 96, limit only in code",
+      "expected": "BLOCKED",
+      "expected_failing": 6,
+      "graph": {
+        "disposition": "BLOCKED",
+        "failing": [
+          [
+            "accounting",
+            "orders-0@2008"
+          ],
+          [
+            "accounting",
+            "orders-2@2079"
+          ],
+          [
+            "accounting",
+            "orders-2@2091"
+          ],
+          [
+            "fraud-detection",
+            "orders-0@2008"
+          ],
+          [
+            "fraud-detection",
+            "orders-2@2079"
+          ],
+          [
+            "fraud-detection",
+            "orders-2@2091"
+          ]
+        ],
+        "gaps": [],
+        "probes": 192,
+        "verdict_ok": true,
+        "failing_found": 6,
+        "failing_expected": 6,
+        "false_failing": 0,
+        "exact": true
+      },
+      "plaintext": [
+        {
+          "disposition": "BLOCKED",
+          "verdict_ok": true,
+          "failing_found": 6,
+          "failing_expected": 6,
+          "false_failing": 0,
+          "exact": true,
+          "reason": "accounting 3.1.0 and fraud-detection 3.1.0 only support USD and will fail when reading non-USD local-currency records written by checkout 3.2.0.",
+          "raw": "```json\n{\"disposition\": \"BLOCKED\",\n \"failing\": {\"accounting\": [\"orders-0@2008\", \"orders-2@2079\", \"orders-2@2091\"], \"fraud-detection\": [\"orders-0@2008\", \"orders-2@2079\", \"orders-2@2091\"]},\n \"reason\": \"accounting 3.1.0 and fraud-detection 3.1.0 only support USD and will fail when reading non-USD local-currency records written by checkout 3.2.0.\"}\n```"
+        },
+        {
+          "disposition": "BLOCKED",
+          "verdict_ok": true,
+          "failing_found": 6,
+          "failing_expected": 6,
+          "false_failing": 0,
+          "exact": true,
+          "reason": "Rolling back accounting and fraud-detection to 3.1.0 causes them to encounter non-USD currency records written by checkout 3.2.0, raising UnsupportedCurrencyError.",
+          "raw": "```json\n{\"disposition\": \"BLOCKED\",\n \"failing\": {\"accounting\": [\"orders-0@2008\", \"orders-2@2079\", \"orders-2@2091\"], \"fraud-detection\": [\"orders-0@2008\", \"orders-2@2079\", \"orders-2@2091\"]},\n \"reason\": \"Rolling back accounting and fraud-detection to 3.1.0 causes them to encounter non-USD currency records written by checkout 3.2.0, raising UnsupportedCurrencyError.\"}\n```"
+        },
+        {
+          "disposition": "BLOCKED",
+          "verdict_ok": true,
+          "failing_found": 6,
+          "failing_expected": 6,
+          "false_failing": 0,
+          "exact": true,
+          "reason": "Accounting and fraud-detection version 3.1.0 only support USD currency, but the topic contains records written by checkout 3.2.0 in EUR and JPY.",
+          "raw": "```json\n{\n  \"disposition\": \"BLOCKED\",\n  \"failing\": {\n    \"accounting\": [\"orders-0@2008\", \"orders-2@2079\", \"orders-2@2091\"],\n    \"fraud-detection\": [\"orders-0@2008\", \"orders-2@2079\", \"orders-2@2091\"]\n  },\n  \"reason\": \"Accounting and fraud-detection version 3.1.0 only support USD currency, but the topic contains records written by checkout 3.2.0 in EUR and JPY.\"\n}\n```"
+        }
+      ],
+      "context_chars": 27460
+    },
+    {
+      "case": "partial",
+      "about": "inventory coverage PARTIAL",
+      "expected": "NEEDS_EVIDENCE",
+      "expected_failing": 0,
+      "graph": {
+        "disposition": "NEEDS_EVIDENCE",
+        "failing": [],
+        "gaps": [
+          "COVERAGE_INCOMPLETE"
+        ],
+        "probes": 80,
+        "verdict_ok": true,
+        "failing_found": 0,
+        "failing_expected": 0,
+        "false_failing": 0,
+        "exact": true
+      },
+      "plaintext": [
+        {
+          "disposition": "BOUNDED_PASS",
+          "verdict_ok": false,
+          "failing_found": 0,
+          "failing_expected": 0,
+          "false_failing": 0,
+          "exact": false,
+          "reason": "Rolling back checkout to 3.1.0 only affects new writes to the orders topic (producing USD-only orders), while accounting and fraud-detection at 3.2.0 are fully equipped to handle both legacy USD records and local-currency records already present in the topic.",
+          "raw": "```json\n{\"disposition\": \"BOUNDED_PASS\",\n \"failing\": {},\n \"reason\": \"Rolling back checkout to 3.1.0 only affects new writes to the orders topic (producing USD-only orders), while accounting and fraud-detection at 3.2.0 are fully equipped to handle both legacy USD records and local-currency records already present in the topic.\"}\n```"
+        },
+        {
+          "disposition": "BLOCKED",
+          "verdict_ok": false,
+          "failing_found": 0,
+          "failing_expected": 0,
+          "false_failing": 32,
+          "exact": false,
+          "reason": "Rolling back checkout to 3.1.0 causes non-USD local-currency orders already written by checkout 3.2.0 to be consumed by accounting 3.2.0 and fraud-detection 3.2.0, which will throw UnsupportedCurrencyError.",
+          "raw": "```json\n{\"disposition\": \"BLOCKED\",\n \"failing\": {\"accounting\": [\"orders-0@1048\", \"orders-1@1065\", \"orders-2@1082\", \"orders-0@1049\", \"orders-1@1066\", \"orders-2@1083\", \"orders-0@1050\", \"orders-1@1067\", \"orders-2@1084\", \"orders-0@1051\", \"orders-1@1068\", \"orders-2@1085\", \"orders-0@1052\", \"orders-1@1069\", \"orders-2@1086\", \"orders-0@1053\"],\n             \"fraud-detection\": [\"orders-0@1048\", \"orders-1@1065\", \"orders-2@1082\", \"orders-0@1049\", \"orders-1@1066\", \"orders-2@1083\", \"orders-0@1050\", \"orders-1@1067\", \"orders-2@1084\", \"orders-0@1051\", \"orders-1@1068\", \"orders-2@1085\", \"orders-0@1052\", \"orders-1@1069\", \"orders-2@1086\", \"orders-0@1053\"]},\n \"reason\": \"Rolling back checkout to 3.1.0 causes non-USD local-currency orders already written by checkout 3.2.0 to be consumed by accounting 3.2.0 and fraud-detection 3.2.0, which will throw UnsupportedCurrencyError.\"}\n```"
+        },
+        {
+          "disposition": "BOUNDED_PASS",
+          "verdict_ok": false,
+          "failing_found": 0,
+          "failing_expected": 0,
+          "false_failing": 0,
+          "exact": false,
+          "reason": "All readers are at version 3.2.0, which fully supports local currency decoding and missing shipping addresses present in the retained records.",
+          "raw": "```json\n{\"disposition\": \"BOUNDED_PASS\",\n \"failing\": {},\n \"reason\": \"All readers are at version 3.2.0, which fully supports local currency decoding and missing shipping addresses present in the retained records.\"}\n```"
+        }
+      ],
+      "context_chars": 19889
+    },
+    {
+      "case": "orphan",
+      "about": "one order with unknown writer",
+      "expected": "NEEDS_EVIDENCE",
+      "expected_failing": 0,
+      "graph": {
+        "disposition": "NEEDS_EVIDENCE",
+        "failing": [],
+        "gaps": [
+          "FORMAT_UNKNOWN",
+          "WRITER_UNKNOWN"
+        ],
+        "probes": 82,
+        "verdict_ok": true,
+        "failing_found": 0,
+        "failing_expected": 0,
+        "false_failing": 0,
+        "exact": true
+      },
+      "plaintext": [
+        {
+          "disposition": "NEEDS_EVIDENCE",
+          "verdict_ok": true,
+          "failing_found": 0,
+          "failing_expected": 0,
+          "false_failing": 0,
+          "exact": true,
+          "reason": "Record orders-0@1054 has an unknown writer and format, preventing complete verification of fleet reader compatibility.",
+          "raw": "```json\n{\"disposition\": \"NEEDS_EVIDENCE\",\n \"failing\": {},\n \"reason\": \"Record orders-0@1054 has an unknown writer and format, preventing complete verification of fleet reader compatibility.\"}\n```"
+        },
+        {
+          "disposition": "NEEDS_EVIDENCE",
+          "verdict_ok": true,
+          "failing_found": 0,
+          "failing_expected": 0,
+          "false_failing": 0,
+          "exact": true,
+          "reason": "Record orders-0@1054 has an unknown writer and format, preventing verification of reader compatibility.",
+          "raw": "```json\n{\"disposition\": \"NEEDS_EVIDENCE\", \"failing\": {}, \"reason\": \"Record orders-0@1054 has an unknown writer and format, preventing verification of reader compatibility.\"}\n```"
+        },
+        {
+          "disposition": "NEEDS_EVIDENCE",
+          "verdict_ok": true,
+          "failing_found": 0,
+          "failing_expected": 0,
+          "false_failing": 0,
+          "exact": true,
+          "reason": "Retained record orders-0@1054 has an unknown writer and format, preventing full verification of reader compatibility.",
+          "raw": "```json\n{\"disposition\": \"NEEDS_EVIDENCE\",\n \"failing\": {},\n \"reason\": \"Retained record orders-0@1054 has an unknown writer and format, preventing full verification of reader compatibility.\"}\n```"
+        }
+      ],
+      "context_chars": 19992
+    },
+    {
+      "case": "safe",
+      "about": "readers stay on 3.2.0",
+      "expected": "BOUNDED_PASS",
+      "expected_failing": 0,
+      "graph": {
+        "disposition": "BOUNDED_PASS",
+        "failing": [],
+        "gaps": [],
+        "probes": 80,
+        "verdict_ok": true,
+        "failing_found": 0,
+        "failing_expected": 0,
+        "false_failing": 0,
+        "exact": true
+      },
+      "plaintext": [
+        {
+          "disposition": "BOUNDED_PASS",
+          "verdict_ok": true,
+          "failing_found": 0,
+          "failing_expected": 0,
+          "false_failing": 0,
+          "exact": true,
+          "reason": "Both accounting and fraud-detection are at version 3.2.0, which fully supports decoding both USD and local-currency order formats present in the retained records.",
+          "raw": "```json\n{\"disposition\": \"BOUNDED_PASS\", \"failing\": {}, \"reason\": \"Both accounting and fraud-detection are at version 3.2.0, which fully supports decoding both USD and local-currency order formats present in the retained records.\"}\n```"
+        },
+        {
+          "disposition": "BOUNDED_PASS",
+          "verdict_ok": true,
+          "failing_found": 0,
+          "failing_expected": 0,
+          "false_failing": 0,
+          "exact": true,
+          "reason": "Both accounting and fraud-detection are running version 3.2.0, which supports parsing both legacy USD records and new local-currency records from checkout 3.2.0.",
+          "raw": "```json\n{\"disposition\": \"BOUNDED_PASS\",\n \"failing\": {},\n \"reason\": \"Both accounting and fraud-detection are running version 3.2.0, which supports parsing both legacy USD records and new local-currency records from checkout 3.2.0.\"}\n```"
+        },
+        {
+          "disposition": "BLOCKED",
+          "verdict_ok": false,
+          "failing_found": 0,
+          "failing_expected": 0,
+          "false_failing": 32,
+          "exact": false,
+          "reason": "Rolling back checkout to 3.1.0 leaves local-currency records in Kafka written by 3.2.0, but accounting 3.2.0 and fraud-detection 3.2.0 still reject non-USD currencies with UnsupportedCurrencyError.",
+          "raw": "```json\n{\"disposition\": \"BLOCKED\",\n \"failing\": {\"accounting\": [\"orders-0@1048\", \"orders-1@1065\", \"orders-2@1082\", \"orders-0@1049\", \"orders-1@1066\", \"orders-2@1083\", \"orders-0@1050\", \"orders-1@1067\", \"orders-2@1084\", \"orders-0@1051\", \"orders-1@1068\", \"orders-2@1085\", \"orders-0@1052\", \"orders-1@1069\", \"orders-2@1086\", \"orders-0@1053\"],\n             \"fraud-detection\": [\"orders-0@1048\", \"orders-1@1065\", \"orders-2@1082\", \"orders-0@1049\", \"orders-1@1066\", \"orders-2@1083\", \"orders-0@1050\", \"orders-1@1067\", \"orders-2@1084\", \"orders-0@1051\", \"orders-1@1068\", \"orders-2@1085\", \"orders-0@1052\", \"orders-1@1069\", \"orders-2@1086\", \"orders-0@1053\"]},\n \"reason\": \"Rolling back checkout to 3.1.0 leaves local-currency records in Kafka written by 3.2.0, but accounting 3.2.0 and fraud-detection 3.2.0 still reject non-USD currencies with UnsupportedCurrencyError.\"}\n```"
+        }
+      ],
+      "context_chars": 19874
+    }
+  ]
+}
