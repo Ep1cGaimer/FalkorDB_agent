@@ -1,0 +1,19 @@
+{
+  "schema": "goal-repair-evidence-files/v1",
+  "files": {
+    "baseline.xml": "238beb0b9b17bbe5b75410ad9673f99cf9440a0c03d312d6e8f8acb8fd369fce",
+    "environment.json": "110d860f25ef0fd691711afd92f60cce67b9d81e0f5a7b1a2dc5fc04b8e2aea9",
+    "expanded-development.xml": "c65ff950a7b5bbacff36ea0b976b95ca652ef9f6a10d0cc9c166d1f3c31dff0b",
+    "final-tests.log": "d284b50cf041c59ec19e1088bfac6502043019c706a50e3c5cce9bfd2bafebb7",
+    "final-tests.xml": "4abae966ca25fdf68d81852a8414bb2c64aee7fc397b964d625ab6bb04861499",
+    "first-focused.xml": "90ff3858501c452bc0eb04257f9c6db9f8b81e909876076947e83bd0e87db110",
+    "implementation-manifest.json": "97f209309721f3e53772b3e0604b262efd7389f65285f5e690a195ef16b59e7b",
+    "interim-suite-coverage.xml": "44e7c5d3f1c24645cebaec3a0bc7e40b4d03993bdb676efc8c0fa9a7267ee366",
+    "interim-suite-isolation.xml": "a65aed68c0385133ae152bba2429f849e8be38f14c6b96adfa5f7bcec28d2844",
+    "javascript.log": "f7df3b92d16344a8a3cf1d985cd7dbdf921717a4d0b596eb555e8c2f045760d2",
+    "publication-access.xml": "74b40c607c40435d5375e4fd658ef22ae1f616e21e709ff06a1df563053fc098",
+    "run-summary.json": "d36069623c2aef61350d57141f4643a25d9bebdd571e7fd61bd405ef4c66c506",
+    "smoke.log": "664254383e567865f4f0cbca2b1756f253d7e00bcdf2b04775e39e5accedb0a7"
+  },
+  "original_audit_archive_sha256": "ba4854725a6b81c1ab1d4e158bc0fffe2c9f9de776aa2003c8bb817d1bc64187"
+}

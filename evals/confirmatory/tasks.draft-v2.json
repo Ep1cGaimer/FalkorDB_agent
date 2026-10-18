@@ -1,0 +1,850 @@
+[
+  {
+    "id": "CF-REQ-DEP-01",
+    "primary_stratum": "DEP",
+    "question": "Trace the normal public get helper through request and the session request entry point. Which source components would need inspection if request construction changes?",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-DEP-02",
+    "primary_stratum": "DEP",
+    "question": "Trace how Session.prepare_request turns a cookie dictionary into a jar and merges it with session cookies; identify the helper reached when dict entries become cookies.",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-DEP-03",
+    "primary_stratum": "DEP",
+    "question": "Trace URL query-parameter preparation from PreparedRequest.prepare through its encoder to the key/value helper. What does the encoder do with None values?",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-DEP-04",
+    "primary_stratum": "DEP",
+    "question": "Trace Response.json's encoding-detection path into its helper and its fallback decoder; name the Requests exception wrapper.",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-DEP-05",
+    "primary_stratum": "DEP",
+    "question": "Follow proxy rebuilding during redirects through the environment-resolution helper. Where is the no_proxy bypass decision reached?",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-DEP-06",
+    "primary_stratum": "DEP",
+    "question": "Trace tuple authentication passed through PreparedRequest.prepare_auth to Basic Authorization generation. Distinguish the parsed class/function references from the dynamic auth call.",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-DEP-07",
+    "primary_stratum": "DEP",
+    "question": "Trace HTTPAdapter.send through TLS-aware connection selection to the helper that builds host and pool parameters. Which verify inputs select CA-file versus CA-directory keys?",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-DEP-08",
+    "primary_stratum": "DEP",
+    "question": "Trace Session.merge_environment_settings to proxy bypass checking, and identify the trust_env boundary on that source path.",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-DEP-09",
+    "primary_stratum": "DEP",
+    "question": "Trace streamed-body preparation to super_len and the recorded rewind position. Which helper is used later for redirected bodies?",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-DEP-10",
+    "primary_stratum": "DEP",
+    "question": "Trace response hooks from Session.send into dispatch_hook. Can the supported static relations enumerate all application hook callbacks and prove none have further dependents?",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-CLK-DEP-01",
+    "primary_stratum": "DEP",
+    "question": "Trace group decoration through command construction. Where does the default Group class enter, and where is the decorated function installed as a callback?",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-DEP-02",
+    "primary_stratum": "DEP",
+    "question": "Trace an option decorator from Option construction to parameter memoization and eventual command parameter collection.",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-DEP-03",
+    "primary_stratum": "DEP",
+    "question": "Trace Command.main through context creation to argument parsing; identify where parameter.handle_parse_result enters.",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-DEP-04",
+    "primary_stratum": "DEP",
+    "question": "Trace a Group invocation to resolving and looking up a subcommand. Explain the token-normalization fallback.",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-DEP-05",
+    "primary_stratum": "DEP",
+    "question": "Trace Context.forward to invocation and subcontext creation. Where are missing exposed parameters filled from defaults?",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-DEP-06",
+    "primary_stratum": "DEP",
+    "question": "Trace prompt's default value conversion through convert_type and ParamType.__call__. Can source prove what an application-provided value_proc does?",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-DEP-07",
+    "primary_stratum": "DEP",
+    "question": "Trace echo_via_pager into the lazy implementation and identify the source branches that select an environment pager versus plain output.",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-DEP-08",
+    "primary_stratum": "DEP",
+    "question": "Trace shell completion from get_completions through context and incomplete-value resolution; what object receives shell_complete?",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-DEP-09",
+    "primary_stratum": "DEP",
+    "question": "Trace Command.get_help_option's lazy decorator path and parameter memoization. Why is the resulting option cached?",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-DEP-10",
+    "primary_stratum": "DEP",
+    "question": "Trace closing a context on Context.exit through close and its ExitStack. Can static source prove all user cleanup callbacks succeed?",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-REQ-REL-01",
+    "primary_stratum": "REL",
+    "question": "Compare get_netrc_auth's host selection and netrc-file selection between v2.10.0 and v2.32.5.",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-REL-02",
+    "primary_stratum": "REL",
+    "question": "Compare super_len's treatment of text strings and seekable objects between v2.10.0 and v2.32.5. Include the urllib3-version boundary.",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-REL-03",
+    "primary_stratum": "REL",
+    "question": "Compare Response.json's invalid-JSON exception handling between v2.10.0 and v2.32.5; distinguish it from its Unicode fallback.",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-REL-04",
+    "primary_stratum": "REL",
+    "question": "Compare HTTPAdapter.send's connection selection and chunked-send implementation between v2.10.0 and v2.32.5.",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-REL-05",
+    "primary_stratum": "REL",
+    "question": "Compare PreparedRequest.prepare_url's whitespace and ASCII host validation between v2.10.0 and v2.32.5.",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-REL-06",
+    "primary_stratum": "REL",
+    "question": "Compare JSON serialization and redirect rewind bookkeeping in prepare_body between v2.10.0 and v2.32.5.",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-REL-07",
+    "primary_stratum": "REL",
+    "question": "Compare redirected Proxy-Authorization reconstruction between v2.10.0 and v2.32.5, including the HTTPS condition.",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-REL-08",
+    "primary_stratum": "REL",
+    "question": "Compare redirect fragment/history handling between v2.10.0 and v2.32.5. Cite each revision rather than treating current code as historical evidence.",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-REL-09",
+    "primary_stratum": "REL",
+    "question": "Compare the default CA-bundle provider between v2.10.0 and v2.32.5. Does the newer source retain the bundled-file fallback?",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-REL-10",
+    "primary_stratum": "REL",
+    "question": "Compare check_compatibility's character-detection choices and no-detector behavior between v2.20.0 and v2.32.5.",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-CLK-REL-01",
+    "primary_stratum": "REL",
+    "question": "Compare command decoration in 7.1.2 and 8.3.0 for a callback named init_data_command and for bare @command use.",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-REL-02",
+    "primary_stratum": "REL",
+    "question": "Compare Context.exit in 7.1.2 and 8.3.0. Is close explicitly called before Exit is raised?",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-REL-03",
+    "primary_stratum": "REL",
+    "question": "Compare Choice.convert's normalization path in 7.1.2 and 8.3.0. Does either version intentionally return only the normalized input rather than its original choice?",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-REL-04",
+    "primary_stratum": "REL",
+    "question": "Compare Path construction and conversion in 7.1.2 and 8.3.0 for executable-path checking. Identify the new option and source check.",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-REL-05",
+    "primary_stratum": "REL",
+    "question": "Compare Option.__init__ in 7.1.2 and 8.3.0 for distinguishing an omitted flag_value from explicit None.",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-REL-06",
+    "primary_stratum": "REL",
+    "question": "Compare Context.invoke in 7.1.2 and 8.3.0 for missing parameter defaults and forwarding kwargs over multiple levels.",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-REL-07",
+    "primary_stratum": "REL",
+    "question": "Compare generated help-option creation in 7.1.2 and 8.3.0. What was added to preserve stable option identity?",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-REL-08",
+    "primary_stratum": "REL",
+    "question": "Compare Parameter.get_default in 7.1.2 and 8.3.0 for default_map precedence, callable suppression and type casting.",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-REL-09",
+    "primary_stratum": "REL",
+    "question": "Compare echo_via_pager in 7.1.2 and 8.3.0. Did support for generator functions and lazy delegation to pager newly appear only in 8.3.0?",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-REL-10",
+    "primary_stratum": "REL",
+    "question": "Compare Choice.get_metavar in 7.1.2 and 8.3.0 for hidden choices and required arguments.",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-REQ-FIX-01",
+    "primary_stratum": "FIX",
+    "question": "The default SSLContext caching change 9a40d127 is an ancestor of v2.32.5. Is that caching mechanism still present there after later changes? Trace the actual source and intervening removal.",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-FIX-02",
+    "primary_stratum": "FIX",
+    "question": "At v2.32.5, does get_netrc_auth still use the hostname-based lookup introduced by 96ba401c, after later releases and edits? Show introduction and current source.",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-FIX-03",
+    "primary_stratum": "FIX",
+    "question": "At v2.32.5, is the leading-path-separator handling introduced by 60389df6 still in HTTPAdapter.request_url? Explain the later HTTP proxy override path too.",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-FIX-04",
+    "primary_stratum": "FIX",
+    "question": "At v2.32.5, is the JSONDecodeError serialization change from 3ff3ff21 still present despite later changes? Identify the actual reduce target.",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-FIX-05",
+    "primary_stratum": "FIX",
+    "question": "Does v2.32.5 preserve the unconditional str-to-UTF-8 behavior originally added to super_len by 3fd309a5? Account for later modification rather than answering from ancestry.",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-FIX-06",
+    "primary_stratum": "FIX",
+    "question": "At v2.32.5, does TLS-aware connection-pool selection from c0813a2d survive the later helper renaming and cache removal? Trace the current path.",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-FIX-07",
+    "primary_stratum": "FIX",
+    "question": "At v2.32.5, is the public subclass hook name introduced by aa1461b6 still used by send? Is old get_connection entirely deleted?",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-FIX-08",
+    "primary_stratum": "FIX",
+    "question": "At v2.32.5, is the filtering of empty Windows proxy override entries introduced by 1604e20f still present? Bound the conclusion to the relevant platform source.",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-FIX-09",
+    "primary_stratum": "FIX",
+    "question": "At v2.32.5, does optional character detection from 555b870e still have both a no-detector warning and an apparent-encoding fallback? Show current evidence for both.",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-FIX-10",
+    "primary_stratum": "FIX",
+    "question": "At v2.32.5, does the lazy proxy-bypass check merged in 77d1e9aa still avoid should_bypass_proxies when trust_env is false? Inspect actual code rather than relying on the branch name.",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-CLK-FIX-01",
+    "primary_stratum": "FIX",
+    "question": "At 8.3.0, is Fish incomplete-word quote/escape handling from 701b313 still present after later changes?",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-FIX-02",
+    "primary_stratum": "FIX",
+    "question": "At 8.3.0, does Zsh completion still preserve the conditional colon escaping introduced by a1235aa? Include its help sentinel boundary.",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-FIX-03",
+    "primary_stratum": "FIX",
+    "question": "At 8.3.0, is the nested-group completion ordering fix ac6a2ac still present in both chained and non-chained branches?",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-FIX-04",
+    "primary_stratum": "FIX",
+    "question": "At 8.3.0, is Option's flag-value condition from 4fd2fea still the identical None-based algorithm, or has it changed later?",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-FIX-05",
+    "primary_stratum": "FIX",
+    "question": "At 8.3.0, does Context.exit retain the explicit closing behavior introduced by c326df9 after later changes?",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-FIX-06",
+    "primary_stratum": "FIX",
+    "question": "At 8.3.0, does the help-option identity caching introduced by 70c673d survive later decorator changes?",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-FIX-07",
+    "primary_stratum": "FIX",
+    "question": "At 8.3.0, is the explicit display of an empty-string default introduced by 61f8101 still in the help-building code despite its refactoring?",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-FIX-08",
+    "primary_stratum": "FIX",
+    "question": "At 8.3.0, does the generated-name suffix removal in 1496837 remain, including the explicit-name bypass?",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-FIX-09",
+    "primary_stratum": "FIX",
+    "question": "At 8.3.0, does add_completion_class still return the registered class as introduced by e002dbc after later typing changes?",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-FIX-10",
+    "primary_stratum": "FIX",
+    "question": "At 8.3.0, is restoration of _compat.should_strip_ansi from ffd43e9 still present in CliRunner isolation's finally block?",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-REQ-BRN-01",
+    "primary_stratum": "BRN",
+    "question": "Investigate merge eea3bbf9ac635f465ee6c9903dc57c677952dafd (character-detection import aliases) at its own tree. Identify ordered parents, compare src/requests/packages.py against both parent blobs, and show what enters relative to its first parent. Is this merge reachable from the pinned final release? Can its title alone prove the historical branch tip or a semantic backport? State the evidence limit.",
+    "repository": "requests",
+    "revision": "eea3bbf9ac635f465ee6c9903dc57c677952dafd"
+  },
+  {
+    "id": "CF-REQ-BRN-02",
+    "primary_stratum": "BRN",
+    "question": "Investigate merge b8be93a721792deeadd2f498b8f77cf610e7765f (UTF-8 length handling) at its own tree. Identify ordered parents, compare src/requests/utils.py against both parent blobs, and show what enters relative to its first parent. Is this merge reachable from the pinned final release? Can its title alone prove the historical branch tip or a semantic backport? State the evidence limit.",
+    "repository": "requests",
+    "revision": "b8be93a721792deeadd2f498b8f77cf610e7765f"
+  },
+  {
+    "id": "CF-REQ-BRN-03",
+    "primary_stratum": "BRN",
+    "question": "Investigate merge 3587a5f869ea7ae2ba6b20d281d810b65aa2418e (leading request-path separators) at its own tree. Identify ordered parents, compare src/requests/adapters.py against both parent blobs, and show what enters relative to its first parent. Is this merge reachable from the pinned final release? Can its title alone prove the historical branch tip or a semantic backport? State the evidence limit.",
+    "repository": "requests",
+    "revision": "3587a5f869ea7ae2ba6b20d281d810b65aa2418e"
+  },
+  {
+    "id": "CF-REQ-BRN-04",
+    "primary_stratum": "BRN",
+    "question": "Investigate merge 77d1e9aa3e000b40fdf93cfc355e1fe7cc52b6ac (short-circuited proxy bypass checks) at its own tree. Identify ordered parents, compare requests/utils.py against both parent blobs, and show what enters relative to its first parent. Is this merge reachable from the pinned final release? Can its title alone prove the historical branch tip or a semantic backport? State the evidence limit.",
+    "repository": "requests",
+    "revision": "77d1e9aa3e000b40fdf93cfc355e1fe7cc52b6ac"
+  },
+  {
+    "id": "CF-REQ-BRN-05",
+    "primary_stratum": "BRN",
+    "question": "Investigate merge 28d537dde33b35c3b7071afd99122eff3538b42c (proxy URL scheme preparation through urllib3 parsing) at its own tree. Identify ordered parents, compare requests/utils.py against both parent blobs, and show what enters relative to its first parent. Is this merge reachable from the pinned final release? Can its title alone prove the historical branch tip or a semantic backport? State the evidence limit.",
+    "repository": "requests",
+    "revision": "28d537dde33b35c3b7071afd99122eff3538b42c"
+  },
+  {
+    "id": "CF-REQ-BRN-06",
+    "primary_stratum": "BRN",
+    "question": "Investigate merge d09659997cd1e3eca49a07c59ece5557071c0ab9 (prepared URL host-label validation) at its own tree. Identify ordered parents, compare requests/models.py against both parent blobs, and show what enters relative to its first parent. Is this merge reachable from the pinned final release?",
+    "repository": "requests",
+    "revision": "d09659997cd1e3eca49a07c59ece5557071c0ab9"
+  },
+  {
+    "id": "CF-REQ-BRN-07",
+    "primary_stratum": "BRN",
+    "question": "Investigate merge 7556ea421387e7738464b88e0a8c67e0d953ea11 (Host-header handling during chunked request sending) at its own tree. Identify ordered parents, compare requests/adapters.py against both parent blobs, and show what enters relative to its first parent. Is this merge reachable from the pinned final release?",
+    "repository": "requests",
+    "revision": "7556ea421387e7738464b88e0a8c67e0d953ea11"
+  },
+  {
+    "id": "CF-REQ-BRN-08",
+    "primary_stratum": "BRN",
+    "question": "Investigate merge 8c211a96cdbe9fe320d63d9e1ae15c5c07e179f8 (session proxy rebuilding before send) at its own tree. Identify ordered parents, compare requests/sessions.py against both parent blobs, and show what enters relative to its first parent. Is this merge reachable from the pinned final release?",
+    "repository": "requests",
+    "revision": "8c211a96cdbe9fe320d63d9e1ae15c5c07e179f8"
+  },
+  {
+    "id": "CF-REQ-BRN-09",
+    "primary_stratum": "BRN",
+    "question": "Investigate merge bbc3d43522bcb1363050557655508d66bfebcfcf (OrderedDict import provenance) at its own tree. Identify ordered parents, compare requests/sessions.py against both parent blobs, and show what enters relative to its first parent. Is this merge reachable from the pinned final release?",
+    "repository": "requests",
+    "revision": "bbc3d43522bcb1363050557655508d66bfebcfcf"
+  },
+  {
+    "id": "CF-REQ-BRN-10",
+    "primary_stratum": "BRN",
+    "question": "Investigate merge 82c744b59c4cd8c6bc5303a8ed7c892b6490b888 (trusted-domain authentication stripping exceptions) at its own tree. Identify ordered parents, compare requests/sessions.py against both parent blobs, and show what enters relative to its first parent. Is this merge reachable from the pinned final release?",
+    "repository": "requests",
+    "revision": "82c744b59c4cd8c6bc5303a8ed7c892b6490b888"
+  },
+  {
+    "id": "CF-CLK-BRN-01",
+    "primary_stratum": "BRN",
+    "question": "Investigate merge dc8e539775aab2b881d90cfd27e815d33df75918 (Fish completion changes arriving on a flag-development branch) at its own tree. Identify ordered parents, compare src/click/shell_completion.py against both parent blobs, and show what enters relative to its first parent. Is this merge reachable from the pinned final release? Can its title alone prove the historical branch tip or a semantic backport? State the evidence limit.",
+    "repository": "click",
+    "revision": "dc8e539775aab2b881d90cfd27e815d33df75918"
+  },
+  {
+    "id": "CF-CLK-BRN-02",
+    "primary_stratum": "BRN",
+    "question": "Investigate merge 11f48e2cd1812692ec118cf14dbf2866b83db10a (type changes merged from stable during option-completion work) at its own tree. Identify ordered parents, compare src/click/types.py against both parent blobs, and show what enters relative to its first parent. Is this merge reachable from the pinned final release? Can its title alone prove the historical branch tip or a semantic backport? State the evidence limit.",
+    "repository": "click",
+    "revision": "11f48e2cd1812692ec118cf14dbf2866b83db10a"
+  },
+  {
+    "id": "CF-CLK-BRN-03",
+    "primary_stratum": "BRN",
+    "question": "Investigate merge 2c6e0eb9aa924cc8c2e1a5cb15a63dcab08ada7e (stable-branch updates during environment-error-hint work) at its own tree. Identify ordered parents, compare src/click/core.py against both parent blobs, and show what enters relative to its first parent. Is this merge reachable from the pinned final release? Can its title alone prove the historical branch tip or a semantic backport? State the evidence limit.",
+    "repository": "click",
+    "revision": "2c6e0eb9aa924cc8c2e1a5cb15a63dcab08ada7e"
+  },
+  {
+    "id": "CF-CLK-BRN-04",
+    "primary_stratum": "BRN",
+    "question": "Investigate merge b2f26437c7621c9b86508c49f6cf7038aa8d2a37 (core updates during parameter-hint typing work) at its own tree. Identify ordered parents, compare src/click/core.py against both parent blobs, and show what enters relative to its first parent. Is this merge reachable from the pinned final release? Can its title alone prove the historical branch tip or a semantic backport? State the evidence limit.",
+    "repository": "click",
+    "revision": "b2f26437c7621c9b86508c49f6cf7038aa8d2a37"
+  },
+  {
+    "id": "CF-CLK-BRN-05",
+    "primary_stratum": "BRN",
+    "question": "Investigate merge fe3677f85644434d67506ac92a3df6d08a96c764 (completion changes merged during enum-default work) at its own tree. Identify ordered parents, compare src/click/shell_completion.py against both parent blobs, and show what enters relative to its first parent. Is this merge reachable from the pinned final release? Can its title alone prove the historical branch tip or a semantic backport? State the evidence limit.",
+    "repository": "click",
+    "revision": "fe3677f85644434d67506ac92a3df6d08a96c764"
+  },
+  {
+    "id": "CF-CLK-BRN-06",
+    "primary_stratum": "BRN",
+    "question": "Investigate merge 361915bbc3ccbe59a09585ecfd1fc30bb0697272 (stable-to-main testing-support changes) at its own tree. Identify ordered parents, compare src/click/testing.py against both parent blobs, and show what enters relative to its first parent. Is this merge reachable from the pinned final release?",
+    "repository": "click",
+    "revision": "361915bbc3ccbe59a09585ecfd1fc30bb0697272"
+  },
+  {
+    "id": "CF-CLK-BRN-07",
+    "primary_stratum": "BRN",
+    "question": "Investigate merge 5a299c6c0fff30b0ae40538dd0903d25803ac191 (decorator conflict resolution in a stable-to-main merge) at its own tree. Identify ordered parents, compare src/click/decorators.py against both parent blobs, and show what enters relative to its first parent. Is this merge reachable from the pinned final release?",
+    "repository": "click",
+    "revision": "5a299c6c0fff30b0ae40538dd0903d25803ac191"
+  },
+  {
+    "id": "CF-CLK-BRN-08",
+    "primary_stratum": "BRN",
+    "question": "Investigate merge 99015e1456b6952054fda8312b40ea646737168d (utility changes merged from 8.1.x) at its own tree. Identify ordered parents, compare src/click/utils.py against both parent blobs, and show what enters relative to its first parent. Is this merge reachable from the pinned final release?",
+    "repository": "click",
+    "revision": "99015e1456b6952054fda8312b40ea646737168d"
+  },
+  {
+    "id": "CF-CLK-BRN-09",
+    "primary_stratum": "BRN",
+    "question": "Investigate merge b765b12c7c90d90e16d165180bfc2fa693c24299 (decorator changes merged from 8.1.x) at its own tree. Identify ordered parents, compare src/click/decorators.py against both parent blobs, and show what enters relative to its first parent. Is this merge reachable from the pinned final release?",
+    "repository": "click",
+    "revision": "b765b12c7c90d90e16d165180bfc2fa693c24299"
+  },
+  {
+    "id": "CF-CLK-BRN-10",
+    "primary_stratum": "BRN",
+    "question": "Investigate merge d9af5cfa009c927a96d10ed38a3e37979876a12e (terminal implementation changes merged from 8.1.x) at its own tree. Identify ordered parents, compare src/click/_termui_impl.py against both parent blobs, and show what enters relative to its first parent. Is this merge reachable from the pinned final release?",
+    "repository": "click",
+    "revision": "d9af5cfa009c927a96d10ed38a3e37979876a12e"
+  },
+  {
+    "id": "CF-REQ-IDN-01",
+    "primary_stratum": "IDN",
+    "question": "At the src-layout transition d63e94f5, follow the public request helper's file identity. Was api.py deleted without a successor or moved with identical content? Preserve citations to both trees.",
+    "repository": "requests",
+    "revision": "d63e94f552ebf77ccf45d97e5863ac46500fa2c7"
+  },
+  {
+    "id": "CF-REQ-IDN-02",
+    "primary_stratum": "IDN",
+    "question": "At d63e94f5, distinguish Session's source identity before and after the source-root move. Does reusing the same blob authorize citing the old path for the child revision?",
+    "repository": "requests",
+    "revision": "d63e94f552ebf77ccf45d97e5863ac46500fa2c7"
+  },
+  {
+    "id": "CF-REQ-IDN-03",
+    "primary_stratum": "IDN",
+    "question": "At 14d6fa14, was __about__.py newly renamed into __version__.py in this commit, or did the target already exist? Check both trees and the import rewiring.",
+    "repository": "requests",
+    "revision": "14d6fa1472cfbaaeb23c23ad4029bac82547c34d"
+  },
+  {
+    "id": "CF-REQ-IDN-04",
+    "primary_stratum": "IDN",
+    "question": "At a00b7e4b, track the bundled cacert.pem deletion. Does the certs.py source in that same tree prove a bundled-file fallback was already removed too?",
+    "repository": "requests",
+    "revision": "a00b7e4b25e041a62b634adc67cb02d7c3667c3e"
+  },
+  {
+    "id": "CF-REQ-IDN-05",
+    "primary_stratum": "IDN",
+    "question": "At f553857b, distinguish deletion of safe_mode.py from a rename or mere source-root move. What caller-side source removal accompanies it?",
+    "repository": "requests",
+    "revision": "f553857beb4424786f8d665019686551905483d6"
+  },
+  {
+    "id": "CF-REQ-IDN-06",
+    "primary_stratum": "IDN",
+    "question": "At 94e82e9c, track removal of defaults.py and the PreparedRequest scheme check. Should missing current file evidence erase the parent-revision source?",
+    "repository": "requests",
+    "revision": "94e82e9cc2e7eb9934ed086a69d3b49ddf3ce3eb"
+  },
+  {
+    "id": "CF-REQ-IDN-07",
+    "primary_stratum": "IDN",
+    "question": "At 4dc48b65, inspect the _config-to-defaults transition. Does Git establish a byte-preserving rename or a deletion/addition with a different representation?",
+    "repository": "requests",
+    "revision": "4dc48b6521805515b9a3a7a06670d9f5984dd45c"
+  },
+  {
+    "id": "CF-REQ-IDN-08",
+    "primary_stratum": "IDN",
+    "question": "At 4d06e401, what happened to Requests' _oauth.py source file? Can that deletion establish that no external authentication object can ever implement OAuth?",
+    "repository": "requests",
+    "revision": "4d06e4019f3a30a38fbdc3f59156f08f74d6c76e"
+  },
+  {
+    "id": "CF-REQ-IDN-09",
+    "primary_stratum": "IDN",
+    "question": "At 8e17600e, track the vendored chardet package entry-point deletion. What can the declared corpus establish about its previous implementation or external replacements?",
+    "repository": "requests",
+    "revision": "8e17600ef60de4faf632acb55d15cb3c178de9bb"
+  },
+  {
+    "id": "CF-REQ-IDN-10",
+    "primary_stratum": "IDN",
+    "question": "At 28666e5d, distinguish removal of the packages directory entry point from the already-existing packages.py shim. Does the latter prove the old vendored implementation was copied unchanged?",
+    "repository": "requests",
+    "revision": "28666e5d3ae04fede9a9078aba937b0ce6380adc"
+  },
+  {
+    "id": "CF-CLK-IDN-01",
+    "primary_stratum": "IDN",
+    "question": "At 079f91a, follow Choice's defining file across the src-layout move. Does the Git tree establish content continuity?",
+    "repository": "click",
+    "revision": "079f91a2396c5c9264f34f95894259b7b15eb89c"
+  },
+  {
+    "id": "CF-CLK-IDN-02",
+    "primary_stratum": "IDN",
+    "question": "At 079f91a, follow the Windows console support file independently of types.py. Does identical source establish that its platform-specific behavior was executed during ingestion?",
+    "repository": "click",
+    "revision": "079f91a2396c5c9264f34f95894259b7b15eb89c"
+  },
+  {
+    "id": "CF-CLK-IDN-03",
+    "primary_stratum": "IDN",
+    "question": "At 0801796, trace the original public-looking bashcomplete module into the internal-name module. Is this a content-preserving rename and what changes in its importer?",
+    "repository": "click",
+    "revision": "080179683dca88decf803e6d606ca61490ebe7f6"
+  },
+  {
+    "id": "CF-CLK-IDN-04",
+    "primary_stratum": "IDN",
+    "question": "At 3c4cacb, was the shell completion redesign merely an identical-file rename of _bashcomplete.py? Use Git changes and source integration evidence.",
+    "repository": "click",
+    "revision": "3c4cacb1bba9f2b6f62628cf1783ce64aed62436"
+  },
+  {
+    "id": "CF-CLK-IDN-05",
+    "primary_stratum": "IDN",
+    "question": "At 0ccada0, what happens to _unicodefun.py and the caller of _verify_python_env? Distinguish actual deletion from an unresolved rename.",
+    "repository": "click",
+    "revision": "0ccada0e64dbb42eecea8386b5e4e41146b9b0f6"
+  },
+  {
+    "id": "CF-CLK-IDN-06",
+    "primary_stratum": "IDN",
+    "question": "Trace resultcallback -> result_callback through b1e7858 and the later f00d15e removal. Was the old name deleted immediately when the new method appeared?",
+    "repository": "click",
+    "revision": "f00d15eeeaf4d789ac6a7840c43fb54aabe7fe3f"
+  },
+  {
+    "id": "CF-CLK-IDN-07",
+    "primary_stratum": "IDN",
+    "question": "At d88e771, track removal of get_terminal_size from its defining module and package export. Does the containing file vanish, or just the deprecated helper?",
+    "repository": "click",
+    "revision": "d88e771a004c34e4b863123333a259b28a2bf8f4"
+  },
+  {
+    "id": "CF-CLK-IDN-08",
+    "primary_stratum": "IDN",
+    "question": "At 60a5eaf, track removal of get_os_args from its defining module and package export. Does the containing file vanish, or just the deprecated helper?",
+    "repository": "click",
+    "revision": "60a5eafaf5f2a71b2a8a4f93ad1faefb2b8b0f76"
+  },
+  {
+    "id": "CF-CLK-IDN-09",
+    "primary_stratum": "IDN",
+    "question": "Trace Parameter's autocompletion parameter through the 3faede8 rename and 51736b9 removal. Is this only a spelling change with identical callback semantics?",
+    "repository": "click",
+    "revision": "51736b9566637351362f1eaeb32ea42aecdec704"
+  },
+  {
+    "id": "CF-CLK-IDN-10",
+    "primary_stratum": "IDN",
+    "question": "At parser deprecation merge 988c683 and final 8.3.0, distinguish _OptionParser's definition from the old OptionParser attribute. Can a missing direct class definition prove old-name imports can never resolve?",
+    "repository": "click",
+    "revision": "988c683963b14ced1b32a8cda9f9b466c32d9df1"
+  },
+  {
+    "id": "CF-REQ-GAP-01",
+    "primary_stratum": "GAP",
+    "question": "Investigate the public entry points at revision confirmatory-missing-requests-release-20261018. If that revision is unavailable in the supplied upstream clone, what must be resolved before giving revision-specific code findings?",
+    "repository": "requests",
+    "revision": "confirmatory-missing-requests-release-20261018"
+  },
+  {
+    "id": "CF-REQ-GAP-02",
+    "primary_stratum": "GAP",
+    "question": "For requests, explain the latest release's public behavior. No release tag, immutable commit, remote release metadata or as-of date has been supplied. What selection needs clarification?",
+    "repository": "requests",
+    "revision": null
+  },
+  {
+    "candidate_repositories": [
+      "requests",
+      "click"
+    ],
+    "id": "CF-REQ-GAP-03",
+    "primary_stratum": "GAP",
+    "question": "Two upstream repositories are available. In exceptions.py, explain the public helper definitions, but the request supplies neither a repository nor a revision. What must be clarified?",
+    "repository": null,
+    "revision": null
+  },
+  {
+    "id": "CF-REQ-GAP-04",
+    "primary_stratum": "GAP",
+    "question": "At the pinned release, is the proxy fix present? No issue number, patch, change commit or concrete proxy symptom is specified. Identify why a unique fix cannot be selected.",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-GAP-05",
+    "primary_stratum": "GAP",
+    "question": "For an application that mounts an unspecified custom transport adapter, enumerate every runtime method reached by Session.send and prove there are no additional dependencies. Does the supported static evidence suffice?",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-GAP-06",
+    "primary_stratum": "GAP",
+    "question": "Using only this Requests corpus, give the complete internal call graph of urllib3 Retry.increment used under HTTPAdapter's retries. Can the external implementation be established here?",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-GAP-07",
+    "primary_stratum": "GAP",
+    "question": "From the Requests Python-only extraction, trace the C implementation below ssl/OpenSSL and certify that no native memory-safety dependency is reachable. What language/relationship evidence is missing?",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-GAP-08",
+    "primary_stratum": "GAP",
+    "question": "Based solely on check_compatibility source at the pinned Requests revision, return BOUNDED_PASS for an unspecified deployed environment. No execution receipts or runtime adapter are available. Is that disposition justified?",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-GAP-09",
+    "primary_stratum": "GAP",
+    "question": "A merge message at eea3bbf9 mentions branch-like names. Determine the exact historical remote branch tip at the moment of authoring, using only the clone's commit objects and present refs. Is that historical metadata recoverable uniquely?",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-REQ-GAP-10",
+    "primary_stratum": "GAP",
+    "question": "Was the hostname-based netrc fix backported to my supported branch? The branch name, target commit and patch identity are not supplied. What can this corpus establish and what needs clarification?",
+    "repository": "requests",
+    "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  },
+  {
+    "id": "CF-CLK-GAP-01",
+    "primary_stratum": "GAP",
+    "question": "Investigate the public entry points at revision confirmatory-missing-click-release-20261018. If that revision is unavailable in the supplied upstream clone, what must be resolved before giving revision-specific code findings?",
+    "repository": "click",
+    "revision": "confirmatory-missing-click-release-20261018"
+  },
+  {
+    "id": "CF-CLK-GAP-02",
+    "primary_stratum": "GAP",
+    "question": "For click, explain the latest release's public behavior. No release tag, immutable commit, remote release metadata or as-of date has been supplied. What selection needs clarification?",
+    "repository": "click",
+    "revision": null
+  },
+  {
+    "candidate_repositories": [
+      "requests",
+      "click"
+    ],
+    "id": "CF-CLK-GAP-03",
+    "primary_stratum": "GAP",
+    "question": "Two upstream repositories are available. In utils.py, explain the public helper definitions, but the request supplies neither a repository nor a revision. What must be clarified?",
+    "repository": null,
+    "revision": null
+  },
+  {
+    "id": "CF-CLK-GAP-04",
+    "primary_stratum": "GAP",
+    "question": "At the pinned release, is the completion fix present? No shell, issue number, patch or change commit is specified. Identify why a unique fix cannot be selected.",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-GAP-05",
+    "primary_stratum": "GAP",
+    "question": "For an application using an unspecified callable as a parameter converter, enumerate FuncParamType's complete runtime dependencies and prove conversion succeeds. Is that supported by static source alone?",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-GAP-06",
+    "primary_stratum": "GAP",
+    "question": "Using only this Click production corpus, trace every internal gettext translation-library call below core's imported gettext functions. Can external-library implementation completeness be proved?",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-GAP-07",
+    "primary_stratum": "GAP",
+    "question": "Treat the _SOURCE_ZSH shell-program string inside shell_completion.py as a complete parsed Zsh call graph and prove it has no unsupported dependencies. Can the Python-only adapter justify this?",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-GAP-08",
+    "primary_stratum": "GAP",
+    "question": "Using only Click's Context.exit/close source, certify that an unspecified deployed application's resource cleanup has BOUNDED_PASS. No runtime adapter or executed receipts are supplied. What can be concluded?",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-GAP-09",
+    "primary_stratum": "GAP",
+    "question": "A merge message at 5a299c6 mentions branch-like names. Determine the exact historical remote branch tip at the moment of authoring, using only the clone's commit objects and present refs. Is that historical metadata recoverable uniquely?",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  },
+  {
+    "id": "CF-CLK-GAP-10",
+    "primary_stratum": "GAP",
+    "question": "Was generated-command suffix removal backported to every 8.1.x maintenance release? No target hashes, patch comparison or backport record is supplied. Can the source/Git scope justify semantic equivalence for all releases?",
+    "repository": "click",
+    "revision": "00fadb8904387158ce6e9aa1573be770446895c1"
+  }
+]

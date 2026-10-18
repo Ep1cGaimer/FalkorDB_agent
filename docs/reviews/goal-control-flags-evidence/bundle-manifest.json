@@ -1,0 +1,16 @@
+{
+  "schema": "evidence-file-manifest/v1",
+  "files": {
+    "control-flags-baseline.log": "fd1c8445bfd2d2faf496876ec7ad4121dfb5c9c987cf640c2167a59b3e110eb0",
+    "control-flags-baseline.xml": "79c51dbfacf953bbc63c962f570d1480d84de5fda280cc654945b683d5b83c6e",
+    "control-flags-current.log": "f63e1101336759ab7460370cb4d0f3a01ca8060a84222ef9c2d6e8748e4c6ff3",
+    "control-flags-current.xml": "6bb6147b5555ee3ca4e72f12f8024f6a048337d3281dc608e08825fdb29700b1",
+    "credential-scan.json": "a5f61dad3f187ad7035f6f95e9c074983423a7eecf8f913d93205a88d554b68a",
+    "goal-live-fixture-control-002.log": "ac50b1b7e71a7c09c2c882a86100151405b360b1c4af8b6acbd0c40fae38c7b3",
+    "goal-live-fixture-control-002.xml": "9c910f7902bb9e895b486fee882a554c2da8843dc3aa62ed4de3b334ebc928b0",
+    "implementation-manifest.json": "d2e670030946820be7e69934d5c6bf9aaa620c647f506f65a09fa71c5fe79d60",
+    "live-control-002-transcripts.tar.gz": "41875739e994697de75329f344c767f1e86b6a41f9c4a8a248c886b794761484",
+    "normalization-replay.json": "50bb55dce5f7065bccddd4430ad7fd77fdf0043825aaf8e47c61ef47df464d6e",
+    "run-summary.json": "e822902208e34797376b86b0e2aace9c9ffd8ea547b7682b143929a3619370ba"
+  }
+}

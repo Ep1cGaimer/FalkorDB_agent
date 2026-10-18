@@ -1,0 +1,24 @@
+✔ a hash match with a different payload or plan cannot display a passing check (0.797167ms)
+✔ only applicable receipts participate in FAIL > PASS > UNKNOWN precedence (0.072333ms)
+✔ matrix identities distinguish routes and stores even when display labels collide (0.060417ms)
+✔ summary preserves unresolved checks and does not infer a plan disposition (0.381458ms)
+✔ alternative replay choices are exact-request proposals that have not been used (0.076041ms)
+✔ saved-data tile never shows a pass over evidence gaps, but failures still dominate (0.104792ms)
+✔ recording labels include model, origin and ID without pretending unknown metadata is live (10.050667ms)
+✔ retained-data summary and titles use arbitrary snapshot/store/format identities (0.217583ms)
+✔ retained summary preserves unknown facts, store identity and partial inventories (0.098292ms)
+✔ handoff loads and refreshes with GET only, selects latest and keeps request and replay labels (0.841666ms)
+✔ invalid and encoded routes never fetch; missing link makes no call (0.541083ms)
+✔ unknown or expired ID has recovery guidance (0.11ms)
+✔ module view displays the full selected plan hash, confirms that attempt and exposes earlier clarification (1.277416ms)
+✔ withAnswer mirrors pipeline.with_answer (0.337459ms)
+✔ recorded answers come only from the exact current request and question (0.366542ms)
+✔ only the transcript bound to the exact answer matches (0.083292ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 59.866541

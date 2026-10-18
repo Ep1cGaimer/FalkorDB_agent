@@ -1,0 +1,235 @@
+....................EEEEEEEEEEEEEEs                                      [100%]
+==================================== ERRORS ====================================
+_____________ ERROR at setup of test_symbols_pagination_exact_once _____________
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 177
+  def test_symbols_pagination_exact_once(indexed):
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 107
+  @pytest.fixture
+  def indexed(scale_repo, write_config, graph_name):
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 85
+  @pytest.fixture
+  def scale_repo(tmp_path, git_cmd):
+E       fixture 'git_cmd' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, identity_fixture_root, indexed, monkeypatch, oracle_case, oracle_graph, oracle_graphs, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, scale_repo, second_graph, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py:85
+__________ ERROR at setup of test_dependencies_pagination_exact_once ___________
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 188
+  def test_dependencies_pagination_exact_once(indexed):
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 107
+  @pytest.fixture
+  def indexed(scale_repo, write_config, graph_name):
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 85
+  @pytest.fixture
+  def scale_repo(tmp_path, git_cmd):
+E       fixture 'git_cmd' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, identity_fixture_root, indexed, monkeypatch, oracle_case, oracle_graph, oracle_graphs, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, scale_repo, second_graph, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py:85
+_________________ ERROR at setup of test_limit_bounds_rejected _________________
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 198
+  def test_limit_bounds_rejected(indexed):
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 107
+  @pytest.fixture
+  def indexed(scale_repo, write_config, graph_name):
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 85
+  @pytest.fixture
+  def scale_repo(tmp_path, git_cmd):
+E       fixture 'git_cmd' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, identity_fixture_root, indexed, monkeypatch, oracle_case, oracle_graph, oracle_graphs, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, scale_repo, second_graph, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py:85
+_ ERROR at setup of test_bad_cursor_is_error_or_gap_never_restart[!!!not-a-cursor] _
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 208
+  @pytest.mark.parametrize("cursor", [
+      "!!!not-a-cursor",
+      "bzotNQ==",                       # base64 "o:-5" (negative offset)
+      "bzoxMDAwMDAw",                   # base64 "o:1000000" (beyond the result)
+      "eyJvIjogMX0=",                   # base64 '{"o": 1}' (forged structure)
+  ])
+  def test_bad_cursor_is_error_or_gap_never_restart(indexed, cursor):
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 107
+  @pytest.fixture
+  def indexed(scale_repo, write_config, graph_name):
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 85
+  @pytest.fixture
+  def scale_repo(tmp_path, git_cmd):
+E       fixture 'git_cmd' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, identity_fixture_root, indexed, monkeypatch, oracle_case, oracle_graph, oracle_graphs, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, scale_repo, second_graph, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py:85
+__ ERROR at setup of test_bad_cursor_is_error_or_gap_never_restart[bzotNQ==] ___
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 208
+  @pytest.mark.parametrize("cursor", [
+      "!!!not-a-cursor",
+      "bzotNQ==",                       # base64 "o:-5" (negative offset)
+      "bzoxMDAwMDAw",                   # base64 "o:1000000" (beyond the result)
+      "eyJvIjogMX0=",                   # base64 '{"o": 1}' (forged structure)
+  ])
+  def test_bad_cursor_is_error_or_gap_never_restart(indexed, cursor):
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 107
+  @pytest.fixture
+  def indexed(scale_repo, write_config, graph_name):
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 85
+  @pytest.fixture
+  def scale_repo(tmp_path, git_cmd):
+E       fixture 'git_cmd' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, identity_fixture_root, indexed, monkeypatch, oracle_case, oracle_graph, oracle_graphs, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, scale_repo, second_graph, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py:85
+_ ERROR at setup of test_bad_cursor_is_error_or_gap_never_restart[bzoxMDAwMDAw] _
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 208
+  @pytest.mark.parametrize("cursor", [
+      "!!!not-a-cursor",
+      "bzotNQ==",                       # base64 "o:-5" (negative offset)
+      "bzoxMDAwMDAw",                   # base64 "o:1000000" (beyond the result)
+      "eyJvIjogMX0=",                   # base64 '{"o": 1}' (forged structure)
+  ])
+  def test_bad_cursor_is_error_or_gap_never_restart(indexed, cursor):
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 107
+  @pytest.fixture
+  def indexed(scale_repo, write_config, graph_name):
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 85
+  @pytest.fixture
+  def scale_repo(tmp_path, git_cmd):
+E       fixture 'git_cmd' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, identity_fixture_root, indexed, monkeypatch, oracle_case, oracle_graph, oracle_graphs, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, scale_repo, second_graph, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py:85
+_ ERROR at setup of test_bad_cursor_is_error_or_gap_never_restart[eyJvIjogMX0=] _
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 208
+  @pytest.mark.parametrize("cursor", [
+      "!!!not-a-cursor",
+      "bzotNQ==",                       # base64 "o:-5" (negative offset)
+      "bzoxMDAwMDAw",                   # base64 "o:1000000" (beyond the result)
+      "eyJvIjogMX0=",                   # base64 '{"o": 1}' (forged structure)
+  ])
+  def test_bad_cursor_is_error_or_gap_never_restart(indexed, cursor):
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 107
+  @pytest.fixture
+  def indexed(scale_repo, write_config, graph_name):
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 85
+  @pytest.fixture
+  def scale_repo(tmp_path, git_cmd):
+E       fixture 'git_cmd' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, identity_fixture_root, indexed, monkeypatch, oracle_case, oracle_graph, oracle_graphs, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, scale_repo, second_graph, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py:85
+____________ ERROR at setup of test_symbol_history_across_ten_tags _____________
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 228
+  def test_symbol_history_across_ten_tags(indexed):
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 107
+  @pytest.fixture
+  def indexed(scale_repo, write_config, graph_name):
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 85
+  @pytest.fixture
+  def scale_repo(tmp_path, git_cmd):
+E       fixture 'git_cmd' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, identity_fixture_root, indexed, monkeypatch, oracle_case, oracle_graph, oracle_graphs, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, scale_repo, second_graph, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py:85
+__ ERROR at setup of test_long_chain_hops_reports_truncation_not_silent_drop ___
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 273
+  def test_long_chain_hops_reports_truncation_not_silent_drop(indexed):
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 107
+  @pytest.fixture
+  def indexed(scale_repo, write_config, graph_name):
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 85
+  @pytest.fixture
+  def scale_repo(tmp_path, git_cmd):
+E       fixture 'git_cmd' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, identity_fixture_root, indexed, monkeypatch, oracle_case, oracle_graph, oracle_graphs, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, scale_repo, second_graph, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py:85
+_______ ERROR at setup of test_incremental_update_reuses_unchanged_blobs _______
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 307
+  def test_incremental_update_reuses_unchanged_blobs(indexed, git_cmd):
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 107
+  @pytest.fixture
+  def indexed(scale_repo, write_config, graph_name):
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 85
+  @pytest.fixture
+  def scale_repo(tmp_path, git_cmd):
+E       fixture 'git_cmd' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, identity_fixture_root, indexed, monkeypatch, oracle_case, oracle_graph, oracle_graphs, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, scale_repo, second_graph, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py:85
+_ ERROR at setup of test_changed_and_deleted_evidence_invalidated_at_new_revision _
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 334
+  def test_changed_and_deleted_evidence_invalidated_at_new_revision(indexed, git_cmd):
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 107
+  @pytest.fixture
+  def indexed(scale_repo, write_config, graph_name):
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 85
+  @pytest.fixture
+  def scale_repo(tmp_path, git_cmd):
+E       fixture 'git_cmd' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, identity_fixture_root, indexed, monkeypatch, oracle_case, oracle_graph, oracle_graphs, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, scale_repo, second_graph, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py:85
+__ ERROR at setup of test_extractor_version_change_reextracts_and_drops_stale __
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 362
+  def test_extractor_version_change_reextracts_and_drops_stale(indexed, monkeypatch):
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 107
+  @pytest.fixture
+  def indexed(scale_repo, write_config, graph_name):
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 85
+  @pytest.fixture
+  def scale_repo(tmp_path, git_cmd):
+E       fixture 'git_cmd' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, identity_fixture_root, indexed, monkeypatch, oracle_case, oracle_graph, oracle_graphs, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, scale_repo, second_graph, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py:85
+____ ERROR at setup of test_interrupted_import_never_complete_then_recovers ____
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 390
+  def test_interrupted_import_never_complete_then_recovers(scale_repo, write_config, graph_name, second_graph):
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 85
+  @pytest.fixture
+  def scale_repo(tmp_path, git_cmd):
+E       fixture 'git_cmd' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, identity_fixture_root, indexed, monkeypatch, oracle_case, oracle_graph, oracle_graphs, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, scale_repo, second_graph, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py:85
+_____ ERROR at setup of test_initial_and_update_costs_recorded_separately ______
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 431
+  def test_initial_and_update_costs_recorded_separately(indexed, git_cmd):
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 107
+  @pytest.fixture
+  def indexed(scale_repo, write_config, graph_name):
+file /Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py, line 85
+  @pytest.fixture
+  def scale_repo(tmp_path, git_cmd):
+E       fixture 'git_cmd' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, identity_fixture_root, indexed, monkeypatch, oracle_case, oracle_graph, oracle_graphs, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, scale_repo, second_graph, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/tests/repo/test_s4_scale.py:85
+=========================== short test summary info ============================
+ERROR tests/repo/test_s4_scale.py::test_symbols_pagination_exact_once
+ERROR tests/repo/test_s4_scale.py::test_dependencies_pagination_exact_once
+ERROR tests/repo/test_s4_scale.py::test_limit_bounds_rejected
+ERROR tests/repo/test_s4_scale.py::test_bad_cursor_is_error_or_gap_never_restart[!!!not-a-cursor]
+ERROR tests/repo/test_s4_scale.py::test_bad_cursor_is_error_or_gap_never_restart[bzotNQ==]
+ERROR tests/repo/test_s4_scale.py::test_bad_cursor_is_error_or_gap_never_restart[bzoxMDAwMDAw]
+ERROR tests/repo/test_s4_scale.py::test_bad_cursor_is_error_or_gap_never_restart[eyJvIjogMX0=]
+ERROR tests/repo/test_s4_scale.py::test_symbol_history_across_ten_tags
+ERROR tests/repo/test_s4_scale.py::test_long_chain_hops_reports_truncation_not_silent_drop
+ERROR tests/repo/test_s4_scale.py::test_incremental_update_reuses_unchanged_blobs
+ERROR tests/repo/test_s4_scale.py::test_changed_and_deleted_evidence_invalidated_at_new_revision
+ERROR tests/repo/test_s4_scale.py::test_extractor_version_change_reextracts_and_drops_stale
+ERROR tests/repo/test_s4_scale.py::test_interrupted_import_never_complete_then_recovers
+ERROR tests/repo/test_s4_scale.py::test_initial_and_update_costs_recorded_separately
+20 passed, 1 skipped, 14 errors in 3.35s

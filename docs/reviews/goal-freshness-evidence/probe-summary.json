@@ -1,0 +1,84 @@
+{
+  "schema": "goal-freshness-probe-summary/v1",
+  "captured_at": "2026-10-18T08:59:06.676343+00:00",
+  "classification": "development diagnostics, no held-out scoring or acceptance release",
+  "acceptance_validated": false,
+  "source_core_unchanged_during_probe": true,
+  "transports": {
+    "exact_matches": 23,
+    "attempts": 23,
+    "phases": [
+      "database-restarted",
+      "database-stopped",
+      "incomplete-publication",
+      "parallel-and-selection",
+      "stale-record",
+      "stale-relationship",
+      "stdio-restart"
+    ],
+    "malformed_input_cases": 2
+  },
+  "api_origin": "http://127.0.0.1:63036",
+  "temporary_api_stopped": true,
+  "owned_database_removed": true,
+  "database_restart_changed_run_id": true,
+  "repositories": [
+    {
+      "upstream": "requests",
+      "commit": "d6ebc4a2f1f68b7e355fb7e4dd5ffc0845547f9f",
+      "graph_generation": "014772f55dd3461c871e2ebcb542ad6d",
+      "multi_hop_edges": 4,
+      "hops_observed": [
+        1,
+        2,
+        3
+      ],
+      "actual_query_events": 60,
+      "ablations": [
+        {
+          "operation": "remove root CALLS edges",
+          "outcome": "PASS"
+        },
+        {
+          "operation": "stale extraction record",
+          "outcome": "PASS"
+        },
+        {
+          "operation": "inject transport failure after three real reads",
+          "outcome": "PASS"
+        }
+      ]
+    },
+    {
+      "upstream": "itsdangerous",
+      "commit": "096c8d42545d3b68ea21a4f890fb2b2d8979c0bd",
+      "graph_generation": "8ebe24b68ab24a0e8c50d4fe013d508c",
+      "multi_hop_edges": 7,
+      "hops_observed": [
+        1,
+        2
+      ],
+      "actual_query_events": 60,
+      "ablations": [
+        {
+          "operation": "remove root CALLS edges",
+          "outcome": "PASS"
+        },
+        {
+          "operation": "stale extraction record",
+          "outcome": "PASS"
+        },
+        {
+          "operation": "inject transport failure after three real reads",
+          "outcome": "PASS"
+        }
+      ]
+    }
+  ],
+  "failures": [],
+  "limitations": [
+    "Inspected development tasks; no independent held-out generated answers or blind scorers.",
+    "Real onboarding/diagnostic timings are not controlled cold scale benchmarks.",
+    "Full T0-T11 acceptance is still IN_PROGRESS."
+  ]
+}

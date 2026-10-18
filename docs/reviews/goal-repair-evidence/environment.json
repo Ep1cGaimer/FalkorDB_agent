@@ -1,0 +1,67 @@
+{
+  "recorded_at": "2026-10-18T08:22:30.277055+00:00",
+  "python": "3.12.13 (main, Jun 23 2026, 15:44:24) [Clang 22.1.3 ]",
+  "platform": "macOS-27.0.1-arm64-arm-64bit",
+  "machine": "arm64",
+  "packages": {
+    "falkordb": "1.8.0",
+    "redis": "8.1.0",
+    "pydantic": "2.14.1",
+    "fastapi": "0.143.2",
+    "starlette": "1.8.0",
+    "uvicorn": "0.54.0",
+    "httpx": "0.28.1",
+    "mcp": "2.3.0",
+    "pytest": "9.1.1"
+  },
+  "database": {
+    "redis_version": "8.10.2",
+    "redis_build_id": "87e8103633530f17",
+    "os": "Linux 7.0.12-linuxkit aarch64",
+    "arch_bits": 64
+  },
+  "modules": [
+    [
+      "name",
+      "graph",
+      "ver",
+      60002,
+      "path",
+      "/var/lib/falkordb/bin/falkordb.so",
+      "args",
+      [
+        "MAX_QUEUED_QUERIES",
+        "25",
+        "TIMEOUT",
+        "1000",
+        "RESULTSET_SIZE",
+        "10000"
+      ]
+    ],
+    [
+      "name",
+      "vectorset",
+      "ver",
+      1,
+      "path",
+      "",
+      "args",
+      []
+    ]
+  ],
+  "resultset_size": [
+    "RESULTSET_SIZE",
+    10000
+  ],
+  "validation_command": "/tmp/rw-mcp-compat/bin/python -m pytest -q -m 'not live and not realrepo' --tb=short --junitxml=artifacts/goal-repair-tests.xml",
+  "capture_attempts": [
+    {
+      "outcome": "ERROR",
+      "reason": "initial environment capture omitted PYTHONPATH=src; no product command ran"
+    },
+    {
+      "outcome": "PASS",
+      "command": "PYTHONPATH=src /tmp/rw-mcp-compat/bin/python (environment capture)"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+FFFFF                                                                    [100%]
+=================================== FAILURES ===================================
+__________ test_graph_work_budget_returns_partial_not_empty_complete ___________
+tests/repo/test_query_budgets.py:24: in test_graph_work_budget_returns_partial_not_empty_complete
+    from rw.repo.budget import ReadLimits
+E   ModuleNotFoundError: No module named 'rw.repo.budget'
+_______ test_investigation_shares_budget_across_resolution_and_retrieval _______
+tests/repo/test_query_budgets.py:37: in test_investigation_shares_budget_across_resolution_and_retrieval
+    assert not result.findings and not result.facts and result.answer is None
+E   AssertionError: assert (not [Finding(kind='definition', summary='module pkg.core (defined at pkg/core.py:1-16) depends on: pkg.util.helper; extern..._hash='258d3d45529bdd6af3252ba0dff92d99f75978a4382a8cf408d2cd95754dda5b')], disposition=None, facts={}, revision=None)])
+E    +  where [Finding(kind='definition', summary='module pkg.core (defined at pkg/core.py:1-16) depends on: pkg.util.helper; extern..._hash='258d3d45529bdd6af3252ba0dff92d99f75978a4382a8cf408d2cd95754dda5b')], disposition=None, facts={}, revision=None)] = RepoFindings(repo='budgets', revision='main', resolved_sha='8a21d059fb4338028c855c4087c77aecd3679aaa', findings=[Findi...re.py:1-16) depends on: pkg.util.helper; external/unresolved: os', index_generation='803eee01f24b4568a3373dcec54f8174').findings
+______________ test_git_process_is_terminated_at_shared_deadline _______________
+tests/repo/test_query_budgets.py:43: in test_git_process_is_terminated_at_shared_deadline
+    from rw.repo.budget import BudgetExhausted, ReadLimits, read_scope
+E   ModuleNotFoundError: No module named 'rw.repo.budget'
+________ test_exhausted_request_does_not_poison_another_or_next_request ________
+tests/repo/test_query_budgets.py:54: in test_exhausted_request_does_not_poison_another_or_next_request
+    from rw.repo.budget import ReadLimits
+E   ModuleNotFoundError: No module named 'rw.repo.budget'
+_____________ test_source_byte_budget_cannot_leave_cited_findings ______________
+tests/repo/test_query_budgets.py:70: in test_source_byte_budget_cannot_leave_cited_findings
+    assert not result.findings and not result.citations
+E   AssertionError: assert (not [Finding(kind='symbol', summary='class pkg.core.Engine at pkg/core.py:10-12', citations=[Citation(repo='budgets', comm..._hash='a49f45647b0bb6762872299564bbb1b30e57859ece0894c05ba65f2483dd73d0')], disposition=None, facts={}, revision=None)])
+E    +  where [Finding(kind='symbol', summary='class pkg.core.Engine at pkg/core.py:10-12', citations=[Citation(repo='budgets', comm..._hash='a49f45647b0bb6762872299564bbb1b30e57859ece0894c05ba65f2483dd73d0')], disposition=None, facts={}, revision=None)] = RepoFindings(repo='budgets', revision='main', resolved_sha='8a21d059fb4338028c855c4087c77aecd3679aaa', findings=[Findi...solved=None, disposition=None, receipts=[], facts={}, answer=None, index_generation='606d65f453a34bbbbcb78c0468f5eaec').findings
+=========================== short test summary info ============================
+FAILED tests/repo/test_query_budgets.py::test_graph_work_budget_returns_partial_not_empty_complete
+FAILED tests/repo/test_query_budgets.py::test_investigation_shares_budget_across_resolution_and_retrieval
+FAILED tests/repo/test_query_budgets.py::test_git_process_is_terminated_at_shared_deadline
+FAILED tests/repo/test_query_budgets.py::test_exhausted_request_does_not_poison_another_or_next_request
+FAILED tests/repo/test_query_budgets.py::test_source_byte_budget_cannot_leave_cited_findings
+5 failed in 0.87s

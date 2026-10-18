@@ -1,0 +1,89 @@
+{
+  "schema": "goal-query-budget-run/v1",
+  "recorded_at": "2026-10-18T09:27:05.590094+00:00",
+  "classification": "development checks; no held-out answer scoring",
+  "acceptance_validated": false,
+  "base_commit": "d7cf693e26073c825f0b6a2bd741ce5d05752f72",
+  "source_manifest": "implementation-manifest.json",
+  "source_manifest_sha256": "75d5fc27c0ac2bce19074dd40e3bca5342b803c12ca3751d593fa33e2bdb0400",
+  "source_files": 166,
+  "source_mismatches_after_tests": [],
+  "python": {
+    "command": "RW_REALREPO=1 RW_REALREPO_SMOKE=1 /tmp/rw-mcp-compat/bin/python -m pytest -q -m 'not live' --tb=short --junitxml=artifacts/goal-query-budget-final-tests.xml",
+    "passed": 1059,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 5,
+    "deselected": 3,
+    "seconds": 372.24,
+    "skipped_cases": [
+      {
+        "test": "tests.repo.test_e2_e4_protocol.test_e2_history_outputs[none]",
+        "reason": "no E2 outputs yet"
+      },
+      {
+        "test": "tests.repo.test_e2_e4_protocol.test_eval_outputs[none]",
+        "reason": "no E2/E4 outputs yet"
+      },
+      {
+        "test": "tests.repo.test_e3_protocol.test_scale_output_records_required_fields[None]",
+        "reason": "no artifacts/repo_scale/*.json output yet"
+      },
+      {
+        "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_scale]",
+        "reason": "no runs recorded under artifacts/repo_scale"
+      },
+      {
+        "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_benefit]",
+        "reason": "no runs recorded under artifacts/repo_benefit"
+      }
+    ],
+    "denominator_note": "Includes artifact-parameterized checks; test-count increase is not a new-question or quality metric."
+  },
+  "javascript": {
+    "passed": 16,
+    "failed": 0
+  },
+  "deterministic_smoke": {
+    "pass_lines": 8,
+    "graph_cleanup": true
+  },
+  "probe": {
+    "outcome": "PASS",
+    "exact_matches": 27,
+    "attempts": 27,
+    "malformed_cases": 2,
+    "phases": [
+      "database-restarted",
+      "database-stopped",
+      "incomplete-publication",
+      "parallel-and-selection",
+      "query-row-budget",
+      "query-source-budget",
+      "stale-record",
+      "stale-relationship",
+      "stdio-restart"
+    ],
+    "core_unchanged": true,
+    "failures": [],
+    "database_removed": true,
+    "post_run_cleanup": "post-run-cleanup.json"
+  },
+  "live_fixture": {
+    "command": "python -m pytest -q -s -m live --tb=short --basetemp=artifacts/live-fixture-20261018-001 --junitxml=artifacts/goal-live-fixture-001.xml",
+    "passed": 2,
+    "failed": 1,
+    "deselected": 1066,
+    "seconds": 408.83,
+    "failure": "test_live_control_runs_once: declared nondefault flag rejected by control-only validator; retained original failure",
+    "later_repair": "evals/llm_control.py normalization parity; separate source freeze and attempts"
+  },
+  "limitations": [
+    "All S/E/T acceptance gates remain IN_PROGRESS.",
+    "No independent blind-scored held-out answers, fair-comparison measurements, or controlled three-slice performance experiment.",
+    "Cooperative Python deadline checks and per-read transport limits do not prove a hard process-memory/OS wall-time cap.",
+    "Source-byte/row accounting is separate from model-token accounting."
+  ],
+  "implementation_commit": "8058032fd4724da4a9471909f92e597795112fe8",
+  "source_manifest_matches_implementation_commit": true
+}

@@ -1,0 +1,1718 @@
+{
+  "author": "Independent Codex AI evaluator; no human review asserted",
+  "created_at": "2026-10-18T09:06:53.662547+00:00",
+  "repositories": {
+    "click": {
+      "ancestry_commit_count": 2855,
+      "available_tag_count": 71,
+      "bare_path": "artifacts/confirmatory/repos/click",
+      "origin": "https://github.com/pallets/click.git",
+      "snapshots": [
+        {
+          "commit": "df0e37dd890d36fc997986ae6d2b6c255f3ed1dc",
+          "included_bytes": 236303,
+          "included_files": [
+            {
+              "bytes": 2858,
+              "git_blob": "971e55d0a8c6dea5087eeb99cf2cda69823ee470",
+              "lines": 98,
+              "path": "click/__init__.py",
+              "python_production": true,
+              "sha256": "93c474d1c14a588f1d84354a41e2c194074d8750b17ab3040d18869ebdf681dc"
+            },
+            {
+              "bytes": 2423,
+              "git_blob": "d9d26d28b053de585428e573adaf4ac1bc842aa9",
+              "lines": 83,
+              "path": "click/_bashcomplete.py",
+              "python_production": true,
+              "sha256": "f36acc8a26ed12eaddc01abad0d1d754206e1972470e96e514ef68d98c490c5d"
+            },
+            {
+              "bytes": 21011,
+              "git_blob": "2b43412c4d60260390722afc09e0bf5a6bf8a225",
+              "lines": 648,
+              "path": "click/_compat.py",
+              "python_production": true,
+              "sha256": "8f9f4ca73c58184f9f4c68f4039b20f1423c1a11e87755cca238820348ef6cbd"
+            },
+            {
+              "bytes": 16395,
+              "git_blob": "7cfd3d5c4a058b0ced59c74469322c709005b22a",
+              "lines": 547,
+              "path": "click/_termui_impl.py",
+              "python_production": true,
+              "sha256": "3a5d49261bc1470de5f23d56214d2d3968d0b71c66c06138e251436f30eace80"
+            },
+            {
+              "bytes": 1198,
+              "git_blob": "7e776031eaa92904fc77e934a1125346bc9fed6a",
+              "lines": 38,
+              "path": "click/_textwrap.py",
+              "python_production": true,
+              "sha256": "8304b89bb6dd422267cda0c6f28b057116fee6f9f8b78976a920b2fb972c0847"
+            },
+            {
+              "bytes": 4204,
+              "git_blob": "9e17a384eff0361d4932e84d1e4d8cb42bb5a11e",
+              "lines": 118,
+              "path": "click/_unicodefun.py",
+              "python_production": true,
+              "sha256": "03750ecc9c3a944672a25d92060ddf357830793bad68ece427ad4e07bbe29376"
+            },
+            {
+              "bytes": 7790,
+              "git_blob": "9aed942162bbdd8683ed28a6de30727628d0054c",
+              "lines": 273,
+              "path": "click/_winconsole.py",
+              "python_production": true,
+              "sha256": "3331b8e831183e8472c7848eec422116e1591c44a0a2801f24b22e91b07aa797"
+            },
+            {
+              "bytes": 70254,
+              "git_blob": "74564514753131ac4f00541ba08dcafbf3d902f8",
+              "lines": 1744,
+              "path": "click/core.py",
+              "python_production": true,
+              "sha256": "3349c9e8a9327bb5d95d81bb1c26e425649fcb5e161d5e9b42618b002ace84ac"
+            },
+            {
+              "bytes": 10941,
+              "git_blob": "9893452650ba0acd4ff9eef10cb92cf1433089b7",
+              "lines": 304,
+              "path": "click/decorators.py",
+              "python_production": true,
+              "sha256": "cbb097da779e761f2245669f8fe412fe119016c376e1ec97021c79636013c1ab"
+            },
+            {
+              "bytes": 6788,
+              "git_blob": "74a4542bb57f29be1a50412b063f4298448e70c0",
+              "lines": 201,
+              "path": "click/exceptions.py",
+              "python_production": true,
+              "sha256": "ace6b4a4fdcf6d2cb4fc000f396f62ac110cf0027707248dfb8cf6554c05568e"
+            },
+            {
+              "bytes": 8889,
+              "git_blob": "a3d6a4d389019c3c5cf61a1ab9be8e6836bd15e6",
+              "lines": 256,
+              "path": "click/formatting.py",
+              "python_production": true,
+              "sha256": "7a1f9cca94d4021a48dc70fe2b8669477bc28944483badb15ef2a4477b4d5133"
+            },
+            {
+              "bytes": 1515,
+              "git_blob": "14338e6bb8434b6328830cfa1aaf21acf80a492c",
+              "lines": 48,
+              "path": "click/globals.py",
+              "python_production": true,
+              "sha256": "3c08272af1b1ab862e10895dc3796060e1812d8c2ccb19e6d48072057dc1157a"
+            },
+            {
+              "bytes": 15510,
+              "git_blob": "9775c9ff9b99d85ed040e410f5209a342b9dd565",
+              "lines": 426,
+              "path": "click/parser.py",
+              "python_production": true,
+              "sha256": "8b4d71818b8803a0304161178ec8701d2c274d1de051ea781712487f25b8b5ae"
+            },
+            {
+              "bytes": 21008,
+              "git_blob": "d9fba52325f35bdf6f060d0843a15bdc95c53c5d",
+              "lines": 539,
+              "path": "click/termui.py",
+              "python_production": true,
+              "sha256": "069f7d312590b72a167b5ffb1e0803980efb9fefb728bc6eecdb1930531a094a"
+            },
+            {
+              "bytes": 11002,
+              "git_blob": "4416c774136dc9b9a4edd4adb02699137768b7fb",
+              "lines": 322,
+              "path": "click/testing.py",
+              "python_production": true,
+              "sha256": "909f668ed260c0d02592029c15ff7e212c6e7e668f0db6ee387542f5622f29d6"
+            },
+            {
+              "bytes": 18864,
+              "git_blob": "36390026dcd1784f6d85f854730faa31ebf95b55",
+              "lines": 550,
+              "path": "click/types.py",
+              "python_production": true,
+              "sha256": "6466f696616ce55c1df65a1344831b19caa13d53aa97c986a018560514fa5781"
+            },
+            {
+              "bytes": 14916,
+              "git_blob": "eee626d3fd0153486345605815ca5f748eb63e7e",
+              "lines": 415,
+              "path": "click/utils.py",
+              "python_production": true,
+              "sha256": "d636a53e5914536f0945e4c441e79216d6c977e4a2ad858135f8ed10b04acd3e"
+            },
+            {
+              "bytes": 20,
+              "git_blob": "7c964b49e2db4d6983a3d8d56509162de9110035",
+              "lines": 2,
+              "path": "setup.cfg",
+              "python_production": false,
+              "sha256": "1b6fa40eb27d2b1d5e571fd671403c72e8ecd7baaadeb4fd1004b830488e5df0"
+            },
+            {
+              "bytes": 717,
+              "git_blob": "8bacd6a76c0239bcc51340db7273be4951b17ad6",
+              "lines": 28,
+              "path": "setup.py",
+              "python_production": false,
+              "sha256": "11b31fd85be2e6da9ed287a54cb78b072d86e4e010250aa752e4b289d73ffdd3"
+            }
+          ],
+          "parse_gaps": [],
+          "ref": "6.7",
+          "symbols": 476,
+          "tracked_files": 118,
+          "tree": "4e4d52de786d4288a8434d944642f7846bc01385"
+        },
+        {
+          "commit": "1784558ed7c75c65764d2a434bd9cbb206ca939d",
+          "included_bytes": 303103,
+          "included_files": [
+            {
+              "bytes": 24661,
+              "git_blob": "273c00f9e44ae8569b6cc936c7b2b7cddf49ba1f",
+              "lines": 636,
+              "path": "CHANGES.rst",
+              "python_production": false,
+              "sha256": "09e8128dd0f316ebd3130c69c8b0c79f94aed2bbc9733a61cf05efdb69fc168b"
+            },
+            {
+              "bytes": 769,
+              "git_blob": "c2d41cc8476a7fca652384e0f6dc291f34ea2160",
+              "lines": 44,
+              "path": "setup.cfg",
+              "python_production": false,
+              "sha256": "c52f544ea84caf76864f4a655555bf440010c3b8852b574f504cad51839768f8"
+            },
+            {
+              "bytes": 1329,
+              "git_blob": "a7af7f10241cbda12f08c3077b971ed395f8cea3",
+              "lines": 40,
+              "path": "setup.py",
+              "python_production": false,
+              "sha256": "5f86ceb124681d8feae113f5e301aa95f0d84b43a74c2f4c408a1ac03d9c855a"
+            },
+            {
+              "bytes": 2463,
+              "git_blob": "2b6008f2dd4176d819f06e0d7e92e43b142d30b0",
+              "lines": 79,
+              "path": "src/click/__init__.py",
+              "python_production": true,
+              "sha256": "164c860d0f9c6e24313ff971814b29c85612e3c7f64bfa5371f28fcfe77f44ca"
+            },
+            {
+              "bytes": 12309,
+              "git_blob": "8bca24480f751e0471a625bc36c05a61d49add87",
+              "lines": 375,
+              "path": "src/click/_bashcomplete.py",
+              "python_production": true,
+              "sha256": "f49f7c20741898202bd89ba9e930ec854af914911e9fe028402651d0ae672b14"
+            },
+            {
+              "bytes": 24169,
+              "git_blob": "60cb115bc5091c408f68d2461115d2e35bd47799",
+              "lines": 786,
+              "path": "src/click/_compat.py",
+              "python_production": true,
+              "sha256": "02831a62767ede9c2d357b87b656fafd45ec6b2a06d106621ca211cb65457b37"
+            },
+            {
+              "bytes": 20702,
+              "git_blob": "88bec37701cf549a7b39c7667a6520930c141a73",
+              "lines": 657,
+              "path": "src/click/_termui_impl.py",
+              "python_production": true,
+              "sha256": "c8d92d50c01d8d8394d47324abdd798d1df3800cd436d19242a493492327dde4"
+            },
+            {
+              "bytes": 1197,
+              "git_blob": "6959087b7f317841e16d0732b88d4240c364f24c",
+              "lines": 37,
+              "path": "src/click/_textwrap.py",
+              "python_production": true,
+              "sha256": "6a30b3933165cb9b639bd7e843937dfcc39e69824c063025b6e15aebd9f88976"
+            },
+            {
+              "bytes": 4201,
+              "git_blob": "781c3652272630609c14da72f88d62315b68798a",
+              "lines": 131,
+              "path": "src/click/_unicodefun.py",
+              "python_production": true,
+              "sha256": "6a92d2344059814b1034f314bf4ef6cc9d6cc2a9e6d1d6154f94ea708593b7ac"
+            },
+            {
+              "bytes": 10010,
+              "git_blob": "b6c4274af0e86151c60541dfefa85b955009205c",
+              "lines": 370,
+              "path": "src/click/_winconsole.py",
+              "python_production": true,
+              "sha256": "e980eee91ab55b1c78c3dba29c130ad8b1ef3fcdda7ab64cf4642eae5937403a"
+            },
+            {
+              "bytes": 77650,
+              "git_blob": "f58bf26d2f988e5b02e060b21863874ac87e1529",
+              "lines": 2030,
+              "path": "src/click/core.py",
+              "python_production": true,
+              "sha256": "57a0c9cdab2d1a1ac2e964c3c15f4c48bc1c254757d947f5ca99a092305d9ff6"
+            },
+            {
+              "bytes": 11215,
+              "git_blob": "c7b5af6cc57fd7e120a1537fa4bf3906b16a24dd",
+              "lines": 333,
+              "path": "src/click/decorators.py",
+              "python_production": true,
+              "sha256": "dd3bc43bf06468797b93a121d46e5e0bb24ae0b28f76916a1fd24fd100f24e53"
+            },
+            {
+              "bytes": 8118,
+              "git_blob": "592ee38f0dec509dceadded39aa7f1684d853ff4",
+              "lines": 253,
+              "path": "src/click/exceptions.py",
+              "python_production": true,
+              "sha256": "de9400cb2305cf1e40dde574636ed6b434f21a881945bac2ebfa390e38ca05bc"
+            },
+            {
+              "bytes": 9281,
+              "git_blob": "319c7f6163e266de1abe6f96bd4290193184ec6c",
+              "lines": 283,
+              "path": "src/click/formatting.py",
+              "python_production": true,
+              "sha256": "59be20a8512959a28f8006cebe790297ca7e6c4671e4aa4ce59481ca196724d9"
+            },
+            {
+              "bytes": 1501,
+              "git_blob": "1649f9a0bfbe60ba6c386d18634cdd77eb8df600",
+              "lines": 47,
+              "path": "src/click/globals.py",
+              "python_production": true,
+              "sha256": "86deeeda4506234f2901aac1e1ee320bc2e4931cba8097d1672cf1123f046d64"
+            },
+            {
+              "bytes": 15691,
+              "git_blob": "f43ebfe9fc095d168da5a5cc7d024cad7d6c274f",
+              "lines": 428,
+              "path": "src/click/parser.py",
+              "python_production": true,
+              "sha256": "9852be939f09b4fa6a3b4002dfa580af4b7951fcc4c359af8154b29fb5827bd3"
+            },
+            {
+              "bytes": 23998,
+              "git_blob": "02ef9e9f045cd437ce043a72e29cbc1de732e962",
+              "lines": 681,
+              "path": "src/click/termui.py",
+              "python_production": true,
+              "sha256": "1bb40110a21ea512062ef35d1b005362212d488991c6f4cefc0825569c871f6b"
+            },
+            {
+              "bytes": 12854,
+              "git_blob": "a3dba3b3014b61ca507d191e1f83488eda85cfff",
+              "lines": 382,
+              "path": "src/click/testing.py",
+              "python_production": true,
+              "sha256": "11412c0d4a8d5c58022e16746453913a96950c0e48feb8a3c2734f13aa880a00"
+            },
+            {
+              "bytes": 25045,
+              "git_blob": "505c39f850922af375a12b130754e9ad6fb7fd02",
+              "lines": 762,
+              "path": "src/click/types.py",
+              "python_production": true,
+              "sha256": "c2eb9b8a4e15aa0a80c3976f6d81640edfb3480c7def2f53417b97715691c900"
+            },
+            {
+              "bytes": 15940,
+              "git_blob": "79265e732d49a4ea35198565a8d1bc401e07b7ea",
+              "lines": 455,
+              "path": "src/click/utils.py",
+              "python_production": true,
+              "sha256": "e1511c27b8841f08e716ecc4b91b644fdf68e551b7cea483ed0d82573bf5dd65"
+            }
+          ],
+          "parse_gaps": [],
+          "ref": "7.1.2",
+          "symbols": 532,
+          "tracked_files": 116,
+          "tree": "8d3c3385a062cd8e706c9fda44938fc3858870dc"
+        },
+        {
+          "commit": "874ca2bc1c30d93a4ac6e36a15ed685eafe89097",
+          "included_bytes": 397076,
+          "included_files": [
+            {
+              "bytes": 46827,
+              "git_blob": "4f7a46554d72e5cef11cf88527a7ace9109b7b2f",
+              "lines": 1106,
+              "path": "CHANGES.rst",
+              "python_production": false,
+              "sha256": "0349385cd1ad5f56098e96cc6473bd83e4aee857a024e7786310a11167ee7041"
+            },
+            {
+              "bytes": 2525,
+              "git_blob": "d5fcdcf0113a057c4ace31f9aa8e95cd2b37bcee",
+              "lines": 104,
+              "path": "setup.cfg",
+              "python_production": false,
+              "sha256": "35f54fb5c81e354a18c259aefba600d3fb5acb6baeef91666c446e6bc7e5cf3b"
+            },
+            {
+              "bytes": 191,
+              "git_blob": "0a74d4144abfd4ecfe747bd1ea0780c4979fd07f",
+              "lines": 9,
+              "path": "setup.py",
+              "python_production": false,
+              "sha256": "9f59b1d6796696cc1564768a6c69d2caddcc3bdddabce7a2c4beefcbb856f4df"
+            },
+            {
+              "bytes": 3138,
+              "git_blob": "9a1dab048917edc420af440c73bd1d689de6b3fa",
+              "lines": 73,
+              "path": "src/click/__init__.py",
+              "python_production": true,
+              "sha256": "6030db8e6e34e9d4ce03457c6d3b5d1a784def38f98fefdd1517b0645fe92efc"
+            },
+            {
+              "bytes": 18744,
+              "git_blob": "23f8866598b4b4eb836b9d9b210ebd395fd0c557",
+              "lines": 623,
+              "path": "src/click/_compat.py",
+              "python_production": true,
+              "sha256": "e77d7c6a04296ede24ae82ac6ea0ce6294d25b32ff6026555108934f4e325e67"
+            },
+            {
+              "bytes": 24069,
+              "git_blob": "f744657753caa6cdef1dcc41a4f0b5e3e9503ab8",
+              "lines": 739,
+              "path": "src/click/_termui_impl.py",
+              "python_production": true,
+              "sha256": "ddd158bf8e38e4dc3eac5bd939304c04f6300756f19e6364f43bba0e6fe80525"
+            },
+            {
+              "bytes": 1353,
+              "git_blob": "b47dcbd4264e86715adfae1c5124c288b67a983e",
+              "lines": 49,
+              "path": "src/click/_textwrap.py",
+              "python_production": true,
+              "sha256": "d747d0eb839c05432e2bb985be1f37eb7feea0ec4f95122d64198acd12438286"
+            },
+            {
+              "bytes": 7860,
+              "git_blob": "6b20df315b23ecd1e3d0ec32c11c0b5ced577efe",
+              "lines": 279,
+              "path": "src/click/_winconsole.py",
+              "python_production": true,
+              "sha256": "e63bb78d091c643d16dbb584306aa610fe32fdcad45733c2aac5ff1586fb04ed"
+            },
+            {
+              "bytes": 114086,
+              "git_blob": "cc65e896bf2d754d74b54a84ac501b80127f83ca",
+              "lines": 3042,
+              "path": "src/click/core.py",
+              "python_production": true,
+              "sha256": "8faa045ad1a01a76bc25aac3e96c615e6367c4b9df463c178256c173ef23afb5"
+            },
+            {
+              "bytes": 18719,
+              "git_blob": "d9bba9502ca353bca5136f43c92436ff584f06e1",
+              "lines": 561,
+              "path": "src/click/decorators.py",
+              "python_production": true,
+              "sha256": "f9995b198815fa823c8ebfe81f8469b8bd4f152fb94267ae100b0b0c0620c6dc"
+            },
+            {
+              "bytes": 9273,
+              "git_blob": "fe68a3613f74e5e82da4e3eedc7d9451977838dd",
+              "lines": 288,
+              "path": "src/click/exceptions.py",
+              "python_production": true,
+              "sha256": "7f244e3bee3b1d61438eddaaba9a3b037277d9596933ea2f2677e8c2ef762b7b"
+            },
+            {
+              "bytes": 9706,
+              "git_blob": "ddd2a2f825f206164eb9efb0a5c41528365beb85",
+              "lines": 301,
+              "path": "src/click/formatting.py",
+              "python_production": true,
+              "sha256": "16b7f4fb95b7dfe968c98fe2f6aaf05d1f3e4939d6de6e60bf2c4b554772c729"
+            },
+            {
+              "bytes": 1961,
+              "git_blob": "480058f10dd6a8205d1bff0b94de7ae347a7629a",
+              "lines": 68,
+              "path": "src/click/globals.py",
+              "python_production": true,
+              "sha256": "4cffaa33cf124f373b7f5dbb877e530ffbfddb41607ce0f6130cea034a04f175"
+            },
+            {
+              "bytes": 19067,
+              "git_blob": "5fa7adfac842bfa5689fd1a41ae4017be1ebff6f",
+              "lines": 529,
+              "path": "src/click/parser.py",
+              "python_production": true,
+              "sha256": "2cac98404f592e3e4a8080d792b7131d045722081fa22bd7d78fd45489f9e980"
+            },
+            {
+              "bytes": 18460,
+              "git_blob": "dc9e00b9b0c6f4903b674f03343e887bd490b081",
+              "lines": 596,
+              "path": "src/click/shell_completion.py",
+              "python_production": true,
+              "sha256": "4f2dd533fb6cd2c4218fabbb7854e22f01cfa1381c5d31840148363a92ea60ac"
+            },
+            {
+              "bytes": 28324,
+              "git_blob": "db7a4b286174fdf26f3251631a2066eda2fa5bea",
+              "lines": 784,
+              "path": "src/click/termui.py",
+              "python_production": true,
+              "sha256": "1fb43c16998f7a5849da8bce85f09186332d0a93728c55ebc8030b64e0eab1d7"
+            },
+            {
+              "bytes": 16084,
+              "git_blob": "e0df0d2a657fe19523957b85964b9956e5c78a30",
+              "lines": 479,
+              "path": "src/click/testing.py",
+              "python_production": true,
+              "sha256": "d50778912e5bb9c9f586c34846bc9dd16b5332e0a9900f7782b916c53f0f3ac5"
+            },
+            {
+              "bytes": 36391,
+              "git_blob": "2b1d1797f2e115e9bc976bcaf7d8e1884a91e91c",
+              "lines": 1089,
+              "path": "src/click/types.py",
+              "python_production": true,
+              "sha256": "4d9bf3de12af073b5ff87a5ad9e9ce98fe1ece748f2f38a38e28396ffd173311"
+            },
+            {
+              "bytes": 20298,
+              "git_blob": "d536434f0bd00cd6fd910c506f5b85a8e485b964",
+              "lines": 624,
+              "path": "src/click/utils.py",
+              "python_production": true,
+              "sha256": "d78efa51db94358e9478f194e26d7cbb35472edd6c28cd8f3f7c96b1085b22d3"
+            }
+          ],
+          "parse_gaps": [],
+          "ref": "8.1.7",
+          "symbols": 578,
+          "tracked_files": 146,
+          "tree": "2a2e0a47bf878494db3dd5436114080dd2812dcc"
+        },
+        {
+          "commit": "fd183b2ced1cb5857784fe7fb22f4982f671f098",
+          "included_bytes": 422555,
+          "included_files": [
+            {
+              "bytes": 53927,
+              "git_blob": "1b8af9a5fd588b9faabeb0c1b25f47e8598f0de6",
+              "lines": 1247,
+              "path": "CHANGES.rst",
+              "python_production": false,
+              "sha256": "ee3157166cac1cfff808b1fe0d4152a6d29b1de9b3a77e0709190c690e6a54e5"
+            },
+            {
+              "bytes": 4522,
+              "git_blob": "66ce28a3b558b7ad07383c689d20e1b3014fc773",
+              "lines": 213,
+              "path": "pyproject.toml",
+              "python_production": false,
+              "sha256": "45ed0b68cf314c5092b6460bff9a776427e26175353667f20a1c90709df6aff7"
+            },
+            {
+              "bytes": 4473,
+              "git_blob": "1aa547c57af68954b3bcd6012873881030e53d91",
+              "lines": 123,
+              "path": "src/click/__init__.py",
+              "python_production": true,
+              "sha256": "e98c92d5a7b29276742d8c1e5a8ccd672d00f6767fd75c2660886fddc6d0ad8a"
+            },
+            {
+              "bytes": 18693,
+              "git_blob": "f2726b93afe2ed69ba20d8e709c9cbd22b9d2339",
+              "lines": 622,
+              "path": "src/click/_compat.py",
+              "python_production": true,
+              "sha256": "bf7c4166415bbc0d415cf46415f04973afa92303c8ef7e399be910127a5502ce"
+            },
+            {
+              "bytes": 26712,
+              "git_blob": "51fd9bf358f0ee8dedceb88efa8c6a60dc40d4a8",
+              "lines": 839,
+              "path": "src/click/_termui_impl.py",
+              "python_production": true,
+              "sha256": "0125e12e2f4840873426cf4a4124bedfe48b65c3deb7756acac05ff5681b6e92"
+            },
+            {
+              "bytes": 1400,
+              "git_blob": "97fbee3dc6ce372600e702d38d9139bcf6a40bec",
+              "lines": 51,
+              "path": "src/click/_textwrap.py",
+              "python_production": true,
+              "sha256": "04e69ed1143abe0dc590d8122723a81b31b599e18cc49fee9165592b1feffb4a"
+            },
+            {
+              "bytes": 8465,
+              "git_blob": "e56c7c6ae7ee7e577db6ace659cd58c0c652074c",
+              "lines": 296,
+              "path": "src/click/_winconsole.py",
+              "python_production": true,
+              "sha256": "fefc54b946b1c01868474bd458236e1d8f1551e7e231d088c94d925cfaa817e0"
+            },
+            {
+              "bytes": 117343,
+              "git_blob": "f57ada62b195fa533387b5d06b366b17edb7d2f4",
+              "lines": 3135,
+              "path": "src/click/core.py",
+              "python_production": true,
+              "sha256": "814869352f5c14119d1175dd8ac1951be791bc67f8f514f215a831ba5ab0745c"
+            },
+            {
+              "bytes": 18461,
+              "git_blob": "21f4c342245fa93a7946b17d7661e0d2fa6a0c29",
+              "lines": 551,
+              "path": "src/click/decorators.py",
+              "python_production": true,
+              "sha256": "e4feda6e126d010629fca1e08d4be132fe3ae044703b3aefd9e9cd9279701f24"
+            },
+            {
+              "bytes": 9891,
+              "git_blob": "f141a832e1ab678709998c3bbafcdea6561b9661",
+              "lines": 308,
+              "path": "src/click/exceptions.py",
+              "python_production": true,
+              "sha256": "d6b76d5e01c9d5bdce8c690df94a5707db7f1c2062849be1fc3b6998b9b09fdb"
+            },
+            {
+              "bytes": 9726,
+              "git_blob": "9891f8809feff24a529ce47a860589c129835322",
+              "lines": 301,
+              "path": "src/click/formatting.py",
+              "python_production": true,
+              "sha256": "061ab1e105dd290f56e162a49c8c23e4a3ca166b5db863ae1aad72c3f4c72d9f"
+            },
+            {
+              "bytes": 1923,
+              "git_blob": "a2f91723d21cefdf658be327174e1f8ccdc20fcd",
+              "lines": 67,
+              "path": "src/click/globals.py",
+              "python_production": true,
+              "sha256": "80cf8d87a0383341c1fd2824685e4ce2770618c0c773f7e51d7bbdfe88781845"
+            },
+            {
+              "bytes": 18979,
+              "git_blob": "a8b7d2634a89df3c9e0b7a1f85dfd4bace60a608",
+              "lines": 532,
+              "path": "src/click/parser.py",
+              "python_production": true,
+              "sha256": "9d4d40876a75d6adbdba5d6f35d53db303e8fcf52e2abc54e985d3a22ef5ab57"
+            },
+            {
+              "bytes": 19857,
+              "git_blob": "6c39d5eb3889000b499d37262cc5f7de8b7a443e",
+              "lines": 644,
+              "path": "src/click/shell_completion.py",
+              "python_production": true,
+              "sha256": "09048676382e9f83916ce66b5cfd0256112d3f1e249ecb9f3a446c0e22bae1c3"
+            },
+            {
+              "bytes": 30847,
+              "git_blob": "dcbb22216c4bac521eee02fbac97e3b67f302076",
+              "lines": 877,
+              "path": "src/click/termui.py",
+              "python_production": true,
+              "sha256": "bc062b282d9aedffcd7c42210138445587dafff89be5741b4d2086b499400510"
+            },
+            {
+              "bytes": 18702,
+              "git_blob": "7c0e8741e2d07f54294a82792c776d08c639add4",
+              "lines": 565,
+              "path": "src/click/testing.py",
+              "python_production": true,
+              "sha256": "d9e2dd01a0890864e83f94f0f9737c263ac36f7c1b2487c047183777472b5b93"
+            },
+            {
+              "bytes": 38389,
+              "git_blob": "684cb3b1e6107bada194d18968de69a7f383a2a0",
+              "lines": 1165,
+              "path": "src/click/types.py",
+              "python_production": true,
+              "sha256": "2814d1c4ddbc711d5567999bf62257f7c3104b0fe9f521b3963a9f108f33e53c"
+            },
+            {
+              "bytes": 20245,
+              "git_blob": "ab2fe5889cee75d559092442696f9b23bf20ebfb",
+              "lines": 627,
+              "path": "src/click/utils.py",
+              "python_production": true,
+              "sha256": "6f5326faeb040c11ed13070f96d3c89f7cd22b89f0d8a4e9e460bbfe849394ba"
+            }
+          ],
+          "parse_gaps": [],
+          "ref": "8.2.1",
+          "symbols": 597,
+          "tracked_files": 143,
+          "tree": "9d603ea306b13bd10ef094a845b3bbb16f520bc7"
+        },
+        {
+          "commit": "00fadb8904387158ce6e9aa1573be770446895c1",
+          "included_bytes": 440523,
+          "included_files": [
+            {
+              "bytes": 56246,
+              "git_blob": "552e773bdce293ae4f3c7531360473a19b3ee74d",
+              "lines": 1293,
+              "path": "CHANGES.rst",
+              "python_production": false,
+              "sha256": "3268bd1656808ab71fdefe59f48be44e3a77c38ebeb667395b30bff986ee7cc9"
+            },
+            {
+              "bytes": 4444,
+              "git_blob": "ebffe00058920e10ed9b1e27c31078dd68c33722",
+              "lines": 208,
+              "path": "pyproject.toml",
+              "python_production": false,
+              "sha256": "60ee7c72dc861c9ceae0c9c2b3bc0f315178018717ce882cf48cb5f6990a1110"
+            },
+            {
+              "bytes": 4473,
+              "git_blob": "1aa547c57af68954b3bcd6012873881030e53d91",
+              "lines": 123,
+              "path": "src/click/__init__.py",
+              "python_production": true,
+              "sha256": "e98c92d5a7b29276742d8c1e5a8ccd672d00f6767fd75c2660886fddc6d0ad8a"
+            },
+            {
+              "bytes": 18693,
+              "git_blob": "f2726b93afe2ed69ba20d8e709c9cbd22b9d2339",
+              "lines": 622,
+              "path": "src/click/_compat.py",
+              "python_production": true,
+              "sha256": "bf7c4166415bbc0d415cf46415f04973afa92303c8ef7e399be910127a5502ce"
+            },
+            {
+              "bytes": 26799,
+              "git_blob": "47f87b861fcf361ff15a4541079c75678d88917f",
+              "lines": 847,
+              "path": "src/click/_termui_impl.py",
+              "python_production": true,
+              "sha256": "92da401f226d36487247ec7ae024050fac49408d757d3037aa0d805778824e85"
+            },
+            {
+              "bytes": 1400,
+              "git_blob": "97fbee3dc6ce372600e702d38d9139bcf6a40bec",
+              "lines": 51,
+              "path": "src/click/_textwrap.py",
+              "python_production": true,
+              "sha256": "04e69ed1143abe0dc590d8122723a81b31b599e18cc49fee9165592b1feffb4a"
+            },
+            {
+              "bytes": 943,
+              "git_blob": "09fb00855e68840d18187f3de3a604e7defc37e8",
+              "lines": 36,
+              "path": "src/click/_utils.py",
+              "python_production": true,
+              "sha256": "919c2d4dfe6032e0a294925c792da24c2bd1bc263ed1a379ac9abc80ac3ba7c8"
+            },
+            {
+              "bytes": 8465,
+              "git_blob": "e56c7c6ae7ee7e577db6ace659cd58c0c652074c",
+              "lines": 296,
+              "path": "src/click/_winconsole.py",
+              "python_production": true,
+              "sha256": "fefc54b946b1c01868474bd458236e1d8f1551e7e231d088c94d925cfaa817e0"
+            },
+            {
+              "bytes": 128855,
+              "git_blob": "ff2f74ad5dc3879b258f6137c8928e586a28ea4b",
+              "lines": 3347,
+              "path": "src/click/core.py",
+              "python_production": true,
+              "sha256": "d40e53f14a005e494818f4c9f37fc325b562df97a1b494b615390fff043b7acd"
+            },
+            {
+              "bytes": 18461,
+              "git_blob": "21f4c342245fa93a7946b17d7661e0d2fa6a0c29",
+              "lines": 551,
+              "path": "src/click/decorators.py",
+              "python_production": true,
+              "sha256": "e4feda6e126d010629fca1e08d4be132fe3ae044703b3aefd9e9cd9279701f24"
+            },
+            {
+              "bytes": 9954,
+              "git_blob": "4d782ee361442e4aafeac7e371ab12789c8a3751",
+              "lines": 308,
+              "path": "src/click/exceptions.py",
+              "python_production": true,
+              "sha256": "f2eb5ff30e95e612573273bf89cd4536bb5bc2e127d4d52ed5a0f057c52a9c6e"
+            },
+            {
+              "bytes": 9730,
+              "git_blob": "0b64f831b5578e7262302ec9218fa498a2336794",
+              "lines": 301,
+              "path": "src/click/formatting.py",
+              "python_production": true,
+              "sha256": "4557f0c2bd2bc16369806afc35a1e874fce422beffb54c9587f9c375a9cb30d7"
+            },
+            {
+              "bytes": 1923,
+              "git_blob": "a2f91723d21cefdf658be327174e1f8ccdc20fcd",
+              "lines": 67,
+              "path": "src/click/globals.py",
+              "python_production": true,
+              "sha256": "80cf8d87a0383341c1fd2824685e4ce2770618c0c773f7e51d7bbdfe88781845"
+            },
+            {
+              "bytes": 19010,
+              "git_blob": "1ea1f7166e4b9eac5bcb632ecd86fe0331829141",
+              "lines": 532,
+              "path": "src/click/parser.py",
+              "python_production": true,
+              "sha256": "437d691f416541912af945c4fc0051ce5ca011fbf13d3b996d6361e317d79b3c"
+            },
+            {
+              "bytes": 20994,
+              "git_blob": "8f1564c49be8e138014841d8f7cb35a34265674f",
+              "lines": 667,
+              "path": "src/click/shell_completion.py",
+              "python_production": true,
+              "sha256": "09ce0641416e5a97d005af6c179a9779e608ee7ded23fd64e997529f80596d3d"
+            },
+            {
+              "bytes": 30847,
+              "git_blob": "dcbb22216c4bac521eee02fbac97e3b67f302076",
+              "lines": 877,
+              "path": "src/click/termui.py",
+              "python_production": true,
+              "sha256": "bc062b282d9aedffcd7c42210138445587dafff89be5741b4d2086b499400510"
+            },
+            {
+              "bytes": 19102,
+              "git_blob": "f6f60b809a065e2d67de5a7ec13d9d3c51b5e760",
+              "lines": 577,
+              "path": "src/click/testing.py",
+              "python_production": true,
+              "sha256": "10445bcdc9756ebd265b4a814bd12a9249df35f5c1f564045b410b22992fb92b"
+            },
+            {
+              "bytes": 39927,
+              "git_blob": "e71c1c21e4c2e1f954ceeed228507478f138993a",
+              "lines": 1209,
+              "path": "src/click/types.py",
+              "python_production": true,
+              "sha256": "7a4e7804d485c0f2acaad7d3ee3b2a71ce161ee8bc00815530a338a156485e17"
+            },
+            {
+              "bytes": 20257,
+              "git_blob": "beae26f761607f0a7a617d4ce8789bf49bb99b6b",
+              "lines": 627,
+              "path": "src/click/utils.py",
+              "python_production": true,
+              "sha256": "8025287b0740840f902c15141f1acb878ba3ea6ed3d568d964c34fbd1d08ed80"
+            }
+          ],
+          "parse_gaps": [],
+          "ref": "8.3.0",
+          "symbols": 599,
+          "tracked_files": 142,
+          "tree": "73d5f074779cb299d9926091ff1c78a7a97653c9"
+        }
+      ]
+    },
+    "requests": {
+      "ancestry_commit_count": 6372,
+      "available_tag_count": 162,
+      "bare_path": "artifacts/repos/requests",
+      "origin": "https://github.com/psf/requests.git",
+      "snapshots": [
+        {
+          "commit": "efb4af01271c8c0ddf49457c7096a5bc91edbdad",
+          "included_bytes": 177383,
+          "included_files": [
+            {
+              "bytes": 33545,
+              "git_blob": "0eec48db850d6be1d52b837928266742b92f2dc7",
+              "lines": 1156,
+              "path": "HISTORY.rst",
+              "python_production": false,
+              "sha256": "8e152b5dd8e512d1f1770ece1d97fd0e2b2c3a173548f2b949881a02cef5a433"
+            },
+            {
+              "bytes": 2215,
+              "git_blob": "82c0f78074aceb90293a45e0d0b872aaf23163f9",
+              "lines": 89,
+              "path": "requests/__init__.py",
+              "python_production": true,
+              "sha256": "65a43d6691128bc6618be487c4c27002ab3fec49f81a5be311afae24e41a4317"
+            },
+            {
+              "bytes": 18680,
+              "git_blob": "23e448f42e91b29f27433fb4ee1e87de3ee88f27",
+              "lines": 483,
+              "path": "requests/adapters.py",
+              "python_production": true,
+              "sha256": "78a2b19d0a0bf321556f71e1eb4ecf38ad1d066da0bb9d1f8104ed497fa5272f"
+            },
+            {
+              "bytes": 5795,
+              "git_blob": "c2068d0eda91bc4006dd0068f3c513fa0ca8e48d",
+              "lines": 149,
+              "path": "requests/api.py",
+              "python_production": true,
+              "sha256": "3028954fd4c6e7a8d3842ceb7f2d692d054e097c5a4ceccd1e3f0734a0eed4fe"
+            },
+            {
+              "bytes": 8075,
+              "git_blob": "73f8e9da8da416469a2bf62757073534edbe2d8b",
+              "lines": 242,
+              "path": "requests/auth.py",
+              "python_production": true,
+              "sha256": "601161474287f28836e748434536200bd281a8c57187dc8c8e9661d3e91779f2"
+            },
+            {
+              "bytes": 613,
+              "git_blob": "07e64750703903bd3971aa7536f6605ae65d6759",
+              "lines": 25,
+              "path": "requests/certs.py",
+              "python_production": true,
+              "sha256": "457e47d5c4a2079d876e387faafdde316f21a87105febe108afff80307f38ae5"
+            },
+            {
+              "bytes": 1469,
+              "git_blob": "70edff784951c903d89c48697ac77e08759a3098",
+              "lines": 62,
+              "path": "requests/compat.py",
+              "python_production": true,
+              "sha256": "86aec2287a3290db3ccb328f00988e9074093e8369f40f3d32e7d37619429e26"
+            },
+            {
+              "bytes": 17564,
+              "git_blob": "eee5168f2c5fe60899eb0227d52a20b54aea1a61",
+              "lines": 493,
+              "path": "requests/cookies.py",
+              "python_production": true,
+              "sha256": "4a167d9736f4aa14d5d379e169f08c417ae7ba0046af7d8cdf4144a39bbaae44"
+            },
+            {
+              "bytes": 2776,
+              "git_blob": "ba0b910e316cde8f256a29a9620a3942fe8b499d",
+              "lines": 114,
+              "path": "requests/exceptions.py",
+              "python_production": true,
+              "sha256": "972ccae48fb390d08df737d81898240ccbedb776a48f0d1052ae2af29608e300"
+            },
+            {
+              "bytes": 767,
+              "git_blob": "9da94366d7e4d11b3f66743d604b7320cdc8cc6d",
+              "lines": 34,
+              "path": "requests/hooks.py",
+              "python_production": true,
+              "sha256": "8d2766663079a1127ac6628cdd5b6a91892af28153c31ea0a86f406945a9025c"
+            },
+            {
+              "bytes": 29530,
+              "git_blob": "fe4bec1bd33eafb2af6a8cb61661fb2a33bef5b5",
+              "lines": 855,
+              "path": "requests/models.py",
+              "python_production": true,
+              "sha256": "d7b4fb70f60193826080a43169e18c5960c1e4aa8b1bcbba422057687ec81586"
+            },
+            {
+              "bytes": 24897,
+              "git_blob": "45be9733e56d8c6c4f34915d26e0c741f795dcf2",
+              "lines": 689,
+              "path": "requests/sessions.py",
+              "python_production": true,
+              "sha256": "2bab4f1206788222d9e6c420dd0ca60b6ea572c985bf0b59d38e20da1ad8dd61"
+            },
+            {
+              "bytes": 3315,
+              "git_blob": "0137c91d961d42ac313114fd5e0750471facfab8",
+              "lines": 91,
+              "path": "requests/status_codes.py",
+              "python_production": true,
+              "sha256": "4021ccee16c1c8124270fc6737aded08162424b8c4d38ba67799b90d2664f851"
+            },
+            {
+              "bytes": 3017,
+              "git_blob": "991056e476e61a6a025f4069c93539b7d7ebf1f3",
+              "lines": 106,
+              "path": "requests/structures.py",
+              "python_production": true,
+              "sha256": "4c9f95c80d06270cccb4bc3603d02a8875ac8ef9f38dfd2cd401c661cee7fa93"
+            },
+            {
+              "bytes": 22228,
+              "git_blob": "c08448ccb1bee2957639a0258ac825079c8991b6",
+              "lines": 728,
+              "path": "requests/utils.py",
+              "python_production": true,
+              "sha256": "290c03b09744e43306992751981547b1d2150da938ae62b8d6028e611f5685f5"
+            },
+            {
+              "bytes": 2897,
+              "git_blob": "3a3905223c123025a6dc3b4bbfc48f1c110daf80",
+              "lines": 98,
+              "path": "setup.py",
+              "python_production": false,
+              "sha256": "f9bcd0ac4883ca0a4a5ade530ad5ce97a0b82e77b475c4b1e9a7a2cb52d24037"
+            }
+          ],
+          "parse_gaps": [],
+          "ref": "v2.10.0",
+          "symbols": 247,
+          "tracked_files": 139,
+          "tree": "5aff9e183bf2e19d0e51d31e74c9082212fd6e51"
+        },
+        {
+          "commit": "bd840450c0d1e9db3bf62382c15d96378cc3a056",
+          "included_bytes": 223989,
+          "included_files": [
+            {
+              "bytes": 48505,
+              "git_blob": "09a09eee07fefbe05423c3c202959ddd80d2c37e",
+              "lines": 1623,
+              "path": "HISTORY.md",
+              "python_production": false,
+              "sha256": "8accd598c0cdff7b4d41ffc3fb593ff5c8f8991e25317f14a5ce67d26a358d67"
+            },
+            {
+              "bytes": 3921,
+              "git_blob": "bc168ee533b6a1706fa81dc8c4201549e99edf42",
+              "lines": 131,
+              "path": "requests/__init__.py",
+              "python_production": true,
+              "sha256": "a2e80cf7e10da0aff4281bcae1fe7924cbbc84e980bdc66696ea180f8c21a195"
+            },
+            {
+              "bytes": 436,
+              "git_blob": "be8a45fe0e5d8849f023577d82c97af1371abe50",
+              "lines": 14,
+              "path": "requests/__version__.py",
+              "python_production": true,
+              "sha256": "da2be6860b84e9475319d2978473009f61438fa5f75ffd5e60a003493ae96833"
+            },
+            {
+              "bytes": 1096,
+              "git_blob": "759d9a56ba0102bb3b7b3abfcfae6731a2ecc243",
+              "lines": 42,
+              "path": "requests/_internal_utils.py",
+              "python_production": true,
+              "sha256": "671dcf9c451c7327ec07e89ed759d95405bca82949cb4831d6a34c13bae04f5f"
+            },
+            {
+              "bytes": 21344,
+              "git_blob": "fa4d9b3cc9a2cf6dc2465958387f32193b431410",
+              "lines": 533,
+              "path": "requests/adapters.py",
+              "python_production": true,
+              "sha256": "59e95233504241775b8c4b83b01c6a283003798f011e6c65af06cd9cb376aebe"
+            },
+            {
+              "bytes": 6253,
+              "git_blob": "abada96d4627a52bf0f6040ee2e08b0eff32c77c",
+              "lines": 158,
+              "path": "requests/api.py",
+              "python_production": true,
+              "sha256": "8566607c3eceae209914e9e97aad1bbf6a5b5c397c6177f10f001c534dfaa83b"
+            },
+            {
+              "bytes": 10206,
+              "git_blob": "bdde51c7fd1b0f1e3c7adeb8f2bf2587cdfab122",
+              "lines": 305,
+              "path": "requests/auth.py",
+              "python_production": true,
+              "sha256": "401dbe712523d63aef5997cf5edb6c669c8069c420b4a2d5935e2f416f53a521"
+            },
+            {
+              "bytes": 453,
+              "git_blob": "d1a378d787d5a220ef2df694c5cbcd6b4015cbea",
+              "lines": 18,
+              "path": "requests/certs.py",
+              "python_production": true,
+              "sha256": "74e079ad5d83675ddd121abd0546bfe21779900aa0e7d7bfcd4641d347da633f"
+            },
+            {
+              "bytes": 1678,
+              "git_blob": "c44b35efb984650802c40efbc5281b875bae4adc",
+              "lines": 70,
+              "path": "requests/compat.py",
+              "python_production": true,
+              "sha256": "15521e4ce9e240c1d091e13625d26f6abdce67e6f820587c68d7b3227e39cf0b"
+            },
+            {
+              "bytes": 18430,
+              "git_blob": "56fccd9c2570d2a31365ed11278fd1b6ecc2aa54",
+              "lines": 549,
+              "path": "requests/cookies.py",
+              "python_production": true,
+              "sha256": "63e6ca5fa4ef5b716762513a02ed125ed55559c68d745bee030431c3e1b48932"
+            },
+            {
+              "bytes": 3185,
+              "git_blob": "a80cad80f14411ddf0ba86070d1a65c78dbf7878",
+              "lines": 126,
+              "path": "requests/exceptions.py",
+              "python_production": true,
+              "sha256": "43c61e596c621c75e1904ca72e93200bfebfaff653630d9a213b3dc0248064d6"
+            },
+            {
+              "bytes": 3515,
+              "git_blob": "e53d35ef6dec122aa4aba941b9c555997a35d143",
+              "lines": 119,
+              "path": "requests/help.py",
+              "python_production": true,
+              "sha256": "94b701b4a01aafc4fa4fbf1ef5373865f77f104245867b718226f524735cb442"
+            },
+            {
+              "bytes": 757,
+              "git_blob": "7a51f212c8a08fc6a04e509e89d8dcc85185df77",
+              "lines": 34,
+              "path": "requests/hooks.py",
+              "python_production": true,
+              "sha256": "411786cb2d1b45caf9ae4c02b8e6cd6a46d8b1cec492229e0701b8a877a4af64"
+            },
+            {
+              "bytes": 34209,
+              "git_blob": "3dded57eff152cf7249c63eeb5b0be85254693d7",
+              "lines": 953,
+              "path": "requests/models.py",
+              "python_production": true,
+              "sha256": "7858590699da023bd76f9a2acebd5524747fb17c61f260ee28a33b4e40716fd5"
+            },
+            {
+              "bytes": 542,
+              "git_blob": "7232fe0ff7e85083d47d624532f29badd7c854d0",
+              "lines": 14,
+              "path": "requests/packages.py",
+              "python_production": true,
+              "sha256": "436ac5d0be66737c1002f73aabf94056d3d30ce68e785803fbb9164902e48c44"
+            },
+            {
+              "bytes": 28958,
+              "git_blob": "a448bd83f2b45c75b50497779e228e584b08c2d6",
+              "lines": 761,
+              "path": "requests/sessions.py",
+              "python_production": true,
+              "sha256": "2374c2aafc7ff99514fb168148eb72e1d9f1fed104dddb4f7e3b5dee1c46bc34"
+            },
+            {
+              "bytes": 4129,
+              "git_blob": "813e8c4e62fdcbbfcb73e2f52e187e0c3c5b84d7",
+              "lines": 120,
+              "path": "requests/status_codes.py",
+              "python_production": true,
+              "sha256": "5d695ca418db0adabdb12aa91fdfca2b18272d37fd67fff0096a25ab6d724a58"
+            },
+            {
+              "bytes": 2981,
+              "git_blob": "da930e2852049feb2b6e262d442b9cc25ecb2d94",
+              "lines": 103,
+              "path": "requests/structures.py",
+              "python_production": true,
+              "sha256": "ce83fcaa5cb625a9397bcf47c29aa3375cf6762ced23efe06aab6cd6b6892417"
+            },
+            {
+              "bytes": 29994,
+              "git_blob": "0ce7fe115c8954acaba71ff4cf3c8097978f2593",
+              "lines": 975,
+              "path": "requests/utils.py",
+              "python_production": true,
+              "sha256": "e9124d5b9d2bcd49dae6a51b168340230a9b00d15728377e8268698140f2ba42"
+            },
+            {
+              "bytes": 63,
+              "git_blob": "ed8a958e0a8da154b0db9b1edca6e47e5dae146a",
+              "lines": 5,
+              "path": "setup.cfg",
+              "python_production": false,
+              "sha256": "9dd20a5ada090b01dd22055f32bdaa56315d3a14b0fd168dbe12013fa09fe5b1"
+            },
+            {
+              "bytes": 3334,
+              "git_blob": "4e2ad936ebf4ab9adb537f3d0f7eccb6f7de5e58",
+              "lines": 109,
+              "path": "setup.py",
+              "python_production": false,
+              "sha256": "df2642bea8effb9579bcdcaee8d05c1bb35a74f61a2039066168563fcc23f1c6"
+            }
+          ],
+          "parse_gaps": [],
+          "ref": "v2.20.0",
+          "symbols": 272,
+          "tracked_files": 90,
+          "tree": "47b8d2e264c98fe545c04ca7d9e855d4f5638511"
+        },
+        {
+          "commit": "147c8511ddbfa5e8f71bbf5c18ede0c4ceb3bba4",
+          "included_bytes": 240919,
+          "included_files": [
+            {
+              "bytes": 57284,
+              "git_blob": "bbe6dd425b02d758fb0addc175391f7f09de0f4e",
+              "lines": 1906,
+              "path": "HISTORY.md",
+              "python_production": false,
+              "sha256": "b22101904f27e7fe5f7855dac688d6497ad43847e991441246f2dae28f29061d"
+            },
+            {
+              "bytes": 257,
+              "git_blob": "d3ab7bd9bb27d486df5e39eec667691c9ebe64d8",
+              "lines": 13,
+              "path": "pyproject.toml",
+              "python_production": false,
+              "sha256": "cac06d1923cfc27743a3dc95c938e47cf6b9519e68b7fe688a119df5c94f100c"
+            },
+            {
+              "bytes": 4963,
+              "git_blob": "300a16c5741d9ccb751185407694fe49e8da6bc5",
+              "lines": 180,
+              "path": "requests/__init__.py",
+              "python_production": true,
+              "sha256": "2ef98a863233f261da297b610b632fe72919d5df76be8c9fde826977e56e0228"
+            },
+            {
+              "bytes": 435,
+              "git_blob": "5063c3f8ee7980493efcc30c24f7e7582714aa81",
+              "lines": 14,
+              "path": "requests/__version__.py",
+              "python_production": true,
+              "sha256": "b2c237133b7b3dac6090e5b8e4686dc0f51c968fd23bfca0b489b803be0839fc"
+            },
+            {
+              "bytes": 1495,
+              "git_blob": "f2cf635e2937ee9b123a1498c5c5f723a6e20084",
+              "lines": 50,
+              "path": "requests/_internal_utils.py",
+              "python_production": true,
+              "sha256": "9cc4329abe21b37d93a95a3901b0ab99c24486f3d487bc57965bb2ab0b252e24"
+            },
+            {
+              "bytes": 19553,
+              "git_blob": "78e3bb6ecf920b429c4ecab62434b1e630c01707",
+              "lines": 538,
+              "path": "requests/adapters.py",
+              "python_production": true,
+              "sha256": "bff1668d4e4a67bea4f98b6d4a1658079469ac8ce184bf18df3816f69e1e050f"
+            },
+            {
+              "bytes": 6449,
+              "git_blob": "cd0b3eeac3ebca7fe4a627ba5a96c1bbaf827d4f",
+              "lines": 157,
+              "path": "requests/api.py",
+              "python_production": true,
+              "sha256": "abad71717ab8b668889abbdc4952d36c5c82883d85f8bffe8562866f3e32f2f8"
+            },
+            {
+              "bytes": 10187,
+              "git_blob": "9733686ddb36b826ead4f4666d42311397fa6fec",
+              "lines": 315,
+              "path": "requests/auth.py",
+              "python_production": true,
+              "sha256": "87e1cb955c7d8fcaca57985f480c9c3f60293928254f3efb474b73eea09b6c41"
+            },
+            {
+              "bytes": 429,
+              "git_blob": "be422c3e91e43bacf60ff3302688df0b28742333",
+              "lines": 17,
+              "path": "requests/certs.py",
+              "python_production": true,
+              "sha256": "67d49be35d009efea35054f2b2cd23145854eb1b2df1cb442ea7f2f04bf6de0c"
+            },
+            {
+              "bytes": 1451,
+              "git_blob": "6776163c94f3d6f61b00d329d4061d6b02afeeb9",
+              "lines": 79,
+              "path": "requests/compat.py",
+              "python_production": true,
+              "sha256": "cb19ed54e4841c632b9fb14daffdf61046a6d5934074f45d484d77ff2687cd39"
+            },
+            {
+              "bytes": 18560,
+              "git_blob": "bf54ab237e410603061b8cec8fd195912d3cfb08",
+              "lines": 561,
+              "path": "requests/cookies.py",
+              "python_production": true,
+              "sha256": "903de43447028fe9b16ed7f97c9b12693f3a786a046290f75f4092829ce5ec13"
+            },
+            {
+              "bytes": 3811,
+              "git_blob": "e1cedf883d3eadcbfda91967d36b7c59b8367e76",
+              "lines": 141,
+              "path": "requests/exceptions.py",
+              "python_production": true,
+              "sha256": "0e1bde1417255634d1c6145db95a4ef866cc60c203da09a374b7cd12a36923f5"
+            },
+            {
+              "bytes": 3875,
+              "git_blob": "8fbcd6560a8fe2c8a07e3bd1441a81e0db9cb689",
+              "lines": 134,
+              "path": "requests/help.py",
+              "python_production": true,
+              "sha256": "80f5f977f1fb5ddf3c6830017a386a1a097d075545453b79066898bcbdcfcc84"
+            },
+            {
+              "bytes": 733,
+              "git_blob": "d181ba2ec2e55d274897315887b78fbdca757da8",
+              "lines": 33,
+              "path": "requests/hooks.py",
+              "python_production": true,
+              "sha256": "0a2bb2b221c0dfd57951f702057148c7cdc8ac3a6ec1f37d45c4d482fdbc7ed4"
+            },
+            {
+              "bytes": 35223,
+              "git_blob": "617a4134e556774953a56d10a2f8f211b15a605f",
+              "lines": 1034,
+              "path": "requests/models.py",
+              "python_production": true,
+              "sha256": "f8394a8b4a2bf2014033a573bada1b5efbc15bfdb0ac9b8e17935f9dd4c875d0"
+            },
+            {
+              "bytes": 957,
+              "git_blob": "77c45c9e90cdf2bcd60eea3cac9c8cf56cca2c08",
+              "lines": 28,
+              "path": "requests/packages.py",
+              "python_production": true,
+              "sha256": "0d782ff852487336484e6bf4bc40408568f85bee4218220dfe4b2f811d7b0efb"
+            },
+            {
+              "bytes": 30373,
+              "git_blob": "dbcf2a7b0ee2898b72714b756e4b27fbbad4beab",
+              "lines": 833,
+              "path": "requests/sessions.py",
+              "python_production": true,
+              "sha256": "f8bbd3ceb3ed7ad493ad1ddbbb1bb85e176032b2452c1d6ae43ecffbe2f65e1c"
+            },
+            {
+              "bytes": 4235,
+              "git_blob": "4bd072be9769748a852740d037d5c63021472c9d",
+              "lines": 128,
+              "path": "requests/status_codes.py",
+              "python_production": true,
+              "sha256": "16f1e64f9b87fbfba29ad473e611fd5426eded557e35e8b627dba96de8fa8fc8"
+            },
+            {
+              "bytes": 2912,
+              "git_blob": "188e13e4829591facb23ae0e2eda84b9807cb818",
+              "lines": 99,
+              "path": "requests/structures.py",
+              "python_production": true,
+              "sha256": "f886e6855cf4e92fb968f499b94b6167afba0fd5ce8d1b935c739a6d8d38d573"
+            },
+            {
+              "bytes": 33448,
+              "git_blob": "a367417f8eb5926d0778eb50dc68ba68f977a31f",
+              "lines": 1094,
+              "path": "requests/utils.py",
+              "python_production": true,
+              "sha256": "eacc765f7708540f018163a0f28771172fbf95b5831444d4f072387d4e119aac"
+            },
+            {
+              "bytes": 345,
+              "git_blob": "bf21c81cc069ab3b27362186476022058b01489f",
+              "lines": 17,
+              "path": "setup.cfg",
+              "python_production": false,
+              "sha256": "dcb8a7cef754e5e5c7c31a7155a68556e910d1845a6b29fa9e36d8cdecc54f16"
+            },
+            {
+              "bytes": 3944,
+              "git_blob": "012354574d60cb4304b6077fd4b9a19919d3255d",
+              "lines": 132,
+              "path": "setup.py",
+              "python_production": false,
+              "sha256": "e6061b128a3248d4c75abde74965cd770b84452931ac45ae3ded8e4cdc822e6d"
+            }
+          ],
+          "parse_gaps": [],
+          "ref": "v2.31.0",
+          "symbols": 279,
+          "tracked_files": 100,
+          "tree": "7be4f5113896a87e2d1ed58a00c237881ae79520"
+        },
+        {
+          "commit": "0e322af87745eff34caffe4df68456ebc20d9068",
+          "included_bytes": 253359,
+          "included_files": [
+            {
+              "bytes": 60368,
+              "git_blob": "e51a7ee2c231c6f1ed0adcd16c198e6a412a9c75",
+              "lines": 1982,
+              "path": "HISTORY.md",
+              "python_production": false,
+              "sha256": "0eb3e62434380d747997cd019e03d4a502e5e77021554735db19b1cde419a679"
+            },
+            {
+              "bytes": 238,
+              "git_blob": "1b7901e1559544ac387713b7c45e9ebe165cce83",
+              "lines": 10,
+              "path": "pyproject.toml",
+              "python_production": false,
+              "sha256": "a5b52f2e3196da56ac62b0d48b2be83e36eccf62f9d062b93fca8488da49ab60"
+            },
+            {
+              "bytes": 350,
+              "git_blob": "8d44e0e14b1901923d71a3c1cb02d4e1e55f77a6",
+              "lines": 17,
+              "path": "setup.cfg",
+              "python_production": false,
+              "sha256": "68d06c0156b89e98ac163dea286ec652845a1c989da58f07ec36d3b142f1499e"
+            },
+            {
+              "bytes": 3941,
+              "git_blob": "1b0eb377b4c84736b2c77ef0a5bd343815eec409",
+              "lines": 132,
+              "path": "setup.py",
+              "python_production": false,
+              "sha256": "b45df91c5c6c34e6a799e5a2cbec75eb8bfcead682aaddd10d5da4583f20bfc1"
+            },
+            {
+              "bytes": 5072,
+              "git_blob": "051cda1340effaa0706b46dd68ac002ceda3d45c",
+              "lines": 184,
+              "path": "src/requests/__init__.py",
+              "python_production": true,
+              "sha256": "e3168011198f0c804fb1ad8fb23a54f6bd3aca8a0afb69992874d90215915adb"
+            },
+            {
+              "bytes": 435,
+              "git_blob": "2c105aca7d48ce1c35a456785cc75f97f076a426",
+              "lines": 14,
+              "path": "src/requests/__version__.py",
+              "python_production": true,
+              "sha256": "1557e09606663509e660f5e93a8843539f05e4451bffe5674936807ac4b5f3b8"
+            },
+            {
+              "bytes": 1495,
+              "git_blob": "f2cf635e2937ee9b123a1498c5c5f723a6e20084",
+              "lines": 50,
+              "path": "src/requests/_internal_utils.py",
+              "python_production": true,
+              "sha256": "9cc4329abe21b37d93a95a3901b0ab99c24486f3d487bc57965bb2ab0b252e24"
+            },
+            {
+              "bytes": 27451,
+              "git_blob": "9a58b1602532f9bee41afb0dfadaa7eb548e98c1",
+              "lines": 719,
+              "path": "src/requests/adapters.py",
+              "python_production": true,
+              "sha256": "28871e72c72a6a6eab78e097465e03c0fe235fc25c97cb1de7b7edd7b291d9c4"
+            },
+            {
+              "bytes": 6449,
+              "git_blob": "5960744552e7f8eea815429e7bdad38b0cc2741d",
+              "lines": 157,
+              "path": "src/requests/api.py",
+              "python_production": true,
+              "sha256": "fd96fd39aeedcd5222cd32b016b3e30c463d7a3b66fce9d2444467003c46b10b"
+            },
+            {
+              "bytes": 10186,
+              "git_blob": "4a7ce6dc1460e0de8aa0c38ea9123faa69bd5110",
+              "lines": 314,
+              "path": "src/requests/auth.py",
+              "python_production": true,
+              "sha256": "905ef9b6a9cb72d67d31ffe19bd4d9223e1c4169cde6ec51cfca16b31e70991d"
+            },
+            {
+              "bytes": 429,
+              "git_blob": "be422c3e91e43bacf60ff3302688df0b28742333",
+              "lines": 17,
+              "path": "src/requests/certs.py",
+              "python_production": true,
+              "sha256": "67d49be35d009efea35054f2b2cd23145854eb1b2df1cb442ea7f2f04bf6de0c"
+            },
+            {
+              "bytes": 1817,
+              "git_blob": "095de1b6cae2f460174af54efa975411645f40c6",
+              "lines": 94,
+              "path": "src/requests/compat.py",
+              "python_production": true,
+              "sha256": "0b9c3f0cf2d2bab5cf81c75653bf1fa2b6b400f99b6245f61bcf50bc7e71ccf0"
+            },
+            {
+              "bytes": 18590,
+              "git_blob": "f69d0cda9e1c893401015a09f2db2de5a5960fd2",
+              "lines": 561,
+              "path": "src/requests/cookies.py",
+              "python_production": true,
+              "sha256": "6cd8be8aa123e0d3d9d34fa86feac7bf392f39bccdde5129830de0ea9692dd7c"
+            },
+            {
+              "bytes": 4260,
+              "git_blob": "83986b489849131efeb7f286b328961205256fd8",
+              "lines": 151,
+              "path": "src/requests/exceptions.py",
+              "python_production": true,
+              "sha256": "8c93d2d545804ecf3a4a155468ba2b4e225bd52686ba83445a020225ea7e5646"
+            },
+            {
+              "bytes": 3875,
+              "git_blob": "8fbcd6560a8fe2c8a07e3bd1441a81e0db9cb689",
+              "lines": 134,
+              "path": "src/requests/help.py",
+              "python_production": true,
+              "sha256": "80f5f977f1fb5ddf3c6830017a386a1a097d075545453b79066898bcbdcfcc84"
+            },
+            {
+              "bytes": 733,
+              "git_blob": "d181ba2ec2e55d274897315887b78fbdca757da8",
+              "lines": 33,
+              "path": "src/requests/hooks.py",
+              "python_production": true,
+              "sha256": "0a2bb2b221c0dfd57951f702057148c7cdc8ac3a6ec1f37d45c4d482fdbc7ed4"
+            },
+            {
+              "bytes": 35418,
+              "git_blob": "8f56ca7d23a9a12084df80cb649e019572308cfe",
+              "lines": 1037,
+              "path": "src/requests/models.py",
+              "python_production": true,
+              "sha256": "938daba17cc2f2efce6a000f422f54e0c91f3bb8b8af615d6aabccaacb4f7a17"
+            },
+            {
+              "bytes": 904,
+              "git_blob": "5ab3d8e250de8475cb22553f564e5444e02c7460",
+              "lines": 23,
+              "path": "src/requests/packages.py",
+              "python_production": true,
+              "sha256": "fe0d2067af355320252874631fa91a9db6a8c71d9e01beaacdc5e2383c932287"
+            },
+            {
+              "bytes": 30495,
+              "git_blob": "b387bc36df7bc064b502adcb3c1a4527dd401fda",
+              "lines": 831,
+              "path": "src/requests/sessions.py",
+              "python_production": true,
+              "sha256": "ca44c8f145864a5b4e7c7d3b1caa25947ee44c11b0e168620556901a67244f0e"
+            },
+            {
+              "bytes": 4322,
+              "git_blob": "c7945a2f06897ed980cc575df2f48d9e6c1a9f7e",
+              "lines": 128,
+              "path": "src/requests/status_codes.py",
+              "python_production": true,
+              "sha256": "889500780db96da4ddc3ee8f7c3d1e178aa1a48343251248fb268cab1b382c42"
+            },
+            {
+              "bytes": 2912,
+              "git_blob": "188e13e4829591facb23ae0e2eda84b9807cb818",
+              "lines": 99,
+              "path": "src/requests/structures.py",
+              "python_production": true,
+              "sha256": "f886e6855cf4e92fb968f499b94b6167afba0fd5ce8d1b935c739a6d8d38d573"
+            },
+            {
+              "bytes": 33619,
+              "git_blob": "ae6c42f6cb48d2beaa3b7352bc1d130db3e4e3be",
+              "lines": 1096,
+              "path": "src/requests/utils.py",
+              "python_production": true,
+              "sha256": "1e2402e8dabf0dade4b5a32217342487e7429378901c7284b184b990373ef02c"
+            }
+          ],
+          "parse_gaps": [],
+          "ref": "v2.32.3",
+          "symbols": 284,
+          "tracked_files": 131,
+          "tree": "9474485f84c7244930abc1b8023f847486572091"
+        },
+        {
+          "commit": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741",
+          "included_bytes": 252398,
+          "included_files": [
+            {
+              "bytes": 61266,
+              "git_blob": "3828073adf5b0b846df72b874000ce46cd732d8b",
+              "lines": 2012,
+              "path": "HISTORY.md",
+              "python_production": false,
+              "sha256": "7ee222a17a09d6c33c50bc5247d7cf1455b207218f0127cae952a3c09006648b"
+            },
+            {
+              "bytes": 238,
+              "git_blob": "1b7901e1559544ac387713b7c45e9ebe165cce83",
+              "lines": 10,
+              "path": "pyproject.toml",
+              "python_production": false,
+              "sha256": "a5b52f2e3196da56ac62b0d48b2be83e36eccf62f9d062b93fca8488da49ab60"
+            },
+            {
+              "bytes": 350,
+              "git_blob": "8d44e0e14b1901923d71a3c1cb02d4e1e55f77a6",
+              "lines": 17,
+              "path": "setup.cfg",
+              "python_production": false,
+              "sha256": "68d06c0156b89e98ac163dea286ec652845a1c989da58f07ec36d3b142f1499e"
+            },
+            {
+              "bytes": 3229,
+              "git_blob": "ff65d39102cf9b36efedc676ac7194d83251d20f",
+              "lines": 107,
+              "path": "setup.py",
+              "python_production": false,
+              "sha256": "251167dd6732e42117b9f9e536c3ac877197ee6eda8779eae3b756432cfc8f85"
+            },
+            {
+              "bytes": 5072,
+              "git_blob": "051cda1340effaa0706b46dd68ac002ceda3d45c",
+              "lines": 184,
+              "path": "src/requests/__init__.py",
+              "python_production": true,
+              "sha256": "e3168011198f0c804fb1ad8fb23a54f6bd3aca8a0afb69992874d90215915adb"
+            },
+            {
+              "bytes": 435,
+              "git_blob": "effdd98cf159371a36cb3ffaa8ad3e31ee3885f2",
+              "lines": 14,
+              "path": "src/requests/__version__.py",
+              "python_production": true,
+              "sha256": "40a0dc78af0afee8eac030dcde862b474a1d381620295390439bc56a9fc6fdc8"
+            },
+            {
+              "bytes": 1495,
+              "git_blob": "f2cf635e2937ee9b123a1498c5c5f723a6e20084",
+              "lines": 50,
+              "path": "src/requests/_internal_utils.py",
+              "python_production": true,
+              "sha256": "9cc4329abe21b37d93a95a3901b0ab99c24486f3d487bc57965bb2ab0b252e24"
+            },
+            {
+              "bytes": 26285,
+              "git_blob": "670c92767c5420a21538688132ce1f4f45e45873",
+              "lines": 696,
+              "path": "src/requests/adapters.py",
+              "python_production": true,
+              "sha256": "f275f5d7781b6f5db7694b71d844e400dffa22c617f8cd9f4682c696e4c47119"
+            },
+            {
+              "bytes": 6449,
+              "git_blob": "5960744552e7f8eea815429e7bdad38b0cc2741d",
+              "lines": 157,
+              "path": "src/requests/api.py",
+              "python_production": true,
+              "sha256": "fd96fd39aeedcd5222cd32b016b3e30c463d7a3b66fce9d2444467003c46b10b"
+            },
+            {
+              "bytes": 10186,
+              "git_blob": "4a7ce6dc1460e0de8aa0c38ea9123faa69bd5110",
+              "lines": 314,
+              "path": "src/requests/auth.py",
+              "python_production": true,
+              "sha256": "905ef9b6a9cb72d67d31ffe19bd4d9223e1c4169cde6ec51cfca16b31e70991d"
+            },
+            {
+              "bytes": 429,
+              "git_blob": "be422c3e91e43bacf60ff3302688df0b28742333",
+              "lines": 17,
+              "path": "src/requests/certs.py",
+              "python_production": true,
+              "sha256": "67d49be35d009efea35054f2b2cd23145854eb1b2df1cb442ea7f2f04bf6de0c"
+            },
+            {
+              "bytes": 2142,
+              "git_blob": "7f9d754350c9fe28db41e328ea880b9e4b20cc8b",
+              "lines": 106,
+              "path": "src/requests/compat.py",
+              "python_production": true,
+              "sha256": "27bb088d1e97a031a9e494d5ccec642b97d2a145546bf3e373b8916610161a62"
+            },
+            {
+              "bytes": 18590,
+              "git_blob": "f69d0cda9e1c893401015a09f2db2de5a5960fd2",
+              "lines": 561,
+              "path": "src/requests/cookies.py",
+              "python_production": true,
+              "sha256": "6cd8be8aa123e0d3d9d34fa86feac7bf392f39bccdde5129830de0ea9692dd7c"
+            },
+            {
+              "bytes": 4260,
+              "git_blob": "83986b489849131efeb7f286b328961205256fd8",
+              "lines": 151,
+              "path": "src/requests/exceptions.py",
+              "python_production": true,
+              "sha256": "8c93d2d545804ecf3a4a155468ba2b4e225bd52686ba83445a020225ea7e5646"
+            },
+            {
+              "bytes": 3875,
+              "git_blob": "8fbcd6560a8fe2c8a07e3bd1441a81e0db9cb689",
+              "lines": 134,
+              "path": "src/requests/help.py",
+              "python_production": true,
+              "sha256": "80f5f977f1fb5ddf3c6830017a386a1a097d075545453b79066898bcbdcfcc84"
+            },
+            {
+              "bytes": 733,
+              "git_blob": "d181ba2ec2e55d274897315887b78fbdca757da8",
+              "lines": 33,
+              "path": "src/requests/hooks.py",
+              "python_production": true,
+              "sha256": "0a2bb2b221c0dfd57951f702057148c7cdc8ac3a6ec1f37d45c4d482fdbc7ed4"
+            },
+            {
+              "bytes": 35510,
+              "git_blob": "c4b25fa0790da44683dab185c89ac08b69fb7419",
+              "lines": 1039,
+              "path": "src/requests/models.py",
+              "python_production": true,
+              "sha256": "32365d67893bb67c3ed67cf93ca4a18e63e6ab29342fa0dc8b09c59e06ff564e"
+            },
+            {
+              "bytes": 904,
+              "git_blob": "5ab3d8e250de8475cb22553f564e5444e02c7460",
+              "lines": 23,
+              "path": "src/requests/packages.py",
+              "python_production": true,
+              "sha256": "fe0d2067af355320252874631fa91a9db6a8c71d9e01beaacdc5e2383c932287"
+            },
+            {
+              "bytes": 30503,
+              "git_blob": "731550de88aceb59747460faf519c2277e300e87",
+              "lines": 831,
+              "path": "src/requests/sessions.py",
+              "python_production": true,
+              "sha256": "0a5d5da449ce7f0af3ccf6e4bbe7a67a935e37846dff4ff9f08cb6c7e2464e6f"
+            },
+            {
+              "bytes": 4322,
+              "git_blob": "c7945a2f06897ed980cc575df2f48d9e6c1a9f7e",
+              "lines": 128,
+              "path": "src/requests/status_codes.py",
+              "python_production": true,
+              "sha256": "889500780db96da4ddc3ee8f7c3d1e178aa1a48343251248fb268cab1b382c42"
+            },
+            {
+              "bytes": 2912,
+              "git_blob": "188e13e4829591facb23ae0e2eda84b9807cb818",
+              "lines": 99,
+              "path": "src/requests/structures.py",
+              "python_production": true,
+              "sha256": "f886e6855cf4e92fb968f499b94b6167afba0fd5ce8d1b935c739a6d8d38d573"
+            },
+            {
+              "bytes": 33213,
+              "git_blob": "8ab55852cc2188c53f08462ec4319c97fa49f04b",
+              "lines": 1086,
+              "path": "src/requests/utils.py",
+              "python_production": true,
+              "sha256": "5aa53ceab677c2f842fad42359c8ed1ff1c4299c1607789609957a496e4311d4"
+            }
+          ],
+          "parse_gaps": [],
+          "ref": "v2.32.5",
+          "symbols": 284,
+          "tracked_files": 132,
+          "tree": "2663dda7dbb8ce123af703b4573d85d09383ba0f"
+        }
+      ]
+    }
+  },
+  "status": "DRAFT",
+  "version": "draft-v1"
+}

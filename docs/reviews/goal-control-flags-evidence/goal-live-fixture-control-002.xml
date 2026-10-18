@@ -1,0 +1,1 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="1" time="215.869" timestamp="2026-10-18T15:03:24.161714+05:30" hostname="Vinays-MacBook-Air.local"><testcase classname="tests.test_llm_control" name="test_live_control_runs_once" time="215.815" /></testsuite></testsuites>

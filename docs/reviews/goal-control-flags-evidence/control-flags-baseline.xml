@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="12" skipped="0" tests="12" time="0.206" timestamp="2026-10-18T15:03:06.540693+05:30" hostname="Vinays-MacBook-Air.local"><testcase classname="tests.test_llm_control" name="test_declared_nondefault_flags_have_same_validity_as_product[flags0]" time="0.001"><failure message="assert [&quot;explicit_fl..._v2': False}&quot;] == []&#10;  &#10;  Left contains one more item: &quot;explicit_flags: cart 1.5 {'basket_v2': False}&quot;&#10;  Use -v to get more diff">tests/test_llm_control.py:338: in test_declared_nondefault_flags_have_same_validity_as_product
+    assert errors == []  # declared defaults do not prohibit an explicit boolean override
+    ^^^^^^^^^^^^^^^^^^^
+E   assert ["explicit_fl..._v2': False}"] == []
+E     
+E     Left contains one more item: "explicit_flags: cart 1.5 {'basket_v2': False}"
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.test_llm_control" name="test_declared_nondefault_flags_have_same_validity_as_product[flags1]" time="0.000"><failure message="assert [&quot;explicit_fl..._v2': False}&quot;] == []&#10;  &#10;  Left contains one more item: &quot;explicit_flags: cart 1.5 {'basket_v2': False}&quot;&#10;  Use -v to get more diff">tests/test_llm_control.py:338: in test_declared_nondefault_flags_have_same_validity_as_product
+    assert errors == []  # declared defaults do not prohibit an explicit boolean override
+    ^^^^^^^^^^^^^^^^^^^
+E   assert ["explicit_fl..._v2': False}"] == []
+E     
+E     Left contains one more item: "explicit_flags: cart 1.5 {'basket_v2': False}"
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.test_llm_control" name="test_control_does_not_coerce_nonboolean_flag_values[map-false]" time="0.000"><failure message="Failed: DID NOT RAISE ValueError">tests/test_llm_control.py:345: in test_control_does_not_coerce_nonboolean_flag_values
+    with pytest.raises(ValueError, match="bool"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError</failure></testcase><testcase classname="tests.test_llm_control" name="test_control_does_not_coerce_nonboolean_flag_values[map-true]" time="0.000"><failure message="Failed: DID NOT RAISE ValueError">tests/test_llm_control.py:345: in test_control_does_not_coerce_nonboolean_flag_values
+    with pytest.raises(ValueError, match="bool"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError</failure></testcase><testcase classname="tests.test_llm_control" name="test_control_does_not_coerce_nonboolean_flag_values[map-0]" time="0.000"><failure message="Failed: DID NOT RAISE ValueError">tests/test_llm_control.py:345: in test_control_does_not_coerce_nonboolean_flag_values
+    with pytest.raises(ValueError, match="bool"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError</failure></testcase><testcase classname="tests.test_llm_control" name="test_control_does_not_coerce_nonboolean_flag_values[map-1]" time="0.000"><failure message="Failed: DID NOT RAISE ValueError">tests/test_llm_control.py:345: in test_control_does_not_coerce_nonboolean_flag_values
+    with pytest.raises(ValueError, match="bool"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError</failure></testcase><testcase classname="tests.test_llm_control" name="test_control_does_not_coerce_nonboolean_flag_values[map-None]" time="0.000"><failure message="Failed: DID NOT RAISE ValueError">tests/test_llm_control.py:345: in test_control_does_not_coerce_nonboolean_flag_values
+    with pytest.raises(ValueError, match="bool"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError</failure></testcase><testcase classname="tests.test_llm_control" name="test_control_does_not_coerce_nonboolean_flag_values[entries-false]" time="0.000"><failure message="Failed: DID NOT RAISE ValueError">tests/test_llm_control.py:345: in test_control_does_not_coerce_nonboolean_flag_values
+    with pytest.raises(ValueError, match="bool"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError</failure></testcase><testcase classname="tests.test_llm_control" name="test_control_does_not_coerce_nonboolean_flag_values[entries-true]" time="0.000"><failure message="Failed: DID NOT RAISE ValueError">tests/test_llm_control.py:345: in test_control_does_not_coerce_nonboolean_flag_values
+    with pytest.raises(ValueError, match="bool"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError</failure></testcase><testcase classname="tests.test_llm_control" name="test_control_does_not_coerce_nonboolean_flag_values[entries-0]" time="0.000"><failure message="Failed: DID NOT RAISE ValueError">tests/test_llm_control.py:345: in test_control_does_not_coerce_nonboolean_flag_values
+    with pytest.raises(ValueError, match="bool"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError</failure></testcase><testcase classname="tests.test_llm_control" name="test_control_does_not_coerce_nonboolean_flag_values[entries-1]" time="0.000"><failure message="Failed: DID NOT RAISE ValueError">tests/test_llm_control.py:345: in test_control_does_not_coerce_nonboolean_flag_values
+    with pytest.raises(ValueError, match="bool"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError</failure></testcase><testcase classname="tests.test_llm_control" name="test_control_does_not_coerce_nonboolean_flag_values[entries-None]" time="0.000"><failure message="Failed: DID NOT RAISE ValueError">tests/test_llm_control.py:345: in test_control_does_not_coerce_nonboolean_flag_values
+    with pytest.raises(ValueError, match="bool"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError</failure></testcase></testsuite></testsuites>

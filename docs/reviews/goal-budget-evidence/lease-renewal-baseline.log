@@ -1,0 +1,16 @@
+F.                                                                       [100%]
+=================================== FAILURES ===================================
+_______ test_renewal_between_watch_and_exec_does_not_abort_owned_import ________
+tests/repo/test_lease_renewal.py:35: in test_renewal_between_watch_and_exec_does_not_abort_owned_import
+    report = index_repository(cfg, name, db=db)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:206: in _index_repository
+    previous = graph.query("MATCH (r:Repository {name:$name}) RETURN r.config_hash",
+src/rw/repo/index.py:189: in query
+    raise RuntimeError("repository import lease lost; retry import")
+E   RuntimeError: repository import lease lost; retry import
+=========================== short test summary info ============================
+FAILED tests/repo/test_lease_renewal.py::test_renewal_between_watch_and_exec_does_not_abort_owned_import
+1 failed, 1 passed in 1.13s

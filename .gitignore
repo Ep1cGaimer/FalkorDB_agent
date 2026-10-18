@@ -31,6 +31,7 @@ coverage/
 artifacts/
 evals/results/
 *.log
+!docs/reviews/**/*.log
 
 # Review scratch output (large, regenerable)
 evals/reviews/scratch/

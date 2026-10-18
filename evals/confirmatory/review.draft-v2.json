@@ -1,0 +1,62 @@
+{
+  "authorship_disclosure": "AI-authored and AI-reviewed; no human review or signature claimed",
+  "decision": "DRAFT_PACKAGE_ACCEPTED_FOR_FURTHER_VERIFICATION_ONLY",
+  "frozen_plan_signature": null,
+  "limitations": [
+    "Final complete core before/after hash attestation and unseen Click implementation/tuning isolation",
+    "Exact model/version/settings and context/tokenizer verification",
+    "Exact prompt files/hashes and comparable baseline implementations/tuning effort",
+    "Exact corpus serialization/token count and beyond-context comparison",
+    "Pilot development-data power/sample-size rationale for Gate B",
+    "Final budget/environment/database image/cache/price verification",
+    "Named two independent blind scorers and third adjudicator with prompt/model identities",
+    "Runner permission/allowlist proof excluding sealed files",
+    "Independent frozen-plan review/signature before any confirmatory result"
+  ],
+  "no_result_claims": "No integration, history correctness, scale, compatibility, or FalkorDB advantage gate is claimed passed.",
+  "plan_path": "evals/confirmatory/plan.draft-v2.json",
+  "plan_sha256": "ffe7f4257c329841d3b2be6b60fe145e6befc2e23d6f4d8c9014d9c0545409bc",
+  "question_counts": {
+    "clarification_only": 8,
+    "clarification_only_ids": [
+      "CF-REQ-GAP-02",
+      "CF-REQ-GAP-03",
+      "CF-REQ-GAP-04",
+      "CF-REQ-GAP-10",
+      "CF-CLK-GAP-02",
+      "CF-CLK-GAP-03",
+      "CF-CLK-GAP-04",
+      "CF-CLK-GAP-10"
+    ],
+    "distinct_commit_objects_verified": 62,
+    "distinct_source_spans_verified": 507,
+    "negative_or_ambiguous": 50,
+    "per_repository_stratum": {
+      "click/BRN": 10,
+      "click/DEP": 10,
+      "click/FIX": 10,
+      "click/GAP": 10,
+      "click/IDN": 10,
+      "click/REL": 10,
+      "requests/BRN": 10,
+      "requests/DEP": 10,
+      "requests/FIX": 10,
+      "requests/GAP": 10,
+      "requests/IDN": 10,
+      "requests/REL": 10
+    },
+    "public_tasks_sha256": "79e39f531005db4254af8c188da9cc3fc883ea8aa9704fb03251491862ef0ab3",
+    "questions": 120,
+    "sealed_oracles_sha256": "9b97b4f462e94d7158cbdcde2349977e70489dacef3c03078c0b6cf5f6913b2d",
+    "status": "DRAFT_SOURCE_GIT_AUTHORED_NOT_T0_FROZEN",
+    "two_hop_or_cross_revision": 80
+  },
+  "review_scope": "Source/Git oracle construction and exact-span/provenance checks; evaluation contract completeness audit. No product invocation or answer scoring.",
+  "reviewed_at": "2026-10-18T09:26:41.357235+00:00",
+  "reviewer": "Independent Codex AI evaluator /root/independent_evaluation",
+  "schema": "confirmatory-independent-review/v2",
+  "seal_access": "Parent has received only public metadata/counts/hashes and explicitly reports sealed oracle unopened. Same-account logical separation is not cryptographic sealing.",
+  "source_review": "120 distinct questions, 10 per repository/stratum; 80 conservative cross-revision cases and 50 negatives. 507 unique source spans checked against raw blobs; commit/tree/diff and ordered ancestry retained. No fabricated upstream backport/revert asserted.",
+  "t0_validated": false,
+  "t2_validated": false
+}

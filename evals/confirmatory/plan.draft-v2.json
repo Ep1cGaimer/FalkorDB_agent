@@ -1,0 +1,416 @@
+{
+  "advantage_gate": {
+    "accuracy_gate_A_selected": false,
+    "answer_difference_lower_95_ci_min": 0.0,
+    "bootstrap_resamples": 10000,
+    "bootstrap_seed": 541098,
+    "bootstrap_units": "Distinct questions stratified by repository/primary stratum, paired arms and repeat blocks kept together",
+    "comparators": "Each applicable direct-context and search_git baseline, not just weaker arm",
+    "each_repository": "No lower answer pass or recall than stronger applicable plaintext comparator",
+    "inconclusive": "Unresolved confidence bounds or inadequate power remain inconclusive; no post-result gate change",
+    "power_sample_size_justification": null,
+    "precision_difference_lower_95_ci_min": 0.0,
+    "recall_difference_lower_95_ci_min": 0.0,
+    "report": "Output tokens, latency, total costs, failed attempts, indexing/update costs and measured break-even; input-token savings alone are not a monetary savings claim",
+    "selected": "B",
+    "token_ratio_upper_95_ci_max": 0.8
+  },
+  "arms": [
+    {
+      "id": "graph",
+      "implementation_hash": null,
+      "prompt_hash": null,
+      "required": "Real FalkorDB query traces; no disabled-graph results counted as graph"
+    },
+    {
+      "id": "search_git",
+      "implementation_hash": null,
+      "prompt_hash": null,
+      "required": "Iterative plaintext search, revision show, exact-span file reads and Git-history/merge inspection at every slice; comparable development effort recorded"
+    },
+    {
+      "id": "direct_context",
+      "implementation_hash": null,
+      "prompt_hash": null,
+      "required": "Same raw corpus only where exact total serialized context fits; retain explicit overflow attempts, still compare search_git everywhere"
+    }
+  ],
+  "artifact_hashes": {
+    "artifacts/confirmatory/provenance/click-parents.txt": "334b60c7b810d8ab493224ce0f301a66e9bb078885c8d7894c06551c82cce796",
+    "artifacts/confirmatory/provenance/click-tags.txt": "44acdacafcd4966f2343ba208e4c6bd3ec8ccba077478d52b1c60557a57fe68e",
+    "artifacts/confirmatory/provenance/python312-parse-check.draft-v1.json": "c0ea802b288af3bc238df51b0061ab820a94be390d2ac542cb81f314f508a291",
+    "artifacts/confirmatory/provenance/requests-parents.txt": "2cd9dfa5ea6f1a7405b894d0015e98220cc4388d40555cb850fd7e26fa7cf89d",
+    "artifacts/confirmatory/provenance/requests-tags.txt": "ca2072584feca26f4ff63fd230f3e11ea03a61828f2ebee1ea65b8d06b23c2e9",
+    "docs/plans/repo-integration-v1.md": "76d9aa7533b98816a48c8bc835699653c8d457dbd0835e2556617c4fd1600d5f",
+    "evals/confirmatory/PROTOCOL.draft-v1.md": "b24b27173d3b6e3f4119710116fdc13a99596c0359a44c0b54d21645270509b6",
+    "evals/confirmatory/corpus.draft-v1.json": "3cc99f8c2c1c1c22c2b6a8cb6681919a6221bb67ae0e2fd140e8fb0bce3edb50",
+    "evals/confirmatory/feasibility-inventory.draft-v1.json": "530f326e4f290e4ac649e425bbbe40d6115650647c02671a135f642581120d2d",
+    "evals/confirmatory/task-manifest.draft-v2.json": "b969a574e2500418a8c42a05fdbb8bc67b6f038a11ce69310fbcadb708ec2aaf",
+    "evals/confirmatory/tasks.draft-v2.json": "79e39f531005db4254af8c188da9cc3fc883ea8aa9704fb03251491862ef0ab3",
+    "remquirements-v1.md": "a177653c4096f885cad1e129f77331cffe59fe13f608bac924232e632c1dd627",
+    "repos/README.md": "2cd50867351c5570157a17f7002ea48a5909fa2b38af5225c7a8a6a9255d8796"
+  },
+  "authorship": {
+    "assistance": "AI-generated source/Git review and oracle authoring; no human review or signature asserted",
+    "independence": "No product code, implementation tests, old evaluation questions/answers/results, or generated product outputs used. No product invoked. Fresh Click source inspected only by independent evaluator in this phase.",
+    "oracle_author": "Independent Codex AI subagent /root/independent_evaluation",
+    "parent_attestation": "Parent reports no Click source/oracle inspection; final implementation and unseen trial attestation remain pending."
+  },
+  "budgets": {
+    "actual_total_input_tokens_per_question": 24000,
+    "cold_import_repeats_per_slice": 3,
+    "cold_index_seconds_per_repo": 3600,
+    "demo_max_seconds": 600,
+    "dependency_hops": 5,
+    "evidence_output_rows_per_page": 100,
+    "evidence_output_rows_total_per_question": 2000,
+    "graph_driver_returned_rows_all_calls_per_question": 20000,
+    "graph_server_scanned_rows": "Not equated with returned rows; requires separate database observability if claimed",
+    "incremental_trials_per_slice": 3,
+    "incremental_update_seconds_per_repo": 900,
+    "index_disk_bytes_per_repo": 8589934592,
+    "input_unit_definition": "Provider/model-tokenizer measured tokens including instructions, questions, accumulated retrieval/tool outputs and failed attempts; bytes/rows never substituted for tokens",
+    "measured_queries_per_slice_min": 100,
+    "output_tokens_per_question": 4000,
+    "p95_latency_seconds": 60,
+    "peak_process_container_memory_bytes": 6442450944,
+    "query_concurrency_demo": 2,
+    "query_concurrency_primary": 1,
+    "query_hard_timeout_seconds": 120,
+    "query_warmup_requests_per_slice": 10,
+    "raw_source_bytes_read_per_question_all_arms": 1048576,
+    "reserve_future_tool_tokens": 8000,
+    "reserve_output_tokens": 4000,
+    "row_unit_definition": "Evidence output row is one returned source/commit fact unit after pagination; internal graph rows count every row delivered by the driver including later filtered/deduplicated rows, across all nested reads. Raw source bytes count all fetched source before excerpt filtering.",
+    "status": "PROPOSED_NUMERICAL_VALUES_REQUIRE_FINAL_VERIFICATION",
+    "tool_calls_per_question": 30,
+    "tool_output_utf8_bytes_total_per_question": 98304,
+    "usable_single_prompt_input_formula": "min(per-question input ceiling, model context window - output reserve - future-tool reserve - exact fixed prompt overhead); publish full-window comparison too",
+    "whole_evaluation_usd": 250
+  },
+  "corpus": {
+    "available_to_arms": "Identical immutable raw Git objects and included production Python/packaging/release-note corpus; no oracle/scoring annotations.",
+    "context_overflow_verified": false,
+    "exact_input_tokens": null,
+    "exact_tokenizer": null,
+    "excluded": "tests/, examples/, generated docs, vendored requests/packages/ implementation parsing; unsupported languages not silently parsed.",
+    "history_inventory": "evals/confirmatory/feasibility-inventory.draft-v1.json",
+    "included": "requests/, src/requests/, click/, src/click/ production .py excluding requests/packages/; root packaging metadata and HISTORY/CHANGES/CHANGELOG metadata; all Git ancestry/tree/ref metadata.",
+    "limits": [
+      "Dynamic calls/module aliases are not complete",
+      "No runtime execution or compatibility pass",
+      "No semantic backport equivalence claim",
+      "No universal rename/copy identity",
+      "Historical Python-2 syntax may be unparsed and must expose gaps"
+    ],
+    "manifest": "evals/confirmatory/corpus.draft-v1.json",
+    "roots": "All exact snapshot SHAs and all reachable ancestor commits in the corpus manifest; additional oracle commit IDs are pinned in the task manifest and independently verified reachable.",
+    "serialized_corpus_hash": null,
+    "supported_languages": [
+      "python"
+    ],
+    "supported_relations": [
+      "DEFINES parsed",
+      "IMPORTS parsed",
+      "INHERITS syntactic bases",
+      "CALLS inferred with declared static resolution limits",
+      "PARENT ordered Git ancestry",
+      "tag target",
+      "revision file membership",
+      "Git -M rename candidate"
+    ],
+    "token_calculation_required": "For each slice/repository publish the serialization of included unique blobs + source identifiers + complete commit/tree membership metadata and model-exact token count; reserve output/tool tokens explicitly. No approximation substituted for actual tokenizer/provider count."
+  },
+  "created_at": "2026-10-18T09:26:41.354348+00:00",
+  "environment": {
+    "cold_state": "Fresh independently named empty graph and importer/retrieval cache; DB/process state and filesystem cache handling recorded. Warm state measured separately.",
+    "credentials": "Existing authenticated provider accounts required; credentials never enter artifacts.",
+    "database_image_digest": null,
+    "independently_observed_host": {
+      "architecture": "arm64",
+      "cpu": "Apple M5",
+      "git": "2.55.0",
+      "host_memory_bytes": 17179869184,
+      "logical_cpus": 10,
+      "oracle_author_python": "3.14.7",
+      "os": "macOS 27.0.1 build 26A434",
+      "python312_parse_check": "artifacts/confirmatory/provenance/python312-parse-check.draft-v1.json"
+    },
+    "parent_metadata_path": "docs/reviews/goal-freshness-evidence/environment.json",
+    "parent_metadata_sha256": "2aa0d5b454aa37b268009c65d50c7b96b41e8083adcb53ed9aee888ecd711174",
+    "parent_reported": {
+      "database": {
+        "arch_bits": 64,
+        "os": "Linux 7.0.12-linuxkit aarch64",
+        "redis_build_id": "87e8103633530f17",
+        "redis_version": "8.10.2"
+      },
+      "endpoint": {
+        "host": "127.0.0.1",
+        "port": 6379
+      },
+      "executable": "/tmp/rw-mcp-compat/bin/python",
+      "git": "git version 2.55.0",
+      "machine": "arm64",
+      "modules": [
+        [
+          "name",
+          "graph",
+          "ver",
+          60002,
+          "path",
+          "/var/lib/falkordb/bin/falkordb.so",
+          "args",
+          [
+            "MAX_QUEUED_QUERIES",
+            "25",
+            "TIMEOUT",
+            "1000",
+            "RESULTSET_SIZE",
+            "10000"
+          ]
+        ],
+        [
+          "name",
+          "vectorset",
+          "ver",
+          1,
+          "path",
+          "",
+          "args",
+          []
+        ]
+      ],
+      "node": "v24.18.0",
+      "packages": {
+        "falkordb": "1.8.0",
+        "fastapi": "0.143.2",
+        "httpx": "0.28.1",
+        "mcp": "2.3.0",
+        "pydantic": "2.14.1",
+        "pytest": "9.1.1",
+        "redis": "8.1.0",
+        "starlette": "1.8.0",
+        "uvicorn": "0.54.0"
+      },
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "python": "3.12.13 (main, Jun 23 2026, 15:44:24) [Clang 22.1.3 ]",
+      "recorded_at": "2026-10-18T09:07:24.992603+00:00",
+      "resultset_size": [
+        "RESULTSET_SIZE",
+        10000
+      ],
+      "temporary_probe_endpoint": "see probe-summary.json; owned container removed"
+    },
+    "provider_readiness": "evals/confirmatory/provider-readiness.draft-v1.json; listings are metadata only, not model selection or generated results"
+  },
+  "fairness": {
+    "budgets": "Same token/output/tool/time/source-byte ceilings; interface-specific rows disclosed",
+    "caching": "No result/answer cache. Model provider prompt caching and retrieval caching explicitly recorded; cache benefit cannot change evidence availability.",
+    "decoding": "Identical per arm; temperature/top_p/seed/reasoning settings pending",
+    "development_tuning": "No held-out questions/answers used to tune core, search baseline or prompts. If holdout informs any change it becomes development data; new confirmatory cases required.",
+    "model_and_answer_instructions": "Identical per arm; exact versions/hashes pending",
+    "retries": "No silent retries; all attempts counted against same task budget; failed pairs retained"
+  },
+  "freeze": {
+    "amendments": "Every pre-result change creates a new version/hash and review. Every post-result change requires a new evaluation preserving previous plans, attempted runs and results. Holdout-informed changes consume those holdouts.",
+    "canonical_hash_rule": "SHA256 of exact UTF-8 plan bytes; detached manifest lists every referenced artifact hash. Plan does not contain its own hash.",
+    "frozen": false,
+    "review_status": "DRAFT_ONLY",
+    "signature": null,
+    "signed_at": null
+  },
+  "mandatory_pending_before_frozen_signature": [
+    "Final complete core before/after hash attestation and unseen Click implementation/tuning isolation",
+    "Exact model/version/settings and context/tokenizer verification",
+    "Exact prompt files/hashes and comparable baseline implementations/tuning effort",
+    "Exact corpus serialization/token count and beyond-context comparison",
+    "Pilot development-data power/sample-size rationale for Gate B",
+    "Final budget/environment/database image/cache/price verification",
+    "Named two independent blind scorers and third adjudicator with prompt/model identities",
+    "Runner permission/allowlist proof excluding sealed files",
+    "Independent frozen-plan review/signature before any confirmatory result"
+  ],
+  "model": {
+    "answer_prompt_path": null,
+    "answer_prompt_sha256": null,
+    "context_window": null,
+    "immutable_model_id": null,
+    "output_allowance": 4000,
+    "pricing_source_and_checked_at": null,
+    "provider": null,
+    "provider_version": null,
+    "reasoning_settings": null,
+    "system_prompt_path": null,
+    "system_prompt_sha256": null,
+    "temperature": null,
+    "tokenizer_id_version": null,
+    "top_p": null
+  },
+  "repeats": {
+    "arm_order_seed": 682410,
+    "early_stopping": "Forbidden on observed outcome",
+    "paired_repeats": 3,
+    "paired_seeds": [
+      7101,
+      7102,
+      7103
+    ],
+    "unsupported_seed_policy": "Record nondeterminism; retain all three paired attempts"
+  },
+  "requirements_authority": "remquirements-v1.md, complete 134-line specification",
+  "scale_slices": {
+    "click": [
+      {
+        "id": "small",
+        "root": "df0e37dd890d36fc997986ae6d2b6c255f3ed1dc"
+      },
+      {
+        "id": "medium",
+        "root": "1784558ed7c75c65764d2a434bd9cbb206ca939d"
+      },
+      {
+        "id": "full",
+        "root": "00fadb8904387158ce6e9aa1573be770446895c1"
+      }
+    ],
+    "policy": "All ancestors per root. Supplemental direct-context comparisons use declared smaller file/commit slices only when the complete identical raw slice fits; never silently trim evidence.",
+    "requests": [
+      {
+        "id": "small",
+        "root": "efb4af01271c8c0ddf49457c7096a5bc91edbdad"
+      },
+      {
+        "id": "medium",
+        "root": "bd840450c0d1e9db3bf62382c15d96378cc3a056"
+      },
+      {
+        "id": "full",
+        "root": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+      }
+    ]
+  },
+  "schema": "confirmatory-T0-plan/v2",
+  "scoring": {
+    "absolute_gates": {
+      "critical_errors_every_run_max": 0,
+      "each_repository_answer_pass_min": 0.85,
+      "each_stratum_answer_pass_min": 0.85,
+      "macro_evidence_precision_min": 0.95,
+      "macro_evidence_recall_min": 0.9,
+      "material_citation_validity": 1.0,
+      "negative_gap_or_clarification_compliance": 1.0,
+      "overall_answer_pass_min": 0.9
+    },
+    "aggregation": "Average 3 repeats within each question, then macro-average distinct questions; publish every run, repo and stratum.",
+    "alternative_proofs": "Narrower/adjacent source spans or equivalent Git plumbing accepted only if they prove every needed proposition with exact identity; earlier/later source alone is not an alternative. Record adjudication.",
+    "answer_pass": "All required conclusions correct, material claims supported, citations resolve, required uncertainty/clarification included. Invented conclusion or wrong revision fails.",
+    "blind_mapping_seed": 160804,
+    "blinding": "Response IDs randomized; remove arm/tool branding from scorer view while retaining source citations/provenance. Scorers cannot infer arm from an ID key; retain hidden mapping.",
+    "clarification_only_evidence": "Only the eight predeclared IDs are evidence N/A; count separately. Their answer/negative-case gates still apply.",
+    "critical_errors": [
+      "wrong repository/revision claim",
+      "fabricated citation",
+      "false definitive absence",
+      "unsupported compatibility pass"
+    ],
+    "double_score": {
+      "adjudicator_identity": null,
+      "agreement": "Retain both original ratings, percent agreement and disagreements; independent third reviewer adjudicates with recorded rationale.",
+      "base_count": 30,
+      "extra_required": "Every disputed, wrong-revision, fabricated/false-pass case and all its repeats, beyond base sample",
+      "ids": [
+        "CF-CLK-BRN-07",
+        "CF-CLK-BRN-09",
+        "CF-CLK-DEP-02",
+        "CF-CLK-DEP-06",
+        "CF-CLK-DEP-07",
+        "CF-CLK-FIX-02",
+        "CF-CLK-FIX-04",
+        "CF-CLK-FIX-05",
+        "CF-CLK-GAP-04",
+        "CF-CLK-GAP-07",
+        "CF-CLK-IDN-03",
+        "CF-CLK-IDN-08",
+        "CF-CLK-REL-05",
+        "CF-CLK-REL-09",
+        "CF-CLK-REL-10",
+        "CF-REQ-BRN-01",
+        "CF-REQ-BRN-04",
+        "CF-REQ-DEP-02",
+        "CF-REQ-DEP-06",
+        "CF-REQ-FIX-02",
+        "CF-REQ-FIX-03",
+        "CF-REQ-FIX-05",
+        "CF-REQ-GAP-03",
+        "CF-REQ-GAP-06",
+        "CF-REQ-GAP-07",
+        "CF-REQ-IDN-01",
+        "CF-REQ-IDN-07",
+        "CF-REQ-REL-01",
+        "CF-REQ-REL-02",
+        "CF-REQ-REL-07"
+      ],
+      "sample_seed": 684121,
+      "scorer_1_identity": null,
+      "scorer_2_identity": null,
+      "scorer_prompt_and_model_hashes": null
+    },
+    "evidence_unit": "One exact source (repo,commit,path,start,end,full-file SHA256) unit or a Git commit/tree/diff/ancestry object proof. Merge duplicated exact identity tuples/commit IDs before denominator calculation.",
+    "failure_denominators": "Timeout/error/unjustified abstention answer=0 and recall=0. Empty retrieval on answerable case precision=0. Failed attempts never dropped.",
+    "precision": "Relevant deduplicated retrieved units / all deduplicated retrieved units; relevant means supports the question or a necessary reasoning step",
+    "recall": "Required facts supported by retrieved evidence / all required facts",
+    "required_fact_unit": "Individual oracle proposition with revision-specific evidence; alternative proof must support same proposition at exact pinned state",
+    "retrieval_before_answer": "Raw retrieval/evidence trace locked and hash-recorded before answer generation"
+  },
+  "sealed_oracle": {
+    "access_rule": "No implementer/ingestion/retrieval/model answer role may open sealed files or author scripts. Only isolated scoring roles consume the frozen oracle after raw retrieval and answers are locked.",
+    "contents": "Required facts, exact commit/path/line spans and full-file hashes, Git commit/tree/diff provenance, acceptable alternative evidence, required uncertainty and incorrect claims.",
+    "isolation_limit": "Directory is a logical access boundary between agent roles, not a cryptographic/OS boundary against the same-account parent; verify runner allowlists and absence of oracle reads before running.",
+    "path": "artifacts/confirmatory/sealed/oracles.draft-v2.json",
+    "sha256": "9b97b4f462e94d7158cbdcde2349977e70489dacef3c03078c0b6cf5f6913b2d"
+  },
+  "status": "DRAFT_NOT_FROZEN_NOT_VALIDATED",
+  "supersedes_draft": "draft-v1 remains preserved; v2 clarifies budget units and adds final draft roster/scorer sampling and stronger explicit branch-source fact rubrics before any results.",
+  "tasks": {
+    "clarification_only_ids": [
+      "CF-REQ-GAP-02",
+      "CF-REQ-GAP-03",
+      "CF-REQ-GAP-04",
+      "CF-REQ-GAP-10",
+      "CF-CLK-GAP-02",
+      "CF-CLK-GAP-03",
+      "CF-CLK-GAP-04",
+      "CF-CLK-GAP-10"
+    ],
+    "complexity_count_policy": "Conservative count uses only REL/BRN/FIX/IDN cross-revision cases, not potentially dynamic DEP chains.",
+    "count": 120,
+    "cross_revision_complexity_cases": 80,
+    "manifest": "evals/confirmatory/task-manifest.draft-v2.json",
+    "negative_or_ambiguous_cases": 50,
+    "path": "evals/confirmatory/tasks.draft-v2.json",
+    "per_repository_stratum": {
+      "click/BRN": 10,
+      "click/DEP": 10,
+      "click/FIX": 10,
+      "click/GAP": 10,
+      "click/IDN": 10,
+      "click/REL": 10,
+      "requests/BRN": 10,
+      "requests/DEP": 10,
+      "requests/FIX": 10,
+      "requests/GAP": 10,
+      "requests/IDN": 10,
+      "requests/REL": 10
+    },
+    "primary_strata": {
+      "BRN": "branch/merge provenance",
+      "DEP": "dependencies/affected components",
+      "FIX": "fix presence after later changes",
+      "GAP": "ambiguity/missing evidence",
+      "IDN": "rename/deletion identity",
+      "REL": "distant-release differences"
+    }
+  },
+  "version": "draft-v2"
+}

@@ -1,0 +1,24 @@
+{
+  "attempts": [
+    {
+      "operation": "inspect Docker image by tag falkordb/falkordb:6.0.2",
+      "outcome": "ERROR",
+      "reason": "tag absent locally; digest already present"
+    },
+    {
+      "operation": "inspect and use pinned 6.0.2 digest",
+      "outcome": "PASS",
+      "image": "falkordb/falkordb:6.0.2@sha256:107455e862a824e45e8e9f5a7fbfdf5e00a08b14e13eae2577c72fd9e3f59ba6"
+    },
+    {
+      "operation": "copy existing bare Requests/ItsDangerous object stores with --no-hardlinks",
+      "outcome": "PASS",
+      "purpose": "reproducible development imports; no unseen claim"
+    },
+    {
+      "operation": "first missing-source regression",
+      "outcome": "harness refined",
+      "reason": "Tag resolution required Git; the minimized failing test uses a pinned indexed commit to test source citation freshness."
+    }
+  ]
+}
