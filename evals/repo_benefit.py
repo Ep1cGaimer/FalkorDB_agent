@@ -1,8 +1,8 @@
-"""E4 FalkorDB benefit (remquirements-v1.md E4), run exactly as pre-registered in
-evals/repo_benefit_threshold.json: contestants graph_tools / plaintext_direct / plaintext_search,
-Groq openai/gpt-oss-120b at temperature 0, identical instructions and budgets, 2 paired repeats with
-contestant order shuffled per question by a recorded seed, scoring as in evals/repo_eval_keys.json
-(rule-based, no LLM judge), verdict strictly from the declared PASS/FAIL/INCONCLUSIVE rules.
+"""Development comparison plumbing, retaining the historical declaration for auditability.
+
+This modified runner is not the frozen historical experiment and cannot release an advantage
+claim. It uses the same three arms and records the legacy rule separately; the current verdict
+stays INCONCLUSIVE until a new compliant T0/T2/T10 protocol is frozen and independently scored.
 
     PYTHONPATH=src .venv/Scripts/python.exe evals/repo_benefit.py [--seed N]
     PYTHONPATH=src .venv/Scripts/python.exe evals/repo_benefit.py --smoke --questions rq-01 --contestants graph_tools
@@ -27,13 +27,9 @@ Implementation decisions not fixed by the declaration (recorded in the output un
 * Groq tool_use_failed (HTTP 400: the model called a non-existent tool): if the rejected generation
   holds an "answer" JSON it is taken as the final answer; otherwise one nudge listing the real tools
   is appended (counts as a turn); no token usage is reported by the API for rejected calls.
-* plaintext_direct "relevant source files": the files named by the question's expected citations at
-  their revisions (an oracle selection favouring the baseline); for questions without expected
-  citations, every indexed source file at the question revision. Each file is numbered by line and
-  followed by `git log --oneline -n 20 <rev> -- <path>`. CONTEXT_LIMIT (nothing truncated, scored
-  incorrect with zero evidence) when the actual prompt_tokens reported by the API + 1500 > 7500 or the
-  API rejects the request as too large (413); prompts estimated at len/4 + 1500 > 1.25 x 7500 are not
-  sent at all.
+* plaintext_direct uses all included/non-excluded files at the public requested/compare revisions,
+  never oracle citation paths. This is a development slice; full-corpus applicability and tokenizer
+  budgets must be fixed in the new confirmatory plan. Context-limit attempts remain visible.
 * graph_tools wrappers return bounded JSON from RepoQuery/investigate; named symbol lookups also carry
   the definition text from the clone (<= 40 lines per item, <= 3 items) so citations can be checked by
   the model. plaintext_search tools are read-only git (grep, show, log, tag) with the same 6000-char cap.
@@ -149,6 +145,7 @@ class Groq:
         self.consecutive_infra = 0
 
     def call(self, messages, tools, tool_choice, max_tokens, est: int | None = None) -> dict:
+        started = time.perf_counter()
         body = {"model": MODEL, "temperature": TEMP, "max_completion_tokens": max_tokens, "messages": messages}
         if tools:
             body["tools"] = tools
@@ -156,7 +153,13 @@ class Groq:
         if est is None:
             est = est_tokens(messages) + (est_tokens(tools) if tools else 0)
         rec = {"estimated_prompt_tokens": est, "max_completion_tokens": max_tokens, "pacing_wait_s": 0.0,
-               "backoff_wait_s": 0.0, "http_attempts": 0}
+               "backoff_wait_s": 0.0, "http_attempts": 0, "http_latency_s": 0.0,
+               "unreported_usage_attempts": 0, "attempts": []}
+
+        def finish():
+            rec["latency_s"] = time.perf_counter() - started - rec["pacing_wait_s"]
+            rec["usage_complete"] = rec["unreported_usage_attempts"] == 0
+            return rec
         rec["pacing_wait_s"] += self.pacer.wait_for(est + max_tokens)
         for attempt in range(6):
             rec["http_attempts"] += 1
@@ -164,12 +167,19 @@ class Groq:
             try:
                 r = httpx.post(GROQ_URL, json=body, headers={"Authorization": f"Bearer {self.key}"}, timeout=180)
             except httpx.HTTPError as exc:
-                rec["latency_s"] = time.perf_counter() - t0
+                elapsed = time.perf_counter() - t0
+                rec["http_latency_s"] += elapsed
+                rec["unreported_usage_attempts"] += 1
+                rec["attempts"].append({"attempt": attempt, "seconds": elapsed, "error_type": type(exc).__name__})
                 rec["error"] = f"{type(exc).__name__}: {exc}"
                 time.sleep(10)
                 rec["backoff_wait_s"] += 10
                 continue
             latency = time.perf_counter() - t0
+            rec["http_latency_s"] += latency
+            rec["attempts"].append({"attempt": attempt, "seconds": latency, "status_code": r.status_code})
+            if r.status_code != 200:
+                rec["unreported_usage_attempts"] += 1
             if r.status_code == 429 or r.status_code >= 500:
                 wait = float(r.headers.get("retry-after") or 15 * (attempt + 1))
                 rec["error"] = f"HTTP {r.status_code}: {r.text[:300]}"
@@ -179,7 +189,6 @@ class Groq:
                 time.sleep(min(wait, 120) + 1)
                 rec["backoff_wait_s"] += min(wait, 120) + 1
                 continue
-            rec["latency_s"] = latency
             if r.status_code == 400 and "tool_use_failed" in r.text and rec.get("tool_use_retries", 0) < TOOL_USE_HTTP_RETRIES:
                 rec["tool_use_retries"] = rec.get("tool_use_retries", 0) + 1  # model emitted an invalid tool call
                 rec.setdefault("rejected_generations", []).append(r.text[:500])
@@ -191,7 +200,7 @@ class Groq:
                 rec["infra_error"] = r.status_code not in (400, 413)  # 400/413: request-level (e.g. too large)
                 self.pacer.record(est)
                 self.consecutive_infra += rec["infra_error"]
-                return rec
+                return finish()
             data = r.json()
             u = data.get("usage") or {}
             rec.update({"prompt_tokens": int(u.get("prompt_tokens") or 0),
@@ -200,11 +209,11 @@ class Groq:
                         "message": data["choices"][0]["message"], "error": None, "infra_error": False})
             self.pacer.record(rec["prompt_tokens"] + rec["completion_tokens"])
             self.consecutive_infra = 0
-            return rec
+            return finish()
         rec["infra_error"] = True
         rec.setdefault("latency_s", 0.0)
         self.consecutive_infra += 1
-        return rec
+        return finish()
 
 
 # ---------------------------------------------------------------- tools
@@ -374,16 +383,18 @@ class SearchTools:
 def direct_context(name: str, q: dict, cfg_include) -> tuple[str, list]:
     clone = Clone(SETS[name][3])
     pairs = []
-    for c in expected_citations(q):
-        if (c["path"], c["revision"]) not in pairs:
-            pairs.append((c["path"], c["revision"]))
-    if not pairs:
-        from rw.repo.index import _matches  # same include semantics as indexing (read-only helper)
-        sha = clone.sha(q["revision"])
+    from rw.repo.index import _matches
+    from rw.repo.config import load_config
+    config = load_config(SETS[name][1])
+    for rev in dict.fromkeys([q["revision"], *([q["compare_revision"]] if q.get("compare_revision") else [])]):
+        sha = clone.sha(rev)
+        if sha is None:
+            continue
         r = clone.run("ls-tree", "-r", "--name-only", sha)
         for p in r.stdout.split("\n"):
-            if p and (not cfg_include or _matches(p, cfg_include)) and p.endswith(".py"):
-                pairs.append((p, q["revision"]))
+            if (p and (not cfg_include or _matches(p, cfg_include))
+                    and not _matches(p, config.exclude)):
+                pairs.append((p, rev))
     parts = []
     for path, rev in pairs:
         text = clone.show(clone.sha(rev), path) or ""
@@ -720,7 +731,7 @@ def build_record(args, ts, started, seed, plan, runs, traces_path, failures, sta
     all_tasks = [t for r in runs for t in r["tasks"]]
     qsets = {n: load_questions(n) for n in REPOS}
     revs = {n: set().union(*(question_revs(q) for q in qsets[n]["questions"])) for n in REPOS}
-    expected = len(plan)
+    expected = len(plan) // max(1, len(runs))
     v, why, vd = verdict(runs, expected) if not args.smoke else ("INCONCLUSIVE", "smoke run (plumbing only)", {})
     gtn = {r: sum(1 for t in all_tasks if t["repo"] == r and t["contestant"] == "graph_tools") for r in REPOS}
     configs = {n: {"file": rel(SETS[n][1]), "sha256": sha256_file(SETS[n][1]), "graph": SETS[n][2]} for n in REPOS}
@@ -728,7 +739,8 @@ def build_record(args, ts, started, seed, plan, runs, traces_path, failures, sta
                   "budget": B, "chars_per_token_estimate": CHARS_PER_TOKEN, "min_completion_tokens": MIN_COMPLETION,
                   "seed": seed, "repos": configs}
     rec = {
-        "schema": "repo_benefit/v1", "evidence": "E4", "status": status, "label": "smoke" if args.smoke else "full",
+        "schema": "repo_benefit/v2-development", "evidence": "E4", "status": status, "label": "smoke" if args.smoke else "development",
+        "acceptance_validated": False,
         "started_at": started, "finished_at": now_iso(),
         "command": " ".join(["PYTHONPATH=src", ".venv/Scripts/python.exe", "evals/repo_benefit.py", *sys.argv[1:]]),
         "llm_used": True, "scored": True,
@@ -784,7 +796,10 @@ def build_record(args, ts, started, seed, plan, runs, traces_path, failures, sta
         "results": {**aggregate(all_tasks),
                     "per_repeat": [{"repeat": r["repeat"], **aggregate(r["tasks"])} for r in runs]},
         "indexing_cost": indexing_cost(gtn),
-        "verdict": v, "verdict_reason": why, "verdict_detail": vd,
+        "legacy_verdict": v, "legacy_verdict_reason": why, "legacy_verdict_detail": vd,
+        "verdict": "INCONCLUSIVE",
+        "verdict_reason": "Development runner: old declaration does not satisfy T0/T2/T10; fresh signed plan, blind scoring and paired confidence intervals required.",
+        "verdict_detail": {"acceptance_eligible": False},
         "failures": failures,
     }
     if error:

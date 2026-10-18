@@ -1,13 +1,9 @@
 """E2 history correctness (remquirements-v1.md E2): deterministic retrieval, no LLM.
 
-For every held-out question (synthetic_history, branchy_history, requests, itsdangerous) this runs
-rw.repo.investigate in retrieval mode at the question's revision: the raw question first (recorded;
-used only if investigate supports its shape), then the hand-written supported-shape queries declared
-in evals/repo_eval_keys.json `e2_retrieval_plans`. It scores retrieved EVIDENCE (recall/precision vs
-expected_citations: same path + revision, intersecting spans) separately from the ANSWER (rule in
-evals/repo_eval_keys.json `answer_rule`, structural form for ambiguous/missing_evidence), checks
-every citation with read-only git (revision resolves in the requested clone, path exists, span inside
-the file) and counts wrong-revision citations. Two identical repeats check determinism.
+This development runner sends only the public question to investigation, then scores the
+returned result against the separate oracle. It never executes oracle retrieval plans. All three
+repeats and failures stay in the run ledger. These questions have informed implementation; their
+scores cannot validate T2 or substitute for a fresh independently scored confirmatory suite.
 
     PYTHONPATH=src .venv/Scripts/python.exe evals/repo_history_eval.py
 
@@ -25,11 +21,11 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from repo_eval_common import (IGNORED_GAPS, KEYS_PATH, ROOT, SETS, THRESHOLD, Clone, allowed_shas,  # noqa: E402
                               answer_check, check_citation, evidence_scores, expected_citations, fabricated,
-                              grounded, load_keys, load_questions, manifest_for, now_iso, question_revs, rel,
+                              grounded, failed_task, macro_mean, load_keys, load_questions, manifest_for, now_iso, question_revs, rel,
                               sha256_file, sha256_text, stamp)
 
 OUT = ROOT / "artifacts" / "repo_history_eval"
-REPEATS = 2
+REPEATS = 3
 NAMES = ["synthetic-history", "branchy-history", "requests", "itsdangerous"]
 SKIP_GAPS = IGNORED_GAPS | {"unsupported_question"}
 
@@ -38,8 +34,9 @@ def run_question(name: str, q: dict, keys: dict, clone: Clone, cfg) -> tuple[dic
     from rw.repo.investigate import investigate
     graph = SETS[name][2]
     rev = q.get("revision")
-    plan = keys["e2_retrieval_plans"].get(q["id"], [])
-    calls = [("raw", q["question"])] + [("plan", t) for t in plan]
+    # Only the public task enters investigation. Oracle plans are scoring annotations,
+    # never retrieval instructions. Unsupported questions remain visible failures.
+    calls = [("raw", q["question"])]
     trace, used = [], []
     t0 = time.perf_counter()
     for kind, text in calls:
@@ -53,9 +50,6 @@ def run_question(name: str, q: dict, keys: dict, clone: Clone, cfg) -> tuple[dic
         trace.append({"kind": kind, "query": text, "revision": rev, "seconds": round(dt, 4), "error": err,
                       "result": r})
         if r is None:
-            continue
-        unsupported = any(g["kind"] == "unsupported_question" for g in r["gaps"])
-        if kind == "raw" and unsupported and plan:
             continue
         used.append(r)
     latency = time.perf_counter() - t0
@@ -114,10 +108,11 @@ def _mean(xs):
 def metrics(tasks: list[dict]) -> dict:
     cits = [c for t in tasks for c in t["citations"]]
     return {"n_tasks": len(tasks),
-            "answer_accuracy": _mean([float(t["answer_correct"]) for t in tasks]),
-            "grounded_answer_accuracy": _mean([float(t["grounded_answer_correct"]) for t in tasks]),
-            "evidence_recall": _mean([t["evidence_recall"] for t in tasks]),
-            "evidence_precision": _mean([t["evidence_precision"] for t in tasks]),
+            "n_questions": len({(t["repo"], t["question_id"]) for t in tasks}),
+            "answer_accuracy": macro_mean(tasks, "answer_correct"),
+            "grounded_answer_accuracy": macro_mean(tasks, "grounded_answer_correct"),
+            "evidence_recall": macro_mean(tasks, "evidence_recall"),
+            "evidence_precision": macro_mean(tasks, "evidence_precision"),
             "citation_validity": round(sum(c["valid"] for c in cits) / len(cits), 4) if cits else None,
             "citations": len(cits),
             "wrong_revision": sum(t["wrong_revision"] for t in tasks),
@@ -162,19 +157,21 @@ def main() -> int:
                 try:
                     task, tr = run_question(n, q, keys, clone, cfg)
                 except Exception as exc:
-                    failures.append(f"repeat {rep} {q['id']}: {type(exc).__name__}: {exc}")
-                    continue
+                    error = f"repeat {rep} {q['id']}: {type(exc).__name__}: {exc}"
+                    failures.append(error)
+                    task = failed_task(n, q, error)
+                    tr = {"repo": n, "question_id": q["id"], "error": error, "calls": []}
                 task["repeat"] = rep
                 tasks.append(task)
-                if rep == 0:
-                    traces.append(tr)
+                traces.append({"repeat": rep, **tr})
         runs.append({"repeat": rep, "tasks": tasks})
     # determinism across repeats
     sig = lambda t: (t["question_id"], t["answer"], json.dumps(t["citations"], sort_keys=True))  # noqa: E731
     deterministic = [sig(t) for t in runs[0]["tasks"]] == [sig(t) for t in runs[-1]["tasks"]]
     tasks0 = runs[0]["tasks"]
-    per_repo = {n: metrics([t for t in tasks0 if t["repo"] == n]) for n in NAMES}
-    overall = metrics(tasks0)
+    all_tasks = [t for r in runs for t in r["tasks"]]
+    per_repo = {n: metrics([t for t in all_tasks if t["repo"] == n]) for n in NAMES}
+    overall = metrics(all_tasks)
     # graph coverage gaps for the evaluated revisions (S4: explicit gaps, not silent)
     from rw.repo.query import RepoQuery
     for n in NAMES:
@@ -184,7 +181,7 @@ def main() -> int:
             if gap:
                 coverage["gaps"].append({"repo": n, "revision": r, "kind": gap.kind, "detail": gap.detail})
     coverage["limits"] = ["investigate() answers only fixed question shapes (rw.repo.investigate.SUPPORTED); "
-                          "held-out questions are mapped to them by the declared e2_retrieval_plans",
+                          "only the public question is passed to investigation; unsupported shapes are scored as attempted",
                           "finding summaries carry symbol names, spans and change lists, not source text, so "
                           "facts that live only in code text (constants, literals) cannot appear in E2 answers",
                           "python adapter only; non-Python files (CHANGES.rst etc.) are indexed as release notes "
@@ -202,7 +199,9 @@ def main() -> int:
     traces_path.write_text(json.dumps(traces, indent=1, default=str), encoding="utf-8")
     config_blob = json.dumps(configs, sort_keys=True)
     rec = {
-        "schema": "repo_history_eval/v1", "evidence": "E2", "status": "complete",
+        "schema": "repo_history_eval/v2-development", "evidence": "E2", "status": "complete",
+        "acceptance_validated": False,
+        "limitations": ["development suite informed implementation; no fresh independent holdout or blind scoring"],
         "started_at": started, "finished_at": now_iso(),
         "command": "PYTHONPATH=src .venv/Scripts/python.exe evals/repo_history_eval.py",
         "llm_used": False, "scored": True,
@@ -227,7 +226,7 @@ def main() -> int:
                                          "citation repo equals the requested repo",
                     "wrong_revision": "a citation whose resolved sha is not the requested, compare or an "
                                       "expected-citation revision; `wrong_revision` counts tasks with any",
-                    "grounded": "answer correct AND evidence_recall > 0 (missing_evidence without expected "
+                    "grounded": "answer correct AND evidence_recall == 1 AND no invalid/wrong-revision citation (missing_evidence/ambiguous without expected "
                                 "citations: answer correct and no fabricated citation)",
                     "decisions": [{"question_id": t["question_id"], "answer_correct": t["answer_correct"],
                                    "decision": t["answer_decision"]} for t in tasks0]},

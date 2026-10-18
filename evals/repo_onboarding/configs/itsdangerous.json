@@ -1,9 +1,25 @@
 {
   "name": "itsdangerous",
-  "path": "artifacts/repos/itsdangerous",
-  "revisions": ["2.0.0", "2.1.0", "2.2.0"],
-  "languages": ["python"],
-  "include": ["src/**", "CHANGES.rst"],
-  "release_notes": ["CHANGES.rst"],
-  "unseen": true
+  "path": "../../../artifacts/repos/itsdangerous",
+  "revisions": [
+    "2.0.0",
+    "2.1.0",
+    "2.2.0"
+  ],
+  "languages": [
+    "python"
+  ],
+  "include": [
+    "src/**",
+    "CHANGES.rst"
+  ],
+  "release_notes": [
+    "CHANGES.rst"
+  ],
+  "unseen": false,
+  "historical_unseen_trial": {
+    "base_commit": "d7cf693e26073c825f0b6a2bd741ce5d05752f72",
+    "manifest": "evals/repo_onboarding/core_manifest.json",
+    "current_claim": "development repository; prior trial invalidated by repaired core"
+  }
 }

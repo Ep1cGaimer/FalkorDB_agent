@@ -43,6 +43,7 @@ from __future__ import annotations
 
 import ast
 import json
+import os
 import re
 from pathlib import Path
 from typing import Any, Callable
@@ -104,9 +105,16 @@ _BULLET = re.compile(r"^(?:[-*+]|\d+[.)])\s+")
 # --------------------------------------------------------------------------- helpers
 
 
-def connect(host: str = "127.0.0.1", port: int = 6379) -> "falkordb.FalkorDB":
+def connect(host: str | None = None, port: int | None = None, *,
+            socket_timeout: float | None = None) -> "falkordb.FalkorDB":
     """Open a FalkorDB client (no graph is created until a write happens)."""
-    return falkordb.FalkorDB(host=host, port=port)
+    host = host if host is not None else os.environ.get("RW_FALKORDB_HOST", "127.0.0.1")
+    port = port if port is not None else int(os.environ.get("RW_FALKORDB_PORT", "6379"))
+    if not host or type(port) is not int or not 1 <= port <= 65535:
+        raise ValueError("invalid FalkorDB endpoint configuration")
+    return falkordb.FalkorDB(host=host, port=port,
+                           socket_connect_timeout=min(2, socket_timeout) if socket_timeout is not None else 2,
+                           **({"socket_timeout": socket_timeout} if socket_timeout is not None else {}))
 
 
 def _drop_graph(db: "falkordb.FalkorDB", graph_name: str) -> None:

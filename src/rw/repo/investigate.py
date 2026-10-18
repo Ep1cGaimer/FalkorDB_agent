@@ -66,9 +66,13 @@ class RepoFindings:
     receipts: list = field(default_factory=list)
     facts: dict = field(default_factory=dict)
     answer: str | None = None
+    index_generation: str | None = None
+    retrieval_budget: dict | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {"repo": self.repo, "revision": self.revision, "resolved_sha": self.resolved_sha,
+                "index_generation": self.index_generation,
+                "retrieval_budget": self.retrieval_budget,
                 "unresolved": self.unresolved,
                 "facts": _jsonable(self.facts), "answer": self.answer,
                 "findings": [{"kind": f.kind, "summary": f.summary,
@@ -107,28 +111,66 @@ def _span(c: Citation | None) -> str:
     return f"{c.path}:{c.start_line}-{c.end_line}" if c.start_line is not None else c.path
 
 
-def _load(repo: str, config) -> tuple[RepoConfig | None, str | None]:
-    if isinstance(config, RepoConfig):
-        return config, None
+def _load(repo: str, config) -> tuple[RepoConfig | None, Gap | None]:
     try:
-        if config is not None:
-            return load_config(Path(config)), None
-        if not isinstance(repo, str) or not NAME_RE.fullmatch(repo):
-            return None, f"unknown repository {repo!r}: not a valid repository name"
-        return load_config(repo), None
+        if isinstance(config, RepoConfig):
+            cfg = config
+        elif config is not None:
+            cfg = load_config(Path(config))
+        else:
+            if not isinstance(repo, str) or not NAME_RE.fullmatch(repo):
+                return None, Gap("INVALID_REPOSITORY", f"unknown repository {repo!r}: not a valid repository name")
+            cfg = load_config(repo)
+        if cfg.name != repo:
+            return None, Gap("REPOSITORY_SELECTION_MISMATCH", "configuration belongs to a different repository")
+        return cfg, None
+    except FileNotFoundError:
+        return None, Gap("UNKNOWN_REPOSITORY", f"unknown repository {repo!r}: no usable configuration (FileNotFoundError)")
     except (OSError, ValueError) as exc:
-        return None, f"unknown repository {repo!r}: no usable configuration ({type(exc).__name__})"
+        return None, Gap("INVALID_CONFIGURATION", f"unknown repository {repo!r}: no usable configuration ({type(exc).__name__})")
 
 
 def investigate(repo: str, revision: str | None, question: str, *, graph_name: str | None = None,
                 db=None, config: RepoConfig | str | Path | None = None, mode: str = "retrieval",
-                runtime_adapter: str | None = None) -> RepoFindings:
+                runtime_adapter: str | None = None, trace: list[dict] | None = None) -> RepoFindings:
+    from rw.repo.budget import BudgetExhausted, ReadLimits, read_scope
+    cfg, _ = _load(repo, config)
+    limits = (ReadLimits(cfg.query_timeout_seconds, cfg.query_max_rows, cfg.query_max_source_bytes)
+              if cfg else ReadLimits())
+    with read_scope(limits) as budget:
+        out = None
+        try:
+            out = _investigate(repo, revision, question, graph_name=graph_name, db=db,
+                               config=cfg if cfg else config, mode=mode,
+                               runtime_adapter=runtime_adapter, trace=trace)
+            budget.remaining()
+        except BudgetExhausted as exc:
+            if out is None:
+                out = RepoFindings(repo, revision, unresolved=str(exc),
+                                   gaps=[Gap("RETRIEVAL_BUDGET_EXHAUSTED", str(exc))])
+        if budget.exhausted:
+            # A paged helper may return a gap instead of raising. No partial evidence
+            # can become a definitive answer (or a compatibility disposition).
+            out.findings, out.citations, out.facts, out.answer = [], [], {}, None
+            out.disposition, out.receipts = None, []
+            out.unresolved = "retrieval budget exhausted; evidence is incomplete"
+            out.gaps = [Gap("RETRIEVAL_BUDGET_EXHAUSTED", f"retrieval {budget.exhausted} budget exhausted; retry with a narrower investigation")]
+        out.retrieval_budget = budget.snapshot()
+        if trace is not None:
+            trace.append({"kind": "retrieval_budget", "repo": repo, **budget.snapshot(include_elapsed=True)})
+        return out
+
+
+def _investigate(repo: str, revision: str | None, question: str, *, graph_name: str | None = None,
+                 db=None, config: RepoConfig | str | Path | None = None, mode: str = "retrieval",
+                 runtime_adapter: str | None = None, trace: list[dict] | None = None) -> RepoFindings:
     if mode not in ("retrieval", "compatibility"):
         raise ValueError(f"mode must be 'retrieval' or 'compatibility', not {mode!r}")
     out = RepoFindings(repo, revision)
     cfg, err = _load(repo, config)
     if cfg is None:
-        out.unresolved = err
+        out.gaps = [err]
+        out.unresolved = err.detail
         return out
     if not revision:
         out.unresolved = f"Which revision of {repo!r} should be investigated? (a tag, branch or commit sha)"
@@ -136,17 +178,20 @@ def investigate(repo: str, revision: str | None, question: str, *, graph_name: s
     from rw.repo.index import graph_name_for
     from rw.repo.query import RepoQuery
     try:
-        q = RepoQuery(graph_name or graph_name_for(cfg), repo, db=db)
+        q = RepoQuery(graph_name or graph_name_for(cfg), repo, db=db, trace=trace)
         sha, gap = q.resolve(revision)
     except Exception as exc:  # graph missing / database unavailable
+        out.gaps = [Gap("INDEX_UNAVAILABLE", f"resolve revision failed ({type(exc).__name__}); index or database is unavailable")]
         out.unresolved = (f"repository {repo!r} has no queryable index for revision {revision!r} "
                           f"({type(exc).__name__}); index it first")
         return out
     if gap:
+        out.gaps.append(gap)
         out.unresolved = (f"revision {revision!r} cannot be used for {repo!r} ({gap.detail}); "
                           "which indexed revision should be investigated?")
         return out
     out.resolved_sha = sha
+    out.index_generation = q._generation
 
     text = (question or "").strip().rstrip("?.!").strip()
     text = re.sub(r"\s+", " ", text)
@@ -161,7 +206,37 @@ def investigate(repo: str, revision: str | None, question: str, *, graph_name: s
 
     handler = {"constant": _constant, "raises": _raises, "dependencies": _deps, "dependents": _deps, "changes": _changes, "fix": _fix,
                "history": _history, "notes": _notes, "list": _list, "locate": _locate}[route]
-    unresolved = handler(q, out, revision, route, m)
+    generation = q._state()
+    from rw.repo.query import EvidenceError, IndexChangedError
+    try:
+        out.gaps.extend(q._coverage_gaps(sha))
+        unresolved = handler(q, out, revision, route, m)
+        if q._state() != generation:
+            raise IndexChangedError("index publication changed")
+    except EvidenceError as exc:
+        out.findings, out.citations, out.facts, out.answer = [], [], {}, None
+        out.gaps = [exc.gap]
+        out.unresolved = "indexed evidence could not be bound to current source and extraction"
+        return out
+    except IndexChangedError:
+        out.findings, out.citations, out.facts, out.answer = [], [], {}, None
+        out.gaps = [Gap("INDEX_CHANGED", "index changed during investigation; retry from the first page")]
+        out.unresolved = "repository index changed during investigation"
+        return out
+    except Exception as exc:
+        # Preserve selection and expose the failed operation, never a partial supported answer.
+        out.findings, out.citations, out.facts, out.answer = [], [], {}, None
+        out.gaps = [Gap("RETRIEVAL_FAILED", f"{route} retrieval failed ({type(exc).__name__}); retry investigation")]
+        out.unresolved = f"{route} retrieval could not complete"
+        return out
+    if any(g.kind in {"STALE_EXTRACTION", "STALE_SOURCE", "MISSING_SOURCE", "CONFLICTING_SOURCE",
+                      "UNSUPPORTED_FILE_KIND", "INDEX_CHANGED", "RETRIEVAL_FAILED",
+                      "RETRIEVAL_TIMEOUT", "RETRIEVAL_BUDGET_EXHAUSTED"} for g in out.gaps):
+        # Lower-level paged operations return gaps rather than exceptions. Do not turn those
+        # failures into an empty dependency set or a definitive absence conclusion.
+        out.findings, out.citations, out.facts, out.answer = [], [], {}, None
+        out.unresolved = "current source-backed evidence is unavailable or stale; restore or reindex before retrying"
+        return out
     if unresolved:
         out.unresolved = unresolved
         out.findings = []
@@ -234,6 +309,10 @@ def _resolve_symbol(q, out: RepoFindings, rev: str, name: str):
     sha = out.resolved_sha
     syms = q._candidates(sha, name)
     exact, suffix = _match_suffix(syms, name)
+    if len({s.path for s in exact}) > 1:
+        out.gaps.append(Gap("ambiguous_symbol", f"{name!r} is defined at multiple paths; clarify which one: "
+                           + ", ".join(sorted({s.path for s in exact}))))
+        return None
     if exact:
         s = exact[0]
         return _Resolved(s.qualname, s.kind, s.path, q._cite(sha, s))
@@ -242,7 +321,7 @@ def _resolve_symbol(q, out: RepoFindings, rev: str, name: str):
         s = suffix[0]
         return _Resolved(s.qualname, s.kind, s.path, q._cite(sha, s))
     if not cands:
-        out.gaps.append(Gap("unknown_symbol", f"{name!r} is not defined in {out.repo} at {rev!r}"))
+        out.gaps.append(Gap("unknown_symbol", f"{name!r} was not found in extracted evidence for {out.repo} at {rev!r}"))
     else:
         out.gaps.append(Gap("ambiguous_symbol", f"{name!r} matches several symbols; clarify which one: "
                                                 + ", ".join(cands)))
@@ -276,7 +355,7 @@ def _deps(q, out, rev, route, m):
         head.facts["external"] = external
     rel = "is used by" if reverse else "depends on"
     head.summary = (f"{sym.kind} {sym.qualname} (defined at {_span(sym.citation)}) {rel}: "
-                    + (", ".join(targets) or "no in-repo symbols")
+                    + (", ".join(targets) or "no resolved in-repository targets in this retrieval")
                     + (f"; external/unresolved: {', '.join(external)}" if external else ""))
     if not page.items:
         out.gaps.append(Gap("no_relations", f"no {'dependents' if reverse else 'dependencies'} of "
@@ -376,21 +455,19 @@ def _locate(q, out, rev, route, m):
     page = q.symbols(rev, m.group(1), limit=MAX_ITEMS)
     out.findings.extend(_sym_finding(s) for s in page.items)
     if not page.items:
-        out.gaps.append(Gap("unknown_symbol", f"{m.group(1)!r} is not defined in {out.repo} at {rev!r}"))
+        out.gaps.append(Gap("unknown_symbol", f"{m.group(1)!r} was not found in extracted evidence for {out.repo} at {rev!r}"))
     out.gaps.extend(_gaps_of(page))
     return None
 
 
 def _fix_first_tag(q, fix_sha: str) -> str | None:
     """Earliest (by commit time) indexed tag whose commit has `fix_sha` as an ancestor."""
-    rows = q._q("MATCH (t:Tag)-[:POINTS_TO]->(c:Commit) RETURN t.name, c.sha, c.author_time "
-                "ORDER BY c.author_time, t.name")
-    for name, sha, _ in rows[:2000]:
-        try:
-            if sha == fix_sha or q._is_ancestor(fix_sha, sha):
-                return name
-        except Exception:
-            continue
+    read = getattr(q, "_q_paged", lambda cypher, params: q._q(cypher))
+    rows = read("MATCH (t:Tag)-[:POINTS_TO]->(c:Commit) RETURN t.name, c.sha, c.author_time "
+                "ORDER BY c.author_time, t.name", {})
+    for name, sha, _ in rows:
+        if sha == fix_sha or q._is_ancestor(fix_sha, sha):
+            return name
     return None
 
 
@@ -413,8 +490,8 @@ def _fix(q, out, rev, route, m):
 
 def _history(q, out, rev, route, m):
     name = m.group(1)
-    rows = q._q("MATCH (t:Tag)-[:POINTS_TO]->(c:Commit) RETURN t.name, c.sha, c.author_time "
-                "ORDER BY c.author_time, t.name")
+    rows = q._q_paged("MATCH (t:Tag)-[:POINTS_TO]->(c:Commit) RETURN t.name, c.sha, c.author_time "
+                "ORDER BY c.author_time, t.name", {})
     revs, seen = [], set()
     for tag, sha, _ in rows:
         if sha in seen or sha == out.resolved_sha:
@@ -443,6 +520,8 @@ def _history(q, out, rev, route, m):
     entries = q.symbol_history(symbol, revs)
     first_present = first_absent = None
     for e in entries:
+        if e.gap:
+            out.gaps.append(e.gap)
         if e.present is None:
             continue
         if e.present and first_present is None:
@@ -455,10 +534,10 @@ def _history(q, out, rev, route, m):
         elif not e.present:
             out.findings.append(Finding("history_entry", f"{symbol} absent at {e.rev}", [], revision=e.rev))
     last = entries[-1] if entries else None
-    at_req = bool(last and last.present)
+    at_req = last.present if last else None
     if first_present is None:
         out.findings = []
-        out.gaps.append(Gap("unknown_symbol", f"{symbol!r} is not defined at any examined revision: "
+        out.gaps.append(Gap("unknown_symbol", f"{symbol!r} was not found in extracted evidence at examined revisions: "
                                               + ", ".join(revs)))
     else:
         facts = {"symbol": symbol, "first_present_revision": first_present,
@@ -483,9 +562,7 @@ def _parse_at(q, sha: str, path: str):
     entry = q._files(sha).get(path)
     if entry is None:
         return None
-    data = q._blob(entry[2])
-    if data is None:
-        return None
+    data = q._source(sha, path, entry[0])
     text = data.decode("utf-8", "replace")
     try:
         with warnings.catch_warnings():

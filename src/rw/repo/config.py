@@ -25,6 +25,9 @@ class RepoConfig(BaseModel):
     include: list[str] = Field(default_factory=list)
     exclude: list[str] = Field(default_factory=list)
     release_notes: list[str] = Field(default_factory=lambda: list(DEFAULT_RELEASE_NOTES))
+    query_timeout_seconds: float = Field(default=120.0, gt=0, le=120.0, allow_inf_nan=False)
+    query_max_rows: int = Field(default=250_000, gt=0, le=250_000, strict=True)
+    query_max_source_bytes: int = Field(default=64 * 1024 * 1024, gt=0, le=64 * 1024 * 1024, strict=True)
 
     @field_validator("name")
     @classmethod
@@ -49,9 +52,14 @@ def repos_dir() -> Path:
 
 def load_config(name_or_path: str | Path) -> RepoConfig:
     """Load a config from a .json file path, or by name from repos/<name>.json
-    ($RW_REPOS_DIR/<name>.json when that variable is set)."""
+    ($RW_REPOS_DIR/<name>.json when that variable is set). Relative repository paths
+    are anchored at the configuration file, never the caller's working directory."""
     if isinstance(name_or_path, str) and NAME_RE.fullmatch(name_or_path):
         p = repos_dir() / f"{name_or_path}.json"
     else:
         p = Path(name_or_path)
-    return RepoConfig(**json.loads(p.read_text(encoding="utf-8")))
+    config = RepoConfig(**json.loads(p.read_text(encoding="utf-8")))
+    repository = Path(config.path).expanduser()
+    if not repository.is_absolute():
+        repository = p.resolve().parent / repository
+    return config.model_copy(update={"path": str(repository.resolve())})

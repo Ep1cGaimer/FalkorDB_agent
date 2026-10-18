@@ -11,12 +11,12 @@ from pathlib import Path
 
 from repo_eval_common import (ROOT, SETS, Clone, allowed_shas, check_citation, evidence_scores,
                               expected_citations, fabricated, manifest_for, now_iso, question_revs, rel,
-                              sha256_file, sha256_text, stamp)
+                              sha256_file, sha256_text, stamp, failed_task, grounded)
 
 R2DIR = ROOT / "evals" / "repo_questions" / "round2"
 KEYS2 = ROOT / "evals" / "repo_eval_keys_round2.json"
 OUT = ROOT / "artifacts" / "repo_history_eval"
-REPEATS = 2
+REPEATS = 3
 # round-2 file -> question-set name used in SETS
 FILES = {"requests.json": "requests", "itsdangerous.json": "itsdangerous", "synthetic.json": "round2-synthetic"}
 for _r in (2, 3):
@@ -84,11 +84,10 @@ def compare_facts(expected: dict, got: dict) -> tuple[bool, list[dict]]:
     return all(c["ok"] for c in checks), checks
 
 
-def _q(name, q, plans, clone, cfg, graph):
+def _q(name, q, clone, cfg, graph):
     from rw.repo.investigate import investigate
     rev = q.get("revision")
-    plan = plans.get(q["id"], [])
-    calls = [("raw", q["question"])] + [("plan", t) for t in plan]
+    calls = [("raw", q["question"])]
     trace, used = [], []
     t0 = time.perf_counter()
     for kind, text in calls:
@@ -100,8 +99,6 @@ def _q(name, q, plans, clone, cfg, graph):
         trace.append({"kind": kind, "query": text, "revision": rev, "seconds": round(time.perf_counter() - t1, 4),
                       "error": err, "result": r})
         if r is None:
-            continue
-        if kind == "raw" and any(g["kind"] == "unsupported_question" for g in r["gaps"]) and plan:
             continue
         used.append(r)
     facts = {}
@@ -130,8 +127,7 @@ def _q(name, q, plans, clone, cfg, graph):
             "contestant": "deterministic_retrieval", "facts": facts, "expected_facts": q["expected_facts"],
             "fact_checks": checks, "answer": " ".join(r.get("answer") or "" for r in used).strip(),
             "answer_correct": bool(correct),
-            "grounded_answer_correct": bool(correct and ((recall or 0) > 0 if q.get("expected_citations")
-                                                          else not fabricated(cits))),
+            "grounded_answer_correct": grounded(q, correct, recall, cits),
             "evidence_recall": recall, "evidence_precision": precision,
             "expected_citations": expected_citations(q), "citations": cits,
             "citation_validity": (sum(c["valid"] for c in cits) / len(cits)) if cits else None,
@@ -173,27 +169,28 @@ def main2(metrics, rnd: int = 2) -> int:
             clone = Clone(SETS[n][3])
             for q in d["questions"]:
                 try:
-                    t, tr = _q(n, q, keys["plans"], clone, cfg, SETS[n][2])
+                    t, tr = _q(n, q, clone, cfg, SETS[n][2])
                 except Exception as exc:
-                    failures.append(f"repeat {rep} {q['id']}: {type(exc).__name__}: {exc}")
-                    continue
+                    error = f"repeat {rep} {q['id']}: {type(exc).__name__}: {exc}"
+                    failures.append(error)
+                    t = {**failed_task(n, q, error), "facts": {}, "expected_facts": q["expected_facts"], "fact_checks": []}
+                    tr = {"repo": n, "question_id": q["id"], "error": error, "calls": []}
                 t["repeat"] = rep
                 tasks.append(t)
-                if rep == 0:
-                    traces.append(tr)
+                traces.append({"repeat": rep, **tr})
         runs.append({"repeat": rep, "tasks": tasks})
     sig = lambda t: (t["question_id"], json.dumps(t["facts"], sort_keys=True, default=str),  # noqa: E731
                      json.dumps(t["citations"], sort_keys=True))
     deterministic = [sig(t) for t in runs[0]["tasks"]] == [sig(t) for t in runs[-1]["tasks"]]
     tasks0 = runs[0]["tasks"]
     names = list(qsets)
-    per_repo = {n: metrics([t for t in tasks0 if t["repo"] == n]) for n in names}
-    overall = metrics(tasks0)
+    all_tasks = [t for r in runs for t in r["tasks"]]
+    per_repo = {n: metrics([t for t in all_tasks if t["repo"] == n]) for n in names}
+    overall = metrics(all_tasks)
     configs = {n: {"file": rel(SETS[n][1]), "sha256": sha256_file(SETS[n][1]), "graph": SETS[n][2],
                    "config": json.loads(Path(SETS[n][1]).read_text(encoding="utf-8"))} for n in names}
     coverage = {"gaps": [], "limits": [
-        "investigate() answers fixed question shapes only; questions are mapped by the declared plans in "
-        "evals/repo_eval_keys_round2.json using the names as worded in the question",
+        "investigate() answers fixed question shapes only; oracle retrieval plans are never executed",
         "python adapter only; Python 2 files that fail to parse have no symbols"]}
     from rw.repo.query import RepoQuery
     for n in names:
@@ -206,7 +203,7 @@ def main2(metrics, rnd: int = 2) -> int:
     traces_path.parent.mkdir(parents=True, exist_ok=True)
     traces_path.write_text(json.dumps(traces, indent=1, default=str), encoding="utf-8")
     rec = {
-        "schema": "repo_history_eval/v1", "evidence": "E2", "round": rnd, "status": "complete",
+        "schema": "repo_history_eval/v2-development", "acceptance_validated": False, "evidence": "E2", "round": rnd, "status": "complete",
         "started_at": started, "finished_at": now_iso(),
         "command": "PYTHONPATH=src .venv/Scripts/python.exe evals/repo_history_eval.py --round " + str(rnd),
         "llm_used": False, "scored": True,
@@ -230,7 +227,7 @@ def main2(metrics, rnd: int = 2) -> int:
                                          "<= end <= file length, citation repo is the requested repo",
                     "wrong_revision": "citations whose resolved sha is not the requested, compare or an expected-"
                                       "citation revision; `wrong_revision` counts tasks with any",
-                    "grounded": "answer correct AND evidence_recall > 0 (questions without expected citations: answer correct and no fabricated citation)",
+                    "grounded": "answer correct AND evidence_recall == 1 AND no invalid/wrong-revision citation (questions without expected citations: answer correct and no fabricated citation)",
                     "decisions": [{"question_id": t["question_id"], "answer_correct": t["answer_correct"],
                                    "fact_checks": t["fact_checks"]} for t in tasks0]},
         "repeats": REPEATS, "deterministic_across_repeats": deterministic,

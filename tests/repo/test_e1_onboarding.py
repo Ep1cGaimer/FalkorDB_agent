@@ -57,17 +57,18 @@ def _check_citations(path: Path, name: str, res, allowed: set[str]):
 @pytest.mark.skipif(not os.environ.get("RW_REALREPO"), reason="set RW_REALREPO=1 (indexes real clones)")
 @pytest.mark.parametrize("cfg_path,body", _configs())
 def test_onboard(cfg_path, body):
-    from rw.repo.config import RepoConfig
+    from rw.repo.config import RepoConfig, load_config
     from rw.repo.git import GitRepo
     from rw.repo.index import index_repository
     from rw.repo.investigate import investigate
 
-    path = (ROOT / body["path"]).resolve()
+    path = Path(load_config(cfg_path).path)
     if not path.exists():
         pytest.skip(f"{body['path']} not cloned")
     if body.get("unseen"):
-        assert MANIFEST.exists(), "unseen repo requires evals/repo_onboarding/core_manifest.json"
-        recorded = json.loads(MANIFEST.read_text(encoding="utf-8"))["files"]
+        freeze = ROOT / body.get("core_manifest_file", str(MANIFEST.relative_to(ROOT)))
+        assert freeze.exists(), "unseen repo requires its independently recorded core freeze"
+        recorded = json.loads(freeze.read_text(encoding="utf-8"))["files"]
         assert core_hashes() == recorded, "core src/rw changed while onboarding an unseen repo"
 
     name = body["name"]
@@ -93,6 +94,9 @@ def test_onboard(cfg_path, body):
               "config": body, "config_sha256": hashlib.sha256(cfg_path.read_bytes()).hexdigest(),
               "coverage": {"gaps": [], "limits": {}}, "traces": [], "answers": [],
               "timings": {"questions": []}, "llm_used": False, "scored": False}
+    record["core_before"] = core_hashes()
+    if body.get("historical_unseen_trial"):
+        record["historical_unseen_trial"] = body["historical_unseen_trial"]
     t0 = time.time()
     try:
         report = index_repository(cfg, graph_name=graph)
@@ -152,6 +156,8 @@ def test_onboard(cfg_path, body):
         assert ch.findings and not ch.unresolved
         ask(last, "Release notes", {shas[last]})
     finally:
+        record["core_after"] = core_hashes()
+        record["core_unchanged"] = record["core_before"] == record["core_after"]
         OUT.mkdir(parents=True, exist_ok=True)
         ts = time.strftime("%Y%m%dT%H%M%S")
         (OUT / f"{name}-{ts}.json").write_text(json.dumps(record, indent=2, default=str), encoding="utf-8")

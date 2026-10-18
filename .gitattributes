@@ -4,8 +4,14 @@
 # (src/rw/verification.py and src/rw/graph.py), and probe receipts are bound to those hashes. Git
 # must therefore never rewrite line endings or apply any other content conversion inside fixtures/,
 # on checkout or on add.
-fixtures/** -text
-tests/fixtures/** -text
+# Freeze manifests hash source/configuration byte-for-byte across checkout platforms.
+*.py text eol=lf
+*.mjs text eol=lf
+*.json text eol=lf
+
+# These more specific rules take precedence over the source/configuration defaults.
+fixtures/** -text -eol
+tests/fixtures/** -text -eol
 
 # Retained payload bytes are opaque records: keep them byte-exact and undiffed.
 *.bin binary

@@ -1,7 +1,16 @@
 {
   "name": "requests",
-  "path": "artifacts/repos/requests",
-  "revisions": ["v2.30.0", "v2.31.0", "v2.32.0"],
-  "languages": ["python"],
-  "include": ["src/**", "requests/**"]
+  "path": "../../../artifacts/repos/requests",
+  "revisions": [
+    "v2.30.0",
+    "v2.31.0",
+    "v2.32.0"
+  ],
+  "languages": [
+    "python"
+  ],
+  "include": [
+    "src/**",
+    "requests/**"
+  ]
 }

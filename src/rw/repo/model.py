@@ -30,6 +30,7 @@ class Relation:
     target: str
     provenance: str  # parsed | inferred
     extractor: str
+    relative_target: str | None = None  # unresolved leading-dot import, rebound at each file path
 
 
 @dataclass(frozen=True)

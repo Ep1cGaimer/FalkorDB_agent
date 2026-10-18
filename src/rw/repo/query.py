@@ -1,6 +1,6 @@
 """Bounded, read-only evidence queries over a per-repository graph (docs/plans/repo-integration-v1.md).
 
-Every query resolves the requested revision to a commit indexed by a COMPLETE ImportRun, then reads
+Every query resolves the requested revision in the current COMPLETE publication, then reads
 that commit's file map (HAS_FILE{path} -> Blob) and the symbols/relations of those blobs.
 
 Bounds: `symbols` pages server-side (Cypher ORDER BY/SKIP/LIMIT plus a count query) and `symbol_history`
@@ -8,23 +8,31 @@ reads only candidate symbols, so neither builds a whole-revision snapshot. Depen
 revision's relation set for cross-file resolution (cached per commit) and stop collecting after
 MAX_WALK_EDGES edges, reporting Gap("TRUNCATED") and coverage["frontier_truncated"]. `changes_between`
 diffs file maps and loads symbols only for changed files. Ancestry uses `git merge-base`/`rev-list`
-when the clone is available (graph PARENT walk otherwise). Cursors are opaque offsets; a negative,
+when the clone is available (graph PARENT walk otherwise). Cursors bind offsets to graph/repository/revision/query/publication identity; a negative,
 malformed or past-the-end cursor raises ValueError or yields a Gap("INVALID_CURSOR") page. Relation
 targets are resolved at query time against the symbols defined at the SAME revision (cross-file);
 anything else is reported as external. Citations always name the requested commit."""
 from __future__ import annotations
 
 import base64
+import hashlib
+import json
+import math
+import time
+from functools import wraps
 import re
 from collections import deque
 from dataclasses import dataclass, field
+from redis.exceptions import TimeoutError as RedisTimeoutError
 
 from rw import graph as G
 from rw.repo.adapters.python import module_name
+from rw.repo.adapters import ADAPTERS, adapter_for
 from rw.repo.git import GitError, GitRepo
 import difflib
 
 from rw.repo.model import Citation, FixStatus, Gap, Page
+from rw.repo.budget import BudgetExhausted, ReadLimits, active_budget, read_scope
 
 MAX_LIMIT = 200
 MAX_HOPS = 5
@@ -100,22 +108,22 @@ class _Sym:
     stored_qualname: str
 
 
-def _encode(offset: int) -> str:
-    return base64.urlsafe_b64encode(f"o:{offset}".encode()).decode()
+def _encode(offset: int, scope: str) -> str:
+    return base64.urlsafe_b64encode(json.dumps([offset, scope]).encode()).decode()
 
 
-def _decode(cursor: str | None) -> int:
+def _decode(cursor: str | None, scope: str) -> int:
     if not cursor:
         return 0
+    if not isinstance(cursor, str) or len(cursor) > 2048:
+        raise ValueError("invalid cursor")
     try:
-        raw = base64.urlsafe_b64decode(cursor.encode()).decode()
-        if raw.startswith("o:") and raw[2:].lstrip("-").isdigit():
-            off = int(raw[2:])
-            if off >= 0:
-                return off
+        off, bound = json.loads(base64.b64decode(cursor.encode(), altchars=b"-_", validate=True))
+        if bound == scope and type(off) is int and off >= 0:
+            return off
     except Exception:
         pass
-    raise ValueError(f"invalid cursor {cursor!r}")
+    raise ValueError("invalid cursor")
 
 
 def _limit(limit: int) -> int:
@@ -133,11 +141,11 @@ def _bad_offset(off: int, total: int) -> Page | None:
 
 
 def _page(items: list, limit: int, cursor: str | None, coverage: dict, *, total: int | None = None,
-          off: int | None = None) -> Page:
+          off: int | None = None, scope: str) -> Page:
     """Page over `items`; with `total`/`off` given, `items` is already the server-side page."""
     limit = _limit(limit)
     if off is None:
-        off = _decode(cursor)
+        off = _decode(cursor, scope)
     if total is None:
         total = len(items)
         items = items[off:off + limit]
@@ -147,7 +155,54 @@ def _page(items: list, limit: int, cursor: str | None, coverage: dict, *, total:
     more = off + limit < total
     coverage = {"total": total, "offset": off, "returned": len(items), **coverage}
     coverage.setdefault("gaps", [])
-    return Page(items, _encode(off + limit) if more else None, more, coverage)
+    return Page(items, _encode(off + limit, scope) if more else None, more, coverage)
+
+
+class IndexChangedError(RuntimeError):
+    """The index changed during a read; the caller must restart the investigation."""
+
+
+class EvidenceError(RuntimeError):
+    """An indexed fact cannot be bound to current extraction and immutable source bytes."""
+
+    def __init__(self, kind: str, detail: str):
+        super().__init__(detail)
+        self.gap = Gap(kind, detail)
+
+
+def _consistent(method):
+    @wraps(method)
+    def call(self, *args, **kwargs):
+        def failed(gap, budget=None):
+            if method.__name__ == "resolve":
+                return None, gap
+            if method.__name__ == "fix_status":
+                return FixStatus("UNCERTAIN", [], [gap], gap.detail)
+            if method.__name__ == "symbol_history":
+                revs = kwargs.get("revs", args[1] if len(args) > 1 else [])
+                return [HistoryEntry(rev, None, None, None, None, gap) for rev in revs]
+            page = self._gap_page(gap)
+            if budget is not None:
+                page.truncated = True
+                page.coverage.update(complete=False, budget=budget)
+            return page
+
+        with read_scope(getattr(self, "limits", None)) as budget:
+            try:
+                before = self._state()
+                self._begin_read()
+                result = method(self, *args, **kwargs)
+                if self._state() != before:
+                    self._snap.clear()
+                    self._fmap.clear()
+                    raise IndexChangedError("repository index changed during retrieval; retry from the first page")
+                budget.remaining()
+                return result
+            except EvidenceError as exc:
+                return failed(exc.gap)
+            except BudgetExhausted as exc:
+                return failed(Gap("RETRIEVAL_BUDGET_EXHAUSTED", str(exc)), exc.coverage)
+    return call
 
 
 def _rebase(stored_q: str, stored_path: str | None, path: str) -> str:
@@ -165,17 +220,74 @@ def _rebase(stored_q: str, stored_path: str | None, path: str) -> str:
 
 
 class RepoQuery:
-    def __init__(self, graph_name: str, repo_name: str, db=None):
+    def __init__(self, graph_name: str, repo_name: str, db=None, *, trace: list[dict] | None = None,
+                 limits: ReadLimits | None = None):
         self.repo = repo_name
-        self.db = db or G.connect()
+        self.limits = limits or (active_budget().limits if active_budget() else ReadLimits())
+        self.db = db or G.connect(socket_timeout=min(2.0, self.limits.seconds))
         self.graph = self.db.select_graph(graph_name)
         self._snap: dict[str, tuple] = {}
         self._fmap: dict[str, dict] = {}
         self._repo_path: str | None | bool = False
+        self._trees: dict[str, dict] = {}
+        self._source_bytes: dict[str, bytes] = {}
+        self.trace = trace
+
+    def _begin_read(self):
+        # Graph caches are scoped to one operation. Even controlled edge/source ablations
+        # without an ImportRun update must affect the next result from this query object.
+        self._snap = {}
+        self._fmap = {}
+        self._trees = {}
+        self._source_bytes = {}
+        self._repo_path = False
 
     # ------------------------------------------------------------ plumbing
     def _q(self, cypher: str, params: dict | None = None) -> list:
-        return self.graph.ro_query(cypher, params or {}).result_set
+        capture = getattr(self, "trace", None)
+        budget = active_budget()
+        timeout = min(1000, max(1, math.floor(budget.remaining() * 1000))) if budget else None
+        clipped = False
+        query, query_params = cypher, params or {}
+        if budget:
+            available = budget.limits.rows - budget.rows
+            if available <= 0:
+                raise BudgetExhausted(budget, "rows")
+            # Trusted queries have either a final LIMIT integer/parameter or no LIMIT.
+            # Clamp graph output before materializing it. If a clamped page fills,
+            # completeness is unknown: reject it rather than silently dropping rows.
+            match = re.search(r"\s+LIMIT\s+(\$\w+|\d+)\s*$", cypher, re.I)
+            requested = (query_params[match[1][1:]] if match and match[1].startswith("$")
+                         else int(match[1]) if match else None)
+            if requested is None or requested > available:
+                clipped = True
+                query = (cypher[:match.start()] if match else cypher) + " LIMIT $__read_rows"
+                query_params = {**query_params, "__read_rows": available}
+        started = time.perf_counter()
+        event = {"kind": "falkordb_query", "query_id": hashlib.sha256(query.encode()).hexdigest()[:16],
+                 "cypher": query, "parameters": query_params, "repo": self.repo,
+                 "graph": getattr(self.graph, "name", None), "generation": getattr(self, "_generation", None)}
+        try:
+            if budget:
+                budget.queries += 1
+            rows = (self.graph.ro_query(query, query_params, timeout=timeout) if budget else
+                    self.graph.ro_query(query, query_params)).result_set
+            event.update(rows=rows, row_count=len(rows), outcome="PASS", timeout_ms=timeout)
+            if budget:
+                budget.consume_rows(len(rows))
+                if clipped and len(rows) == available:
+                    raise BudgetExhausted(budget, "rows")
+            return rows
+        except Exception as exc:
+            event.update(outcome="ERROR", error_type=type(exc).__name__)
+            if budget and ("query timed out" in str(exc).lower() or isinstance(exc, (TimeoutError, RedisTimeoutError))):
+                budget.remaining()  # total deadline takes precedence when it has expired
+                raise EvidenceError("RETRIEVAL_TIMEOUT", "database read timed out; retrieval is incomplete") from None
+            raise
+        finally:
+            event["seconds"] = time.perf_counter() - started
+            if capture is not None:
+                capture.append(event)
 
     def _q_paged(self, cypher: str, params: dict) -> list:
         """All rows of an ORDER BY query, fetched in RESULT_PAGE pages (the server caps result sets)."""
@@ -194,7 +306,8 @@ class RepoQuery:
         if len(rows) < RESULT_PAGE:
             return rows
         if len(hs) == 1:
-            raise RuntimeError(f"result for blob {hs[0]} exceeds {RESULT_PAGE} rows")
+            ordering = " ORDER BY s.id, type(e), t.id" if "-[e]->" in cypher else " ORDER BY s.id"
+            return self._q_paged(cypher + ordering, {"hs": hs})
         mid = len(hs) // 2
         return self._q_split(cypher, hs[:mid]) + self._q_split(cypher, hs[mid:])
 
@@ -205,15 +318,56 @@ class RepoQuery:
         return GitRepo(self._repo_path) if self._repo_path else None
 
     def _complete(self, sha: str) -> bool:
-        return bool(self._q("MATCH (r:ImportRun {status:'COMPLETE'})-[:INDEXED]->(c:Commit {sha:$s}) "
-                            "RETURN c.sha LIMIT 1", {"s": sha}))
+        return bool(self._q("MATCH (repo:Repository {name:$n, status:'COMPLETE'}), "
+                            "(r:ImportRun {status:'COMPLETE'})-[:INDEXED]->(c:Commit {sha:$s}) "
+                            "WHERE r.id=repo.published_run RETURN c.sha LIMIT 1", {"s": sha, "n": self.repo}))
 
+    def _state(self):
+        rows = self._q("MATCH (r:Repository {name:$n}) RETURN r.status, r.generation", {"n": self.repo})
+        return tuple(rows[0]) if rows else (None, None)
+
+    def _scope(self, *args) -> str:
+        return hashlib.sha256(json.dumps([self.repo, getattr(self.graph, "name", None),
+            getattr(self, "_generation", None), args], sort_keys=True).encode()).hexdigest()
+
+    def _refresh_generation(self, generation):
+        if getattr(self, "_generation", None) != generation:
+            self._snap.clear()
+            self._fmap.clear()
+            self._trees.clear()
+            self._source_bytes.clear()
+            self._repo_path = False
+            self._generation = generation
+
+    def _coverage_gaps(self, sha: str) -> list[Gap]:
+        self._source_tree(sha)
+        extractors = [f"{lang}@{adapter.version}" for lang, adapter in ADAPTERS.items()]
+        rows = self._q_paged("MATCH (:Commit {sha:$s})-[f:HAS_FILE]->(b:Blob) "
+            "WHERE b.language IS NULL OR b.errors > 0 OR b.extracted_by IS NULL "
+            "OR NOT b.extracted_by IN $extractors "
+            "RETURN f.path, b.language, b.errors, b.extracted_by ORDER BY f.path",
+            {"s": sha, "extractors": extractors})
+        for path, lang, errors, extractor in rows:
+            if lang is not None and extractor not in extractors:
+                raise EvidenceError("STALE_EXTRACTION", f"{path}: extraction identity is stale or incomplete; reindex repository")
+        return [Gap("UNSUPPORTED_LANGUAGE" if lang is None else "EXTRACTION_ERROR",
+                    f"{path}: " + ("no extraction adapter" if lang is None else "source not completely parsed/extracted"))
+                for path, lang, errors, extractor in rows
+                if lang is not None or not path.lower().endswith((".md", ".rst", ".txt"))]
+
+    @_consistent
     def resolve(self, rev: str) -> tuple[str | None, Gap | None]:
         """Full sha of an indexed (COMPLETE) commit for a tag/branch/sha, else a gap."""
         if not isinstance(rev, str) or not rev or rev.startswith("-"):
             return None, Gap("UNKNOWN_REVISION", f"invalid revision {rev!r}")
+        status, generation = self._state()
+        if status != "COMPLETE":
+            return None, Gap("INCOMPLETE_IMPORT", "repository has no complete current publication; retry the import")
+        self._refresh_generation(generation)
         sha = None
         rows = self._q("MATCH (:Tag {name:$n})-[:POINTS_TO]->(c:Commit) RETURN c.sha", {"n": rev})
+        if len(rows) > 1:
+            return None, Gap("AMBIGUOUS_REVISION", f"tag {rev!r} has conflicting targets")
         if rows:
             sha = rows[0][0]
         if sha is None and SHA_RE.fullmatch(rev):
@@ -248,10 +402,55 @@ class RepoQuery:
     def _files(self, sha: str) -> dict:
         """path -> (content_hash, lines, git_sha) at commit `sha` (cached)."""
         if sha not in self._fmap:
-            self._fmap[sha] = {path: (h, n, g) for path, h, n, g in self._q_paged(
+            rows = self._q_paged(
                 "MATCH (:Commit {sha:$s})-[f:HAS_FILE]->(b:Blob) "
-                "RETURN f.path, b.content_hash, b.lines, b.git_sha ORDER BY f.path", {"s": sha})}
+                "RETURN f.path, b.content_hash, b.lines, b.git_sha ORDER BY f.path", {"s": sha})
+            if len({r[0] for r in rows}) != len(rows):
+                raise EvidenceError("CONFLICTING_SOURCE", f"duplicate file bindings at {sha}; reindex repository")
+            self._fmap[sha] = {path: (h, n, g) for path, h, n, g in rows}
+            tree = self._source_tree(sha)
+            for path, (_, _, git_sha) in self._fmap[sha].items():
+                if path not in tree or tree[path][0] != git_sha:
+                    raise EvidenceError("STALE_SOURCE", f"{path}: indexed file binding disagrees with Git tree {sha}")
         return self._fmap[sha]
+
+    def _source_tree(self, sha: str) -> dict:
+        if sha not in self._trees:
+            git = self._git()
+            if git is None:
+                raise EvidenceError("MISSING_SOURCE", "source repository is unavailable")
+            try:
+                self._trees[sha] = {p: (g, mode) for p, g, mode in git.tree(sha)}
+            except (GitError, OSError):
+                raise EvidenceError("MISSING_SOURCE", f"cannot read Git tree {sha}") from None
+        return self._trees[sha]
+
+    def _source(self, sha: str, path: str, content_hash: str) -> bytes:
+        """Verify graph provenance against Git objects, without deriving graph relationships."""
+        budget = active_budget()
+        if budget:
+            budget.remaining()
+        entry = self._source_tree(sha).get(path)
+        if entry is None:
+            raise EvidenceError("STALE_SOURCE", f"{path}: path is absent at {sha}")
+        git_sha, mode = entry
+        if mode not in ("100644", "100755"):
+            raise EvidenceError("UNSUPPORTED_FILE_KIND", f"{path}: Git mode {mode} is not a regular source file")
+        if git_sha not in self._source_bytes:
+            data = self._blob(git_sha)
+            if data is None:
+                raise EvidenceError("MISSING_SOURCE", f"{path}: source bytes unavailable at {sha}")
+            if budget:
+                budget.consume_source(len(data))
+            self._source_bytes[git_sha] = data
+        data = self._source_bytes[git_sha]
+        if hashlib.sha256(data).hexdigest() != content_hash:
+            raise EvidenceError("STALE_SOURCE", f"{path}: indexed content hash disagrees with source bytes at {sha}")
+        if self.trace is not None:
+            self.trace.append({"kind": "source_verification", "repo": self.repo, "commit": sha,
+                "generation": getattr(self, "_generation", None), "path": path, "git_blob": git_sha,
+                "content_hash": content_hash, "bytes": len(data), "outcome": "PASS"})
+        return data
 
     def _load(self, files: dict, with_rels: bool = True):
         """Symbols (sorted) and relations of the blobs in `files` (a path -> entry map)."""
@@ -268,15 +467,29 @@ class RepoQuery:
                     "RETURN b.content_hash, s.qualname, s.kind, s.start_line, s.end_line, s.text_hash, "
                     "s.first_path", hs):
                 for p in by_hash[h]:
+                    if adapter_for(p) is None:
+                        continue
                     syms.append(_Sym(_rebase(q, fp, p), kind, p, h, sl, el, th, q))
             if not with_rels:
                 continue
-            for h, sq, fp, kind, tq, text, prov, ext in self._q_split(
+            for h, sq, fp, kind, tq, text, prov, ext, relative in self._q_split(
                     "MATCH (b:Blob)-[:DEFINES]->(s:Symbol)-[e]->(t:Symbol) WHERE b.content_hash IN $hs "
                     "RETURN b.content_hash, s.qualname, s.first_path, type(e), t.qualname, t.external, "
-                    "e.provenance, e.extractor", hs):
+                    "e.provenance, e.extractor, e.relative_target", hs):
+                if ext not in {f"{lang}@{a.version}" for lang, a in ADAPTERS.items()}:
+                    raise EvidenceError("STALE_EXTRACTION", f"relationship {sq} -> {tq} has stale extraction identity")
                 for p in by_hash[h]:
-                    rels.append((_rebase(sq, fp, p), p, kind, tq if text else _rebase(tq, fp, p), prov, ext))
+                    if adapter_for(p) is None:
+                        continue
+                    target = tq if text else _rebase(tq, fp, p)
+                    if relative:
+                        level = len(relative) - len(relative.lstrip("."))
+                        mod = module_name(p)
+                        package = mod if p.endswith(("__init__.py", "__init__.pyi")) else mod.rpartition(".")[0]
+                        parts = package.split(".") if package else []
+                        anchor = parts[:max(0, len(parts) - level + 1)]
+                        target = ".".join([*anchor, relative[level:]]).rstrip(".")
+                    rels.append((_rebase(sq, fp, p), p, kind, target, prov, ext))
         syms.sort(key=lambda s: (s.path, s.start_line, s.qualname))
         return syms, rels
 
@@ -287,7 +500,8 @@ class RepoQuery:
         out = []
         for path, h, q, kind, sl, el, th, fp in self._q_paged(
                 "MATCH (:Commit {sha:$s})-[f:HAS_FILE]->(b:Blob)-[:DEFINES]->(s:Symbol) "
-                "WHERE s.kind = 'module' OR s.qualname = $last OR s.qualname ENDS WITH $dl "
+                "WHERE (toLower(f.path) ENDS WITH '.py' OR toLower(f.path) ENDS WITH '.pyi') "
+                "AND (s.kind = 'module' OR s.qualname = $last OR s.qualname ENDS WITH $dl) "
                 "RETURN f.path, b.content_hash, s.qualname, s.kind, s.start_line, s.end_line, s.text_hash, "
                 "s.first_path ORDER BY f.path, s.start_line, s.qualname", {"s": sha, "last": last, "dl": "." + last}):
             out.append(_Sym(_rebase(q, fp, path), kind, path, h, sl, el, th, q))
@@ -295,18 +509,51 @@ class RepoQuery:
         return out
 
     def _cite(self, sha: str, s: _Sym) -> Citation:
+        lines = self._source(sha, s.path, s.content_hash).decode("utf-8", "replace").splitlines()
+        if not (1 <= s.start_line <= s.end_line <= max(1, len(lines))):
+            raise EvidenceError("STALE_SOURCE", f"{s.path}: indexed symbol span is outside source at {sha}")
+        actual = hashlib.sha256("\n".join(lines[s.start_line - 1:s.end_line]).encode("utf-8")).hexdigest()
+        if actual != s.text_hash:
+            raise EvidenceError("STALE_SOURCE", f"{s.path}: indexed symbol span hash disagrees with source at {sha}")
         return Citation(self.repo, sha, s.path, s.start_line, s.end_line, s.content_hash)
 
     def _gap_page(self, gap: Gap) -> Page:
-        return Page([], None, False, {"gaps": [gap]})
+        return Page([], None, False, {"complete": False, "gaps": [gap]})
+
+    @_consistent
+    def revisions(self, limit: int = 50, cursor: str | None = None) -> Page:
+        """Published revision identities, including detached commits, with bounded transport."""
+        _limit(limit)
+        status, generation = self._state()
+        if status != "COMPLETE":
+            return self._gap_page(Gap("INCOMPLETE_IMPORT", "no complete current publication"))
+        self._refresh_generation(generation)
+        scope = self._scope("revisions")
+        off = _decode(cursor, scope)
+        params = {"name": self.repo}
+        match = ("MATCH (repo:Repository {name:$name, status:'COMPLETE'}), "
+                 "(r:ImportRun {status:'COMPLETE'})-[:INDEXED]->(c:Commit) "
+                 "WHERE r.id=repo.published_run ")
+        total = self._q(match + "RETURN count(c)", params)[0][0]
+        bad = _bad_offset(off, total)
+        if bad:
+            return bad
+        rows = self._q(match + "OPTIONAL MATCH (t:Tag)-[:POINTS_TO]->(c) "
+            "RETURN c.sha, collect(DISTINCT t.name) ORDER BY c.sha SKIP $o LIMIT $l",
+            {**params, "o": off, "l": limit})
+        return _page([{"sha": sha, "refs": sorted(refs)} for sha, refs in rows], limit, cursor,
+                     {"generation": generation, "gaps": []}, total=total, off=off, scope=scope)
 
     # ------------------------------------------------------------ symbols
+    @_consistent
     def symbols(self, rev: str, name: str | None = None, limit: int = 50, cursor: str | None = None) -> Page:
         _limit(limit)
-        off = _decode(cursor)
         sha, gap = self.resolve(rev)
         if gap:
             return self._gap_page(gap)
+        scope = self._scope("symbols", sha, name)
+        off = _decode(cursor, scope)
+        coverage = {"commit": sha, "generation": getattr(self, "_generation", None), "gaps": self._coverage_gaps(sha)}
 
         def item(s: _Sym) -> SymbolItem:
             return SymbolItem(f"{self.repo}:{s.content_hash}:{s.qualname}", s.qualname, s.kind, s.path,
@@ -314,11 +561,12 @@ class RepoQuery:
         if name:
             syms = [s for s in self._candidates(sha, name)
                     if s.qualname == name or s.qualname.rsplit(".", 1)[-1] == name]
-            return _page([item(s) for s in syms], limit, cursor, {"commit": sha, "gaps": []}, off=off)
+            return _page([item(s) for s in syms], limit, cursor, coverage, off=off, scope=scope)
         if sha in self._snap:  # already loaded: page in memory
-            return _page([item(s) for s in self._snap[sha][1]], limit, cursor, {"commit": sha, "gaps": []},
-                         off=off)
-        match = "MATCH (:Commit {sha:$s})-[f:HAS_FILE]->(b:Blob)-[:DEFINES]->(s:Symbol) "
+            return _page([item(s) for s in self._snap[sha][1]], limit, cursor, coverage,
+                         off=off, scope=scope)
+        match = ("MATCH (:Commit {sha:$s})-[f:HAS_FILE]->(b:Blob)-[:DEFINES]->(s:Symbol) "
+                 "WHERE toLower(f.path) ENDS WITH '.py' OR toLower(f.path) ENDS WITH '.pyi' ")
         total = self._q(match + "RETURN count(s)", {"s": sha})[0][0]
         bad = _bad_offset(off, total)
         if bad:
@@ -328,31 +576,38 @@ class RepoQuery:
                        {"s": sha, "o": off, "l": limit})
         items = [item(_Sym(_rebase(q, fp, path), kind, path, h, sl, el, th, q))
                  for path, h, q, kind, sl, el, th, fp in rows]
-        return _page(items, limit, cursor, {"commit": sha, "gaps": []}, total=total, off=off)
+        return _page(items, limit, cursor, coverage, total=total, off=off, scope=scope)
 
     # ------------------------------------------------------------ dependencies
     def _edges(self, sha: str):
         files, syms, rels = self._snapshot(sha)
         defs: dict[str, _Sym] = {}
+        ambiguous = set()
         for s in syms:
+            if s.qualname in defs and defs[s.qualname].path != s.path:
+                ambiguous.add(s.qualname)
             defs.setdefault(s.qualname, s)
         edges = {}
         for src, _p, kind, tgt, prov, ext in rels:
             key = (src, tgt, kind)
             if key not in edges or (edges[key][0] == "inferred" and prov == "parsed"):
                 edges[key] = (prov, ext)
-        return defs, edges
+        return defs, edges, ambiguous
 
+    @_consistent
     def _walk(self, rev, symbol, hops, limit, cursor, reverse: bool) -> Page:
         _limit(limit)
         if not isinstance(hops, int) or not 1 <= hops <= MAX_HOPS:
             raise ValueError(f"hops must be in 1..{MAX_HOPS}")
-        off = _decode(cursor)
         sha, gap = self.resolve(rev)
         if gap:
             return self._gap_page(gap)
-        defs, edges = self._edges(sha)
-        gaps = []
+        scope = self._scope("walk", sha, symbol, hops, reverse)
+        off = _decode(cursor, scope)
+        defs, edges, ambiguous = self._edges(sha)
+        gaps = self._coverage_gaps(sha)
+        if symbol in ambiguous:
+            return self._gap_page(Gap("AMBIGUOUS_SYMBOL", f"{symbol!r} is defined at multiple paths; clarify its identity"))
         if symbol not in defs:
             gaps.append(Gap("UNKNOWN_SYMBOL", f"{symbol!r} is not defined in {self.repo} at {rev!r}"))
         adj: dict[str, list] = {}
@@ -362,11 +617,18 @@ class RepoQuery:
         queue = deque([symbol])
         cut = False
         while queue and not cut:
+            if active_budget():
+                active_budget().remaining()
             node = queue.popleft()
             d = dist[node]
             if d >= hops:
                 continue
             for src, tgt, kind, prov, ext in sorted(adj.get(node, [])):
+                if src in ambiguous or tgt in ambiguous:
+                    gap = Gap("AMBIGUOUS_SYMBOL", f"cannot bind edge {src} -> {tgt} to a unique source path")
+                    if gap not in gaps:
+                        gaps.append(gap)
+                    continue
                 if (src, tgt, kind) in seen_edges:
                     continue
                 if len(items) >= MAX_WALK_EDGES:
@@ -386,7 +648,7 @@ class RepoQuery:
             gaps.append(Gap("TRUNCATED", f"traversal stopped after {MAX_WALK_EDGES} edges; "
                                          "deeper/remaining edges are not listed"))
         return _page(items, limit, cursor, {"commit": sha, "hops": hops, "gaps": gaps,
-                                            "frontier_truncated": cut}, off=off)
+                                            "frontier_truncated": cut}, off=off, scope=scope)
 
     def dependencies(self, rev, symbol, hops=1, limit=50, cursor=None) -> Page:
         return self._walk(rev, symbol, hops, limit, cursor, reverse=False)
@@ -395,13 +657,15 @@ class RepoQuery:
         return self._walk(rev, symbol, hops, limit, cursor, reverse=True)
 
     # ------------------------------------------------------------ changes
+    @_consistent
     def changes_between(self, rev_a, rev_b, limit=50, cursor=None) -> Page:
         _limit(limit)
         sha_a, gap_a = self.resolve(rev_a)
         sha_b, gap_b = self.resolve(rev_b)
         if gap_a or gap_b:
             return Page([], None, False, {"gaps": [g for g in (gap_a, gap_b) if g]})
-        off = _decode(cursor)
+        scope = self._scope("changes", sha_a, sha_b)
+        off = _decode(cursor, scope)
         fa, fb = self._files(sha_a), self._files(sha_b)
         changed_a = {p: e for p, e in fa.items() if p not in fb or fb[p][0] != e[0]}
         changed_b = {p: e for p, e in fb.items() if p not in fa or fa[p][0] != e[0]}
@@ -442,7 +706,10 @@ class RepoQuery:
 
         def whole(sha, path, files):
             h, n, _ = files[path]
-            return Citation(self.repo, sha, path, 1, n or self._count_lines(files[path][2]), h)
+            lines = max(len(self._source(sha, path, h).decode("utf-8", "replace").splitlines()), 1)
+            if n is not None and n != lines:
+                raise EvidenceError("STALE_SOURCE", f"{path}: indexed line count disagrees with source at {sha}")
+            return Citation(self.repo, sha, path, 1, lines, h)
 
         def diff(old: dict, new: dict):
             add = sorted(q for q in new if q not in old)
@@ -480,11 +747,8 @@ class RepoQuery:
             elif p not in renamed_old:
                 items.append(ChangeItem(p, "D", p, [], sorted(syms_a.get(p, {})), [], whole(sha_a, p, fa),
                                         kinds(syms_a.get(p, {}))))
-        return _page(items, limit, cursor, {"from": sha_a, "to": sha_b, "gaps": []}, off=off)
-
-    def _count_lines(self, git_sha: str | None) -> int:
-        data = self._blob(git_sha)
-        return max(len(data.decode("utf-8", "replace").splitlines()), 1) if data else 1
+        return _page(items, limit, cursor, {"from": sha_a, "to": sha_b,
+            "gaps": self._coverage_gaps(sha_a) + self._coverage_gaps(sha_b)}, off=off, scope=scope)
 
     def _blob(self, git_sha: str | None) -> bytes | None:
         git = self._git()
@@ -496,16 +760,23 @@ class RepoQuery:
             return None
 
     # ------------------------------------------------------------ release notes
+    @_consistent
     def release_notes(self, rev, limit=50, cursor=None) -> Page:
         _limit(limit)
         sha, gap = self.resolve(rev)
         if gap:
             return self._gap_page(gap)
-        off = _decode(cursor)
+        scope = self._scope("notes", sha)
+        off = _decode(cursor, scope)
         files = self._files(sha)
-        rows = self._q("MATCH (:Commit {sha:$s})-[:HAS_NOTE]->(n:ReleaseNote) RETURN n.path, n.content_hash "
-                       "ORDER BY n.path", {"s": sha})
-        tags = [r[0] for r in self._q("MATCH (t:Tag)-[:POINTS_TO]->(:Commit {sha:$s}) RETURN t.name",
+        match = "MATCH (:Commit {sha:$s})-[:HAS_NOTE]->(n:ReleaseNote) "
+        total = self._q(match + "RETURN count(n)", {"s": sha})[0][0]
+        bad = _bad_offset(off, total)
+        if bad:
+            return bad
+        rows = self._q(match + "RETURN n.path, n.content_hash ORDER BY n.path "
+                       "SKIP $o LIMIT $l", {"s": sha, "o": off, "l": limit})
+        tags = [r[0] for r in self._q_paged("MATCH (t:Tag)-[:POINTS_TO]->(:Commit {sha:$s}) RETURN t.name ORDER BY t.name",
                                       {"s": sha})]
         if rev not in tags and not SHA_RE.fullmatch(rev):
             tags.append(rev)
@@ -513,17 +784,18 @@ class RepoQuery:
         items, gaps = [], []
         for path, h in rows:
             entry = files.get(path)
-            data = self._blob(entry[2] if entry else None)
-            if data is None:
+            if entry is None:
                 gaps.append(Gap("MISSING_SOURCE", f"cannot read {path} at {sha}"))
                 continue
+            data = self._source(sha, path, h)
             lines = data.decode("utf-8", "replace").splitlines()
             start, end = _section(lines, versions)
             text = "\n".join(lines[start - 1:end])
             items.append(NoteItem(path, text, Citation(self.repo, sha, path, start, end, h)))
-        return _page(items, limit, cursor, {"commit": sha, "gaps": gaps}, off=off)
+        return _page(items, limit, cursor, {"commit": sha, "gaps": gaps}, off=off, scope=scope, total=total)
 
     # ------------------------------------------------------------ history
+    @_consistent
     def symbol_history(self, symbol: str, revs: list[str]) -> list[HistoryEntry]:
         out = []
         for rev in revs:
@@ -532,12 +804,19 @@ class RepoQuery:
                 out.append(HistoryEntry(rev, None, None, None, None, gap))
                 continue
             syms = self._candidates(sha, symbol)
+            matches = [s for s in syms if s.qualname == symbol]
+            if len({s.path for s in matches}) > 1:
+                out.append(HistoryEntry(rev, sha, None, None, None,
+                                        Gap("AMBIGUOUS_SYMBOL", f"{symbol!r} is defined at multiple paths")))
+                continue
             hit = next((s for s in syms if s.qualname == symbol), None)
             if hit is None:
                 hit_path = next((s for s in syms if s.path == symbol and s.kind == "module"), None)
                 hit = hit_path
             if hit is None:
-                out.append(HistoryEntry(rev, sha, False, None, None))
+                gaps = self._coverage_gaps(sha)
+                out.append(HistoryEntry(rev, sha, None if gaps else False, None, None,
+                                        Gap("INCOMPLETE_COVERAGE", "; ".join(g.detail for g in gaps)) if gaps else None))
             else:
                 out.append(HistoryEntry(rev, sha, True, hit.content_hash, self._cite(sha, hit)))
         return out
@@ -572,6 +851,7 @@ class RepoQuery:
         return self._ancestors(b, stop=a)[1]
 
     # ------------------------------------------------------------ fix status
+    @_consistent
     def fix_status(self, rev: str, fix_commit: str, *, symbol: str | None = None) -> FixStatus:
         """Is the change introduced by `fix_commit` present in the CONTENT at `rev`?"""
         sha, gap = self.resolve(rev)
@@ -592,15 +872,18 @@ class RepoQuery:
         except (GitError, OSError) as e:
             return FixStatus("UNCERTAIN", [], [Gap("CHANGE_IDENTITY_UNKNOWN", str(e))],
                              "the fix diff is unavailable")
-        hunks = [h for h in hunks if any(x.strip() for x in h[2])]
+        hunks = [h for h in hunks if any(x.strip() for x in h[1] + h[2])]
         if not hunks:
-            return FixStatus("UNCERTAIN", [], [Gap("CHANGE_IDENTITY_UNKNOWN", f"{fix} adds no lines")],
-                             "the fix adds no lines to check for")
+            return FixStatus("UNCERTAIN", [], [Gap("CHANGE_IDENTITY_UNKNOWN", f"{fix} has no textual hunks")],
+                             "the fix has no textual change to check")
         files = self._files(sha)
         pre_files = self._files(parents[0][0])
         fix_files = self._files(fix)
         # files outside the indexed include scope cannot be checked and do not count as missing
-        hunks = [h for h in hunks if h[0] in fix_files] or hunks
+        hunks = [h for h in hunks if h[0] in fix_files or h[0] in pre_files]
+        if not hunks:
+            return FixStatus("UNCERTAIN", [], [Gap("CHANGE_IDENTITY_UNKNOWN", "fix is outside indexed scope")],
+                             "the fix's changed files are outside indexed scope")
         ancestor = self._is_ancestor(fix, sha)
         rename_map: dict[str, str] = {}
         if any(h[0] not in files for h in hunks):
@@ -615,15 +898,30 @@ class RepoQuery:
         for path, removed, added in hunks:
             p = path if path in files else rename_map.get(path)
             if p is None or p not in files:
+                if not added and path not in fix_files:
+                    continue  # a file deleted by the fix remains deleted
                 missing.append(path)
                 continue
             h, _, g = files[p]
-            data = self._blob(g)
-            if data is None:
-                missing.append(path)
-                continue
+            data = self._source(sha, p, h)
             lines = data.decode("utf-8", "replace").splitlines()
             file_cits[p] = Citation(self.repo, sha, p, 1, max(len(lines), 1), h)
+            if any(x.strip() for x in removed):
+                fixed_data = self._source(fix, path, fix_files[path][0]) if path in fix_files else b""
+                fixed_lines = fixed_data.decode("utf-8", "replace").splitlines()
+                def occurrences(source):
+                    return sum(source[i:i + len(removed)] == removed
+                               for i in range(len(source) - len(removed) + 1))
+                if occurrences(lines) > occurrences(fixed_lines):
+                    missing.append(path)
+                    continue  # required deletion has been undone, even if added guards survive
+                if path not in fix_files:
+                    return FixStatus("UNCERTAIN", list(file_cits.values()), [Gap("CHANGE_IDENTITY_UNKNOWN",
+                        f"{path} was deleted by the fix but a different file now exists at that path")],
+                        "the deleted path was recreated; content alone cannot establish change identity")
+            if not any(x.strip() for x in added):
+                found.append(file_cits[p])
+                continue
             at = _find_block(lines, added)
             span = None
             if at is not None:
@@ -632,14 +930,14 @@ class RepoQuery:
                 span = _find_subsequence(lines, added)
             if span is None:
                 missing.append(path)
-                pre_blob = self._blob(pre_files[path][2]) if path in pre_files else None
+                pre_blob = self._source(parents[0][0], path, pre_files[path][0]) if path in pre_files else None
                 pre = pre_blob.decode("utf-8", "replace").splitlines() if pre_blob else []
                 similar = similar or _similar(lines, added, removed + pre)
             else:
                 found.append(Citation(self.repo, sha, p, span[0], span[1], h))
 
         if not missing:
-            gaps, reason = [], f"the lines added by {fix[:12]} are present at {sha[:12]}"
+            gaps, reason = [], f"the additions and deletions of {fix[:12]} remain at {sha[:12]}"
             if not ancestor:
                 match = self._patch_match(git, fix, sha)
                 if match:
@@ -692,15 +990,17 @@ class RepoQuery:
 
 def _parse_patch(text: str) -> list[tuple[str, list[str], list[str]]]:
     """Hunks of a -U0 patch: (new path, removed lines, added lines)."""
-    hunks, path, cur = [], None, None
+    hunks, path, old_path, cur = [], None, None, None
     for line in text.splitlines():
         if line.startswith("diff "):
             cur = None
+            old_path = None
         elif line.startswith("+++ ") and cur is None:
             t = line[4:]
-            path = None if t == "/dev/null" else (t[2:] if t.startswith("b/") else t)
+            path = old_path if t == "/dev/null" else (t[2:] if t.startswith("b/") else t)
         elif line.startswith("--- ") and cur is None:
-            continue
+            t = line[4:]
+            old_path = None if t == "/dev/null" else (t[2:] if t.startswith("a/") else t)
         elif line.startswith("@@"):
             cur = (path, [], [])
             if path is not None:

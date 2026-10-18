@@ -6,7 +6,7 @@ import warnings
 
 from rw.repo.model import Relation, Symbol
 
-VERSION = "1"
+VERSION = "2"
 LIMITS = [
     "Dynamic imports (importlib, __import__, imports built from strings) are not extracted.",
     "Calls through getattr, dicts of callables, or other dynamic dispatch are not resolved.",
@@ -53,9 +53,15 @@ class PythonAdapter:
         package = mod if is_pkg else mod.rpartition(".")[0]
         names: dict[str, str] = {}  # local binding -> qualified target
         rels: list[Relation] = []
+        relative_targets: dict[str, str] = {}
 
         def rel(kind, src, tgt, prov):
-            rels.append(Relation(kind, src, tgt, prov, extractor))
+            relative = None
+            for prefix in sorted(relative_targets, key=len, reverse=True):
+                if tgt == prefix or tgt.startswith(prefix + "."):
+                    relative = relative_targets[prefix] + tgt[len(prefix):]
+                    break
+            rels.append(Relation(kind, src, tgt, prov, extractor, relative))
 
         # imports anywhere in the module bind names for resolution
         for node in ast.walk(tree):
@@ -70,10 +76,13 @@ class PythonAdapter:
                     anchor = anchor[:len(anchor) - (node.level - 1)] if node.level > 1 else anchor
                     base = ".".join([*anchor, *([base] if base else [])])
                 for a in node.names:
+                    target = f"{base}.{a.name}" if base and a.name != "*" else (base or a.name)
+                    if node.level:
+                        suffix = ".".join(x for x in (node.module, None if a.name == "*" else a.name) if x)
+                        relative_targets[target] = "." * node.level + suffix
                     if a.name == "*":
                         rel("IMPORTS", mod, base, "parsed")
                         continue
-                    target = f"{base}.{a.name}" if base else a.name
                     rel("IMPORTS", mod, target, "parsed")
                     names[a.asname or a.name] = target
 

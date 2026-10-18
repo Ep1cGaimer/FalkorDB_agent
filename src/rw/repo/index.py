@@ -14,9 +14,11 @@ Large-history design (S4/E3):
 - Commits whose file map is fully written carry `files_done=true`; later runs (updates, resumes) only
   write file maps for new commits. A commit interrupted mid-write has its partial HAS_FILE/HAS_NOTE
   edges deleted and rewritten. Each run still links (ImportRun)-[:INDEXED]->(Commit) for all its
-  commits; queries only trust commits linked from a COMPLETE run.
-- Re-extraction (new extractor version, or a blob interrupted before `extracted_by` was set) DETACH
-  DELETEs the blob's previous symbols first, so no stale relation edges remain."""
+  commits; queries only trust commits linked from the currently published COMPLETE run.
+- A renewable, fenced import lease excludes other writers. The Repository publication is STARTED
+  before mutation and COMPLETE only after all writes. Queries reject an unfinished publication.
+- Re-extraction clears `extracted_by` before deleting old symbols; interruption cannot leave a
+  reusable completion marker over missing facts. Changed extraction configuration rebuilds file maps."""
 from __future__ import annotations
 
 import fnmatch
@@ -26,6 +28,7 @@ import re
 import time
 import tracemalloc
 import uuid
+import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
@@ -38,6 +41,7 @@ from rw.repo.model import Gap
 
 CHUNK = 1000
 BLOB_BATCH = 200
+IMPORT_LEASE_SECONDS = 120
 
 
 class ImportInterrupted(RuntimeError):
@@ -114,10 +118,82 @@ def select_revisions(config: RepoConfig, git: GitRepo) -> tuple[list[str], list]
 
 def index_repository(config: RepoConfig, graph_name: str | None = None, db=None, *,
                      interrupt_after: int | None = None) -> IndexReport:
+    """Serialize writers across processes; a crashed writer's lease expires automatically.
+
+    Queries reject an in-progress/failed publication. Retry is the recovery operation; no
+    previous snapshot is served while shared extraction facts might have been changed.
+    """
+    db = db or G.connect()
+    graph_name = graph_name or graph_name_for(config)
+    lock = db.connection.lock(f"rw:repo-import:{graph_name}", timeout=IMPORT_LEASE_SECONDS, thread_local=False)
+    if not lock.acquire(blocking=False):
+        raise RuntimeError("repository import already in progress; retry after it finishes")
+    stop, lost = threading.Event(), threading.Event()
+
+    def renew():
+        while not stop.wait(IMPORT_LEASE_SECONDS / 4):
+            try:
+                lock.extend(IMPORT_LEASE_SECONDS, replace_ttl=True)
+            except Exception:
+                lost.set()
+                return
+
+    heartbeat = threading.Thread(target=renew, daemon=True)
+    heartbeat.start()
+    try:
+        return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+                                 lease_lost=lost, lease=lock)
+    finally:
+        stop.set()
+        heartbeat.join(timeout=5)
+        from redis.exceptions import LockNotOwnedError
+        try:
+            lock.release()
+        except LockNotOwnedError:
+            if not lost.is_set():
+                raise
+
+
+def _index_repository(config: RepoConfig, graph_name: str, db, *,
+                      lease_lost: threading.Event, lease,
+                     interrupt_after: int | None = None) -> IndexReport:
     """Index `config` into `graph_name`. See the module docstring for the storage/performance design."""
     graph_name = graph_name or graph_name_for(config)
     db = db or G.connect()
-    graph = db.select_graph(graph_name)
+    underlying = db.select_graph(graph_name)
+    def fenced_execute(*command, **kwargs):
+        # WATCH + EXEC makes lease validation atomic with the actual GRAPH command. A paused
+        # writer cannot resume after lease expiry and mutate a newer writer's publication.
+        # A renewal changes the watched key's TTL without changing its owner. EXEC
+        # aborts without running the command; retry that case under a fresh WATCH.
+        from redis.exceptions import WatchError
+        for _ in range(8):
+            try:
+                with db.connection.pipeline() as pipe:
+                    pipe.watch(lease.name)
+                    owner = pipe.get(lease.name)
+                    owner = owner.encode() if isinstance(owner, str) else owner
+                    if lease_lost.is_set() or owner != lease.local.token:
+                        lease_lost.set()
+                        raise RuntimeError("repository import lease lost; retry import")
+                    pipe.multi()
+                    pipe.execute_command(*command, **kwargs)
+                    return pipe.execute()[0]
+            except WatchError:
+                # Re-entering checks the token atomically with the next command;
+                # a successor's token is rejected before any write can execute.
+                continue
+        raise RuntimeError("repository import lease contention; retry import")
+
+    underlying.execute_command = fenced_execute
+
+    class LeasedGraph:
+        def query(self, *args, **kwargs):
+            if lease_lost.is_set():
+                raise RuntimeError("repository import lease lost; retry import")
+            return underlying.query(*args, **kwargs)
+
+    graph = LeasedGraph()
     git = GitRepo(config.path)
     run_id = uuid.uuid4().hex
     report = IndexReport(config.name, graph_name, run_id, "STARTED")
@@ -127,12 +203,20 @@ def index_repository(config: RepoConfig, graph_name: str | None = None, db=None,
         tracemalloc.start()
 
     _ensure_indexes(graph)
-    graph.query("MERGE (r:Repository {name:$name}) SET r.path = $path",
-                {"name": config.name, "path": str(config.path)})
+    fingerprint = hashlib.sha256(json.dumps({
+        "schema": 2, "include": config.include, "exclude": config.exclude,
+        "languages": config.languages, "release_notes": config.release_notes,
+    }, sort_keys=True).encode()).hexdigest()
+    previous = graph.query("MATCH (r:Repository {name:$name}) RETURN r.config_hash",
+                           {"name": config.name}).result_set
+    graph.query("MERGE (r:Repository {name:$name}) SET r.path=$path, r.status='STARTED', r.generation=$id",
+                {"name": config.name, "path": str(config.path), "id": run_id})
     graph.query("CREATE (:ImportRun {id:$id, repo:$repo, status:'STARTED', started_at:$t})",
                 {"id": run_id, "repo": config.name, "t": _now()})
     phases: dict[str, float] = {}
     try:
+        if not previous or previous[0][0] != fingerprint:
+            graph.query("MATCH (c:Commit) SET c.files_done=null")
         tp = time.perf_counter()
         revs, tags = select_revisions(config, git)
         commits = git.commits(revs)
@@ -149,6 +233,8 @@ def index_repository(config: RepoConfig, graph_name: str | None = None, db=None,
         _write(graph, "UNWIND $rows AS row MATCH (c:Commit {sha:row.c}), (p:Commit {sha:row.p}) "
                       "MERGE (c)-[e:PARENT {order:row.order}]->(p)",
                [{"c": c.sha, "p": p, "order": i} for c in todo for i, p in enumerate(c.parents)])
+        # Tags are mutable aliases, replaced as a set while the publication is unavailable.
+        graph.query("MATCH (t:Tag) DETACH DELETE t")
         _write(graph, "UNWIND $rows AS row MERGE (t:Tag {name:row.name}) SET t.message=row.message "
                       "WITH t, row MATCH (c:Commit {sha:row.sha}) MERGE (t)-[:POINTS_TO]->(c)",
                [{"name": t.name, "sha": t.target_sha, "message": t.message} for t in tags])
@@ -183,14 +269,18 @@ def index_repository(config: RepoConfig, graph_name: str | None = None, db=None,
                     cur.pop(path, None)
                     continue
                 if config.include and not _matches(path, config.include):
+                    cur.pop(path, None)
                     continue
                 if config.exclude and _matches(path, config.exclude):
+                    cur.pop(path, None)
                     continue
                 cur[path] = bsha
             if children.get(sha, 0) > 0:
                 maps[sha] = cur
             for path, bsha in cur.items():
-                blob_first_path.setdefault(bsha, path)
+                first = blob_first_path.setdefault(bsha, path)
+                if adapter_for(first, config.languages) is None and adapter_for(path, config.languages) is not None:
+                    blob_first_path[bsha] = path
             if sha in todo_set:
                 file_rows.append((sha, dict(cur) if sha in maps else cur))
         del maps
@@ -267,6 +357,8 @@ def index_repository(config: RepoConfig, graph_name: str | None = None, db=None,
                 phases=phases)
         raise
     _finish(graph, report, t0, tracing, final_status="COMPLETE", phases=phases)
+    graph.query("MATCH (r:Repository {name:$name}) SET r.status='COMPLETE', r.published_run=$id, "
+                "r.config_hash=$h", {"name": config.name, "id": run_id, "h": fingerprint})
     return report
 
 
@@ -314,7 +406,7 @@ class _BlobBatch:
             for r in ex.relations:
                 if r.source not in defs:
                     continue
-                key = (r.kind, r.source, r.target, r.provenance, r.extractor)
+                key = (r.kind, r.source, r.target, r.provenance, r.extractor, r.relative_target)
                 if key in seen:
                     continue
                 seen.add(key)
@@ -322,6 +414,7 @@ class _BlobBatch:
                 tid = sid(r.target) if local else f"{self.config.name}:ref:{r.target}"
                 self.rels.setdefault(r.kind, []).append(
                     {"src": sid(r.source), "tid": tid, "tq": r.target, "local": local,
+                     "relative": r.relative_target,
                      "prov": r.provenance, "ext": r.extractor})
             self.report.symbols += len(ex.symbols)
             self.report.relations += len(ex.relations)
@@ -332,6 +425,10 @@ class _BlobBatch:
         if not self.blobs:
             return
         g = self.graph
+        # Clear the completion marker BEFORE the first destructive write. A retry must never
+        # reuse a blob whose old symbols were removed by an interrupted re-extraction.
+        _write(g, "UNWIND $rows AS row MATCH (b:Blob {content_hash:row.h}) "
+                  "SET b.extracted_by=null", self.stale)
         _write(g, "UNWIND $rows AS row MATCH (:Blob {content_hash:row.h})-[:DEFINES]->(s:Symbol) "
                   "DETACH DELETE s", self.stale)
         _write(g, "UNWIND $rows AS row MERGE (b:Blob {content_hash:row.h}) SET b.git_sha=row.g, "
@@ -346,10 +443,10 @@ class _BlobBatch:
             local = [r for r in rows if r["local"]]
             ext = [r for r in rows if not r["local"]]
             _write(g, "UNWIND $rows AS row MATCH (s:Symbol {id:row.src}), (t:Symbol {id:row.tid}) "
-                      f"CREATE (s)-[:{kind} {{provenance:row.prov, extractor:row.ext}}]->(t)", local)
+                      f"CREATE (s)-[:{kind} {{provenance:row.prov, extractor:row.ext, relative_target:row.relative}}]->(t)", local)
             _write(g, "UNWIND $rows AS row MATCH (s:Symbol {id:row.src}) MERGE (t:Symbol {id:row.tid}) "
                       "ON CREATE SET t.qualname=row.tq, t.external=true "
-                      f"CREATE (s)-[:{kind} {{provenance:row.prov, extractor:row.ext}}]->(t)", ext)
+                      f"CREATE (s)-[:{kind} {{provenance:row.prov, extractor:row.ext, relative_target:row.relative}}]->(t)", ext)
         _write(g, "UNWIND $rows AS row MATCH (b:Blob {content_hash:row.h}) "
                   "SET b.extracted_by=row.x, b.errors=row.errors", self.blobs)
         self.blobs, self.stale, self.syms, self.rels = [], [], [], {}
@@ -406,6 +503,9 @@ def _finish(graph, report: IndexReport, t0: float, tracing: bool, final_status: 
     except Exception:
         pass
     params = {"id": report.import_run_id, "t": _now(), "m": json.dumps(report.metrics)}
+    if final_status == "FAILED":
+        graph.query("MATCH (r:Repository {name:$name, generation:$id}) SET r.status='FAILED'",
+                    {"name": report.repo, "id": report.import_run_id})
     if final_status:
         params["s"] = final_status
         graph.query("MATCH (r:ImportRun {id:$id}) SET r.status=$s, r.finished_at=$t, r.metrics_json=$m",

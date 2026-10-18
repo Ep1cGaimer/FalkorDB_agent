@@ -54,7 +54,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.repo.conftest import git as _git, write as _write
+from .conftest import git as _git, write as _write
 
 # ---------------------------------------------------------------- test-only `r3` repo
 

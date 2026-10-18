@@ -335,19 +335,30 @@ def _repo_config(name: str):
 
 def _repo_listing_entry(cfg) -> dict:
     from .repo.index import graph_name_for
-    entry = {"name": cfg.name, "import_status": None, "revisions": []}
+    entry = {"name": cfg.name, "import_status": None, "index_generation": None, "revisions": []}
     try:
         from . import graph as G
         g = G.connect().select_graph(graph_name_for(cfg))
-        runs = g.ro_query("MATCH (r:ImportRun) RETURN r.status, r.started_at "
-                          "ORDER BY r.started_at DESC LIMIT 1").result_set
-        if runs:
-            entry["import_status"] = runs[0][0]
-        rows = g.ro_query("MATCH (:ImportRun {status:'COMPLETE'})-[:INDEXED]->(c:Commit)<-[:POINTS_TO]-(t:Tag) "
-                          "RETURN c.sha, collect(DISTINCT t.name) ORDER BY c.sha").result_set
-        entry["revisions"] = [{"sha": sha, "refs": sorted(refs)} for sha, refs in rows]
-    except Exception:  # graph absent or database unavailable: listed as not indexed
-        pass
+        params = {"name": cfg.name}
+        state_query = "MATCH (r:Repository {name:$name}) RETURN r.status, r.generation"
+        state = g.ro_query(state_query, params).result_set
+        if not state:
+            return entry
+        entry["import_status"], entry["index_generation"] = state[0]
+        if entry["import_status"] != "COMPLETE":
+            return entry
+        from .repo.query import RepoQuery
+        q = RepoQuery(graph_name_for(cfg), cfg.name)
+        page = q.revisions(limit=200)
+        if g.ro_query(state_query, params).result_set != state:
+            entry["import_status"] = "INDEX_CHANGED"
+            entry["index_generation"] = None
+            return entry
+        entry["revisions"] = page.items
+        entry["revision_coverage"] = {**page.coverage, "next_cursor": page.next_cursor,
+                                      "truncated": page.truncated}
+    except Exception:
+        entry.update(import_status="INDEX_UNAVAILABLE", index_generation=None, revisions=[])
     return entry
 
 
@@ -356,12 +367,12 @@ def _add_repo_routes(app: FastAPI) -> None:
 
     @app.get("/api/repos")
     def list_repos():
-        from .repo.config import RepoConfig, repos_dir
+        from .repo.config import load_config, repos_dir
         out = []
         d = repos_dir()
         for p in sorted(d.glob("*.json")) if d.is_dir() else []:
             try:
-                cfg = RepoConfig(**json.loads(p.read_text(encoding="utf-8")))
+                cfg = load_config(p)
             except (OSError, ValueError):
                 continue
             if cfg.name != p.stem:
@@ -381,11 +392,35 @@ def _add_repo_routes(app: FastAPI) -> None:
             raise HTTPException(502, f"indexing failed ({type(exc).__name__})") from None
         return json.loads(json.dumps(asdict(report), default=str))
 
+    @app.get("/api/repos/{name}/revisions")
+    def repo_revisions(name: str, limit: int = Query(50, ge=1, le=200),
+                       cursor: str | None = Query(None, max_length=2048)):
+        from dataclasses import asdict
+        from .repo.index import graph_name_for
+        from .repo.query import RepoQuery, IndexChangedError
+        cfg = _repo_config(name)
+        try:
+            return asdict(RepoQuery(graph_name_for(cfg), cfg.name).revisions(limit, cursor))
+        except ValueError:
+            raise HTTPException(422, "invalid revision pagination cursor") from None
+        except IndexChangedError:
+            raise HTTPException(409, "repository index changed; restart pagination") from None
+        except Exception as exc:
+            raise HTTPException(502, f"revision listing failed ({type(exc).__name__})") from None
+
     @app.post("/api/repos/{name}/investigate")
     def investigate_repo(name: str, body: RepoInvestigateRequest):
+        from .repo.config import NAME_RE
         from .repo.investigate import investigate
-        cfg = _repo_config(name)
-        return investigate(name, body.revision, body.question, config=cfg).to_dict()
+        if not NAME_RE.fullmatch(name):
+            raise HTTPException(422, "invalid repository name")
+        result = investigate(name, body.revision, body.question)
+        kinds = {g.kind for g in result.gaps}
+        if "UNKNOWN_REPOSITORY" in kinds:
+            return JSONResponse(status_code=404, content=result.to_dict())
+        if kinds & {"INVALID_CONFIGURATION", "REPOSITORY_SELECTION_MISMATCH"}:
+            return JSONResponse(status_code=422, content=result.to_dict())
+        return result.to_dict()
 
 
 def create_app(*, session_factory: Callable | None = None,

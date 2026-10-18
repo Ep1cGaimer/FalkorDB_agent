@@ -5,10 +5,10 @@ orchestration code — and that repository/revision selection works through the 
 
 ## Inputs
 
-- `configs/<repo>.json` — one `RepoConfig` per repository (`name`, `path` relative to the project root,
+- `configs/<repo>.json` — one `RepoConfig` per repository (`name`, `path` relative to the configuration file,
   bounded `revisions`, `languages`, `include`/`exclude`). Optional `"unseen": true` marks a repository
   not inspected during implementation.
-- `core_manifest.json` — `{"files": {"src/rw/<path>.py": "<sha256>", ...}}`, recorded by the implementer
+- `core_manifest_file` (optional config metadata; otherwise `core_manifest.json`) — `{"files": {"src/rw/<path>.py": "<sha256>", ...}}`, recorded by the implementer
   **before** onboarding an unseen repository. For unseen repos the test fails if any `src/rw/**/*.py`
   hash differs (or a file is added/removed).
 
@@ -39,3 +39,9 @@ orchestration code — and that repository/revision selection works through the 
 Report per repository: configuration effort, languages covered, coverage gaps and adapter limitations,
 and whether core files changed. Two repositories (one unseen) are required for E1; one well-supported
 language is sufficient initially. Claims are limited to the measured repositories and revisions.
+
+The current Requests and ItsDangerous configurations are development inputs. ItsDangerous's
+original unseen trial and manifest remain historical at the audited branch revision; its new
+metadata explicitly records invalidation after core repairs. A new unseen trial needs a new
+repository and a core freeze captured before source inspection. The test records core hashes
+both before and after each import. Passing the existing development imports does not close T1.

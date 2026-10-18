@@ -179,7 +179,7 @@ def test_retrieval_mode_never_dispositions(q, make_repo, write_config, graph_nam
 def _hostile_files(sentinel_dir: Path) -> dict:
     def w(tag):
         return f"open(r\"{sentinel_dir / tag}\", \"w\").write(\"x\")\n"
-    from tests.repo.conftest import V1_FILES
+    from .conftest import V1_FILES
     files = dict(V1_FILES)
     files.update({
         "setup.py": w("setup") + "def configure():\n    return 1\n",

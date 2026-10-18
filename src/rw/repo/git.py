@@ -40,9 +40,36 @@ class GitRepo:
         self.path = str(Path(path))
 
     def _proc(self, *args: str, stdin: bytes | None = None) -> subprocess.CompletedProcess:
-        env = {**os.environ, "GIT_TERMINAL_PROMPT": "0", "GIT_OPTIONAL_LOCKS": "0"}
-        return subprocess.run(["git", "-c", "core.quotepath=false", "-C", self.path, *args],
-                              capture_output=True, env=env, input=stdin)
+        from rw.repo.budget import BudgetExhausted, active_budget
+        budget = active_budget()
+        try:
+            proc = subprocess.run(self._command(*args), capture_output=True,
+                                  env=self._environment(), input=stdin,
+                                  timeout=budget.remaining() if budget else None)
+        except subprocess.TimeoutExpired:
+            # subprocess.run kills and waits for the child before raising.
+            if budget:
+                raise BudgetExhausted(budget, "seconds") from None
+            raise
+        if budget:
+            budget.remaining()
+        return proc
+
+    def _environment(self) -> dict[str, str]:
+        # Do not let the caller's Git routing/configuration select a different object database,
+        # invoke a pager, or replace objects. Repository-local configuration still applies, so
+        # executable Git features are also disabled explicitly in _command.
+        env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+        env.update(GIT_TERMINAL_PROMPT="0", GIT_OPTIONAL_LOCKS="0", GIT_CONFIG_NOSYSTEM="1",
+                   GIT_CONFIG_GLOBAL=os.devnull, GIT_NO_REPLACE_OBJECTS="1", GIT_NO_LAZY_FETCH="1",
+                   GIT_PAGER="cat")
+        return env
+
+    def _command(self, *args: str) -> list[str]:
+        return ["git", "--no-pager", "-c", "core.quotepath=false",
+                "-c", "log.showSignature=false", "-c", "core.fsmonitor=false",
+                "-c", "core.hooksPath=" + os.devnull, "-c", "diff.external=",
+                "-c", "core.pager=cat", "-C", self.path, *args]
 
     def _bytes(self, *args: str, stdin: bytes | None = None) -> bytes:
         proc = self._proc(*args, stdin=stdin)
@@ -63,7 +90,7 @@ class GitRepo:
         shas = [self.resolve(r) for r in revs]
         if not shas:
             return []
-        out = self._text("log", "--topo-order", "--reverse",
+        out = self._text("log", "--no-show-signature", "--topo-order", "--reverse",
                          "--format=%H%x00%P%x00%at%x00%s%x00%B%x1e", *shas, "--")
         result = []
         for rec in out.split("\x1e"):
@@ -155,7 +182,8 @@ class GitRepo:
         shas = [self.resolve(r) for r in revs]
         if not shas:
             return
-        out = self._bytes("log", "--topo-order", "--reverse", "--raw", "-z", "--no-abbrev",
+        out = self._bytes("log", "--no-show-signature", "--no-ext-diff", "--no-textconv",
+                          "--topo-order", "--reverse", "--raw", "-z", "--no-abbrev",
                           "--no-renames", "--diff-merges=first-parent", "--root",
                           "--format=%x01%H", *shas, "--")
         for chunk in out.split(b"\x01"):
@@ -181,9 +209,8 @@ class GitRepo:
         shas = list(shas)
         if not shas:
             return
-        env = {**os.environ, "GIT_TERMINAL_PROMPT": "0", "GIT_OPTIONAL_LOCKS": "0"}
-        proc = subprocess.Popen(["git", "-C", self.path, "cat-file", "--batch"], stdin=subprocess.PIPE,
-                                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=env)
+        proc = subprocess.Popen(self._command("cat-file", "--batch"), stdin=subprocess.PIPE,
+                                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=self._environment())
 
         def feed():
             try:

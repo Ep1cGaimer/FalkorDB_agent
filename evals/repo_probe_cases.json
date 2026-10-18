@@ -1,0 +1,7 @@
+{
+  "classification": "development probes selected from inspected repositories; not held-out scoring",
+  "repositories": [
+    {"config": "repo_onboarding/configs/requests.json", "revision": "v2.32.0", "symbol": "requests.api.get"},
+    {"config": "repo_onboarding/configs/itsdangerous.json", "revision": "2.2.0", "symbol": "itsdangerous.serializer.Serializer.dumps"}
+  ]
+}

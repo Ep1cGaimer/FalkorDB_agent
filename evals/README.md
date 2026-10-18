@@ -50,3 +50,21 @@ Run these checks against a ready FalkorDB instance (no live provider calls):
 The SQL CLI defaults to the baseline; its reusable `compare(fixture_root, oracle_path)` is also
 exercised against the overlay. The scorer accepts `--fixture-root` and `--oracle` for saved runs
 against another fixture root. See [the oracle method](expected/README.md) for prediction provenance.
+
+## Repository transport and graph diagnostics
+
+`python evals/repo_transport_probe.py --isolated-db --out artifacts/repo_probes/<new-run-id>`
+imports the configured development repositories, records multi-hop read queries and source hash
+checks, removes/restores root dependency edges, marks extraction evidence stale, and injects a
+transport interruption after real reads. It compares the same requests over the actual CLI, a
+temporary TCP API, and concurrent calls on real MCP stdio sessions, including session restart,
+incomplete/stale publications and malformed inputs. The isolated option uses the pinned Docker
+image on a loopback-only assigned port and tests an actual owned-container stop/start. It never
+stops the existing database. All owned services/indexes are cleaned up, and earlier output
+directories are refused rather than overwritten.
+
+The JSON record includes the source freeze, exact harness bytes/hash, read queries/parameters/rows,
+transport requests/responses, failures and cleanup. The stopped-database case must expose an
+INDEX_UNAVAILABLE gap. A stale relationship must not become an empty dependency answer.
+These are inspected development cases with no live model calls or blind scoring; they establish
+transport/causal diagnostics, not the full T7/T9 gates or comparative advantage.

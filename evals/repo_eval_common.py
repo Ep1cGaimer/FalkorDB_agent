@@ -73,8 +73,13 @@ class Clone:
 
     def run(self, *args: str, check: bool = False) -> subprocess.CompletedProcess:
         assert args[0] in {"rev-parse", "show", "grep", "log", "ls-tree", "cat-file", "tag", "merge-base"}
-        return subprocess.run(["git", "-C", str(self.path), *args], capture_output=True, text=True,
-                              encoding="utf-8", errors="replace", check=check)
+        from rw.repo.git import GitRepo
+        raw = GitRepo(self.path)._proc(*args)
+        result = subprocess.CompletedProcess(raw.args, raw.returncode,
+            raw.stdout.decode("utf-8", "replace"), raw.stderr.decode("utf-8", "replace"))
+        if check:
+            result.check_returncode()
+        return result
 
     def sha(self, rev) -> str | None:
         if not isinstance(rev, str) or not rev or rev.startswith("-"):
@@ -144,6 +149,8 @@ def check_citation(clone: Clone, c: dict, allowed: set[str], default_rev: str | 
 
 
 def overlaps(cit: dict, exp: dict, clone: Clone) -> bool:
+    if not cit.get("valid") or not cit.get("requested_revision_match"):
+        return False
     if cit.get("path") != exp["path"] or not cit.get("resolved_sha"):
         return False
     if cit["resolved_sha"] != clone.sha(exp["revision"]):
@@ -155,10 +162,10 @@ def overlaps(cit: dict, exp: dict, clone: Clone) -> bool:
 
 
 def evidence_scores(cits: list[dict], q: dict, clone: Clone) -> tuple[float | None, float | None]:
-    """(recall, precision). recall is None when nothing is expected; precision None when nothing returned."""
+    """(recall, precision); empty answerable retrieval earns zeros, not an omitted denominator."""
     exp = expected_citations(q)
     recall = (sum(any(overlaps(c, x, clone) for c in cits) for x in exp) / len(exp)) if exp else None
-    precision = (sum(any(overlaps(c, x, clone) for x in exp) for c in cits) / len(cits)) if cits else None
+    precision = (sum(any(overlaps(c, x, clone) for x in exp) for c in cits) / len(cits)) if cits else (0.0 if exp else None)
     return recall, precision
 
 
@@ -201,9 +208,34 @@ def answer_check(q: dict, text: str, cits: list[dict], keys: dict, *, structural
 
 
 def grounded(q: dict, correct: bool, recall, cits: list[dict]) -> bool:
-    if q["category"] == "missing_evidence" and not q.get("expected_citations"):
+    if fabricated(cits):
+        return False
+    if q["category"] in ("missing_evidence", "ambiguous") and not q.get("expected_citations"):
         return correct and not fabricated(cits)
-    return bool(correct and (recall or 0) > 0)
+    return bool(correct and recall == 1.0)
+
+
+def failed_task(repo: str, q: dict, error: str) -> dict:
+    """Keep failed attempts in quality denominators; unavailable measurements remain explicit."""
+    applicable = bool(expected_citations(q))
+    return {"repo": repo, "question_id": q["id"], "category": q["category"],
+            "revision": q.get("revision"), "contestant": "deterministic_retrieval",
+            "answer": "", "answer_correct": False, "grounded_answer_correct": False,
+            "answer_decision": error, "error": error, "evidence_recall": 0.0 if applicable else None,
+            "evidence_precision": 0.0 if applicable else None, "citations": [],
+            "citation_validity": None, "wrong_revision": False, "wrong_revision_citations": 0,
+            "fabricated_citations": 0, "tokens": 0, "tool_calls": 0, "latency_s": None,
+            "context_limit": False, "budget_exhausted": False, "infra_error": True}
+
+
+def macro_mean(tasks: list[dict], metric: str) -> float | None:
+    """Average repeats within each distinct question before averaging questions."""
+    groups: dict[tuple, list[float]] = {}
+    for t in tasks:
+        if t.get(metric) is not None:
+            groups.setdefault((t["repo"], t["question_id"]), []).append(float(t[metric]))
+    means = [sum(values) / len(values) for values in groups.values()]
+    return round(sum(means) / len(means), 4) if means else None
 
 
 def manifest_for(name: str, revs: set[str]) -> dict:

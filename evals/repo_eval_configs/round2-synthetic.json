@@ -1,9 +1,9 @@
 {
- "name": "round2-synthetic",
- "path": "D:\\Projects\\FalkorDB_agent\\artifacts\\question_repos\\round2-synthetic",
- "revisions": [],
- "tag_pattern": "^v\\d+\\.\\d+\\.\\d+$",
- "languages": [
-  "python"
- ]
+  "name": "round2-synthetic",
+  "path": "../../artifacts/question_repos/round2-synthetic",
+  "revisions": [],
+  "tag_pattern": "^v\\d+\\.\\d+\\.\\d+$",
+  "languages": [
+    "python"
+  ]
 }

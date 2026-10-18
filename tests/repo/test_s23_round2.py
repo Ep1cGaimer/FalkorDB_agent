@@ -62,7 +62,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.repo.conftest import git as _git, write as _write, _load_branchy_builder
+from .conftest import git as _git, write as _write, _load_branchy_builder
 
 # ---------------------------------------------------------------- test-only `facts` repo
 
@@ -145,7 +145,7 @@ def facts(tmp_path_factory):
 
 @pytest.fixture(scope="module")
 def hist(tmp_path_factory):
-    from tests.repo.conftest import HISTORY_V1, HISTORY_V11_CHANGES, HISTORY_V12_CHANGES
+    from .conftest import HISTORY_V1, HISTORY_V11_CHANGES, HISTORY_V12_CHANGES
     tmp = tmp_path_factory.mktemp("r2hist")
     repo = tmp / "hist"
     repo.mkdir()

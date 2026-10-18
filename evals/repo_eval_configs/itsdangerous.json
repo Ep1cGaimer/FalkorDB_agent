@@ -1,18 +1,18 @@
 {
- "name": "itsdangerous",
- "path": "D:\\Projects\\FalkorDB_agent\\artifacts\\repos\\itsdangerous",
- "revisions": [],
- "tag_pattern": "^[0-9]+\\.[0-9]+(\\.[0-9]+)?((a|rc)[0-9]+)?$",
- "languages": [
-  "python"
- ],
- "include": [
-  "src/**",
-  "itsdangerous.py",
-  "itsdangerous/**",
-  "CHANGES*"
- ],
- "release_notes": [
-  "CHANGES*"
- ]
+  "name": "itsdangerous",
+  "path": "../../artifacts/repos/itsdangerous",
+  "revisions": [],
+  "tag_pattern": "^[0-9]+\\.[0-9]+(\\.[0-9]+)?((a|rc)[0-9]+)?$",
+  "languages": [
+    "python"
+  ],
+  "include": [
+    "src/**",
+    "itsdangerous.py",
+    "itsdangerous/**",
+    "CHANGES*"
+  ],
+  "release_notes": [
+    "CHANGES*"
+  ]
 }
