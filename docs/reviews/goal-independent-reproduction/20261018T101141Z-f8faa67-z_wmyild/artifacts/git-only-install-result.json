@@ -1,0 +1,19 @@
+{
+  "command": [
+    "docker",
+    "exec",
+    "rw-independent-z_wmyild-a2-python",
+    "sh",
+    "-c",
+    "apt-get install -y --no-install-recommends git ca-certificates"
+  ],
+  "cwd": "/private/tmp/rw-independent-812ecf7-z_wmyild",
+  "elapsed_seconds": 8.109975666971877,
+  "ended_at": "2026-10-18T10:04:27.020860+00:00",
+  "label": "linux-git-only-install",
+  "log": "/private/tmp/rw-independent-812ecf7-z_wmyild/artifacts/34-linux-git-only-install.log",
+  "returncode": 0,
+  "sequence": 34,
+  "started_at": "2026-10-18T10:04:18.910856+00:00",
+  "timeout_seconds": 900
+}

@@ -1,0 +1,11 @@
+RollbackWitness deterministic-smoke (SYNTHETIC FIXTURE; no agent/model calls) graph=rw_smoke_25f45ef6
+PASS snap-001 BLOCKED
+  receipt: saved-cart-2002 ValueError: unsupported saved-cart format 'cart/v2'
+  witness: (Plan candidate 1)-HAS_DEPLOYMENT-> (Deployment cart)-RUNS-> (Release cart 1.4)-EXECUTES_ROUTE-> (ReaderRoute load_saved_cart)-READS_FROM-> (StateStore store:cart-cache)<-IN_STORE- (Batch saved-cart-2002 (cart/v2))-WRITTEN_BY-> (Release writer 1.5)
+PASS blocked approval refused (HTTP 409)
+PASS snap-001 BOUNDED_PASS
+PASS approved as smoke-operator; simulate applied=true, repeat applied=false
+PASS snap-002-partial NEEDS_EVIDENCE (COVERAGE_INCOMPLETE)
+PASS snap-003-orphan NEEDS_EVIDENCE (FORMAT_UNKNOWN, WRITER_UNKNOWN)
+PASS cleanup graph=rw_smoke_25f45ef6
+PASS deterministic-smoke complete

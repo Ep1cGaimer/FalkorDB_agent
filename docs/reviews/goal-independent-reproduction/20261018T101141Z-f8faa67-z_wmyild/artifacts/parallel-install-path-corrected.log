@@ -1,0 +1,3 @@
+ERROR: Invalid requirement: 'Using Python 3.12.13 environment at: venv': Expected end or semicolon (after name and no valid version specifier)
+    Using Python 3.12.13 environment at: venv
+          ^ (from line 1 of /private/tmp/rw-independent-812ecf7-z_wmyild/exact-requirements.txt)

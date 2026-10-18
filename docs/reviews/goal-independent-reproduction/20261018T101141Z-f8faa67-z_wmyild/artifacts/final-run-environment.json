@@ -1,0 +1,47 @@
+{
+  "created_at": "2026-10-18T10:05:13.365466+00:00",
+  "initial_setup_commit": "812ecf7e2153d7662f6523a80365b0622cf92ceb",
+  "manifest_sha256": "bfd2477f3c93e2fe1f16bc6704dddd7e257d14d921b09d061355e76ef9eae08e",
+  "run": {
+    "artifacts": "/tmp/rw-independent-812ecf7-z_wmyild/artifacts",
+    "commit": "812ecf7e2153d7662f6523a80365b0622cf92ceb",
+    "container": "rw-independent-z_wmyild-a2",
+    "container_id": "ae86c5e5e3adc2de67868ebdaa80a8af64f5e97e0ab757b6c1e9e33959ce90fb",
+    "created_at": "2026-10-18T09:35:53.997176+00:00",
+    "database_host": "127.0.0.1",
+    "database_port": 56993,
+    "host_endpoint": {
+      "host": "127.0.0.1",
+      "port": 56993
+    },
+    "image": "falkordb/falkordb@sha256:107455e862a824e45e8e9f5a7fbfdf5e00a08b14e13eae2577c72fd9e3f59ba6",
+    "initial_unused_temp_allocation": "/var/folders/wy/fkdplhvs43v1mlyqjjx5z2000000gn/T/rw-independent-812ecf7-2l_co6mv",
+    "linux_venv": "/private/tmp/rw-independent-812ecf7-z_wmyild/linux-venv-attempt2",
+    "namespace_endpoint": {
+      "host": "127.0.0.1",
+      "port": 6379
+    },
+    "parent": "/Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent",
+    "phase": "SETUP",
+    "python_container": "rw-independent-z_wmyild-a2-python",
+    "python_container_id": "330c2b7a18067e46d8d7368b0e4ccbb8381bb8705706f12359145b0645a1892f",
+    "python_image_digests": [
+      "python@sha256:48a11b7ba705fd53bf15248d1f94d36c39549903c5d59edcfa2f3f84126e7b44"
+    ],
+    "python_image_id": "sha256:48a11b7ba705fd53bf15248d1f94d36c39549903c5d59edcfa2f3f84126e7b44",
+    "repo": "/tmp/rw-independent-812ecf7-z_wmyild/repo",
+    "run_root": "/tmp/rw-independent-812ecf7-z_wmyild",
+    "schema": "independent-reproduction/v1",
+    "scope": "Development deterministic reproduction only; no Click, sealed or confirmatory task execution"
+  },
+  "runtime_env": {
+    "RW_FALKORDB_HOST": "127.0.0.1",
+    "RW_FALKORDB_PORT": "6379",
+    "RW_REALREPO": "1",
+    "RW_REALREPO_SMOKE": "1"
+  },
+  "scope": "Development deterministic reproduction only; no Click/confirmatory tasks or live generation; no source/test expectation edits",
+  "secrets_policy": "No provider keys or .env copied into runner",
+  "source_change_reason": "Parent-directed pre-test pin amendment: ignore repository-local Git graft overlays and refresh parent edges separately from reused file maps; initial812 setup preserved. No held-out input used.",
+  "source_commit": "f8faa67f5b9c9d0d2682ecff7d10d3ac084cf242"
+}

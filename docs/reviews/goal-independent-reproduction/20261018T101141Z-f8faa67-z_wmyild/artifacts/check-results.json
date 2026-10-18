@@ -1,0 +1,63 @@
+[
+  {
+    "command": [
+      "docker",
+      "exec",
+      "rw-independent-z_wmyild-a2-python",
+      "/private/tmp/rw-independent-812ecf7-z_wmyild/linux-venv-attempt2/bin/python",
+      "-m",
+      "pytest",
+      "-q",
+      "-m",
+      "not live",
+      "-rA",
+      "--junitxml=/private/tmp/rw-independent-812ecf7-z_wmyild/artifacts/pytest.xml",
+      "--basetemp=/private/tmp/rw-independent-812ecf7-z_wmyild/pytest-tmp"
+    ],
+    "cwd": "/private/tmp/rw-independent-812ecf7-z_wmyild",
+    "elapsed_seconds": 278.6404651660123,
+    "ended_at": "2026-10-18T10:09:52.005975+00:00",
+    "label": "pytest-final",
+    "log": "/private/tmp/rw-independent-812ecf7-z_wmyild/artifacts/44-pytest-final.log",
+    "returncode": 0,
+    "sequence": 44,
+    "started_at": "2026-10-18T10:05:13.365683+00:00",
+    "timeout_seconds": 2400
+  },
+  {
+    "command": [
+      "node",
+      "--test",
+      "/private/tmp/rw-independent-812ecf7-z_wmyild/repo/tests/js/evidence.test.mjs",
+      "/private/tmp/rw-independent-812ecf7-z_wmyild/repo/tests/js/handoff.test.mjs",
+      "/private/tmp/rw-independent-812ecf7-z_wmyild/repo/tests/js/replay_matcher.test.mjs"
+    ],
+    "cwd": "/private/tmp/rw-independent-812ecf7-z_wmyild/repo",
+    "elapsed_seconds": 0.2428355000447482,
+    "ended_at": "2026-10-18T10:03:35.149138+00:00",
+    "label": "javascript-host-approved",
+    "log": "/private/tmp/rw-independent-812ecf7-z_wmyild/artifacts/33-javascript-host-approved.log",
+    "returncode": 0,
+    "sequence": 33,
+    "started_at": "2026-10-18T10:03:34.905956+00:00",
+    "timeout_seconds": 120
+  },
+  {
+    "command": [
+      "docker",
+      "exec",
+      "rw-independent-z_wmyild-a2-python",
+      "/private/tmp/rw-independent-812ecf7-z_wmyild/linux-venv-attempt2/bin/python",
+      "scripts/smoke.py"
+    ],
+    "cwd": "/private/tmp/rw-independent-812ecf7-z_wmyild",
+    "elapsed_seconds": 0.9094702909933403,
+    "ended_at": "2026-10-18T10:09:52.918748+00:00",
+    "label": "deterministic-smoke-final",
+    "log": "/private/tmp/rw-independent-812ecf7-z_wmyild/artifacts/45-deterministic-smoke-final.log",
+    "returncode": 0,
+    "sequence": 45,
+    "started_at": "2026-10-18T10:09:52.009338+00:00",
+    "timeout_seconds": 180
+  }
+]
