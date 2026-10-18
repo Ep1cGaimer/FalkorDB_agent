@@ -3,7 +3,7 @@
 This reference documents the queries and algorithms the current product depends
 on, reviewed against source at `a8f2224`. Start with the
 [README setup](../README.md#quickstart) and
-[repository graph model](demo/RECORDING_PLAN.md#graph-model-and-query-to-show) and
+[repository graph model](../README.md#repository-evidence-graph) and
 [rollback graph model](ARCHITECTURE.md#graph-schema). The repository-evidence demo
 and synthetic rollback workflow use different graphs and result types.
 
@@ -178,7 +178,7 @@ by the dedicated repository demo.
 
 ## Run a read-only query against the prepared demo
 
-First complete [repository-demo setup](demo/RECORDING_PLAN.md#linux--wsl-setup).
+First complete [repository-demo setup](../README.md#repository-evidence-demo--linux--wsl).
 Run from the repository root against its dedicated database:
 
 ```sh
@@ -214,7 +214,7 @@ exact row counts depend on indexed facts. For the fixture workflow,
 `.venv/bin/python scripts/smoke.py` exercises the real obligation queries and
 probes using fixed grounding, without a model key. See
 [QUICKSTART](QUICKSTART.md) for the fixture DB and
-[the recording plan](demo/RECORDING_PLAN.md) for demo expectations.
+[the README](../README.md#repository-evidence-demo--linux--wsl) for demo expectations.
 
 ## Validation and related references
 
@@ -230,4 +230,4 @@ runtime results are recorded separately in [demo status](demo/STATUS.md) and
 
 Schema details: [fixture architecture](ARCHITECTURE.md),
 [repository integration design](plans/repo-integration-v1.md).
-Recording: [five-minute flow and preparation](demo/RECORDING_PLAN.md).
+Demo setup: [repository evidence demo](../README.md#repository-evidence-demo--linux--wsl).
