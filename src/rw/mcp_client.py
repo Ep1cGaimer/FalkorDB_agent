@@ -26,7 +26,7 @@ from .verification import dispose
 from .pipeline import ALL_SNAPSHOTS
 
 log = logging.getLogger("rw.mcp")
-MAX_HTTP_BYTES = 1024 * 1024
+MAX_HTTP_BYTES = 4 * 1024 * 1024  # loopback API body: a few verified attempts of a 40-record fixture
 MAX_RESULT_BYTES = 128 * 1024
 HASH = re.compile(r"^sha256:[0-9a-f]{64}$")
 RELEASE = re.compile(r"^release:[^:\s/\\]+:[0-9a-f]{16}$")
@@ -306,7 +306,12 @@ class BridgeClient:
                 result = project_state(state, self.origin)
             encoded = result.model_dump_json(exclude_unset=False).encode()
             if len(encoded) > MAX_RESULT_BYTES:
-                raise BridgeError("response_too_large", "Complete evidence exceeds the MCP result budget; no partial result returned.")
+                done = "The operation completed. " if mutation else ""
+                where = (f" Call rw_get_verdict with investigation_id {result.investigation_id} for the verdict, "
+                         f"and give the human the review_url {result.review_url}"
+                         if isinstance(result, InvestigationResult) else "")
+                raise BridgeError("response_too_large", done + "Complete evidence exceeds the MCP result "
+                                  "budget; no partial result returned." + where)
             # Validate the exact outgoing representation, including nested projections.
             result = type(result).model_validate_json(encoded, strict=True)
             status = "ok"
@@ -337,7 +342,7 @@ class BridgeClient:
             raw = bytearray()
             async for chunk in response.aiter_bytes():
                 if len(raw) + len(chunk) > MAX_HTTP_BYTES:
-                    raise BridgeError("response_too_large", "Backend response exceeds 1 MiB; no partial evidence returned.")
+                    raise BridgeError("response_too_large", "Backend response exceeds 4 MiB; no partial evidence returned.")
                 raw.extend(chunk)
             if response.headers.get("content-type", "").split(";", 1)[0].strip().lower() != "application/json":
                 raise BridgeError("invalid_backend_response", "Backend did not return JSON.")

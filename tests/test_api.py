@@ -75,6 +75,66 @@ def confirm(client, state):
     return response.json()
 
 
+def test_verdict_summary_is_bounded_and_matches_the_report(api):
+    client, _, _ = api
+    initial = create(client)
+    blocked = confirm(client, initial)
+    response = client.get(f"/api/investigations/{initial['id']}/summary")
+    assert response.status_code == 200, response.text
+    summary = response.json()
+    verdict = summary["attempts"][0]["verdict"]
+    receipts = blocked["verification"]["receipts"]
+    assert verdict["disposition"] == "BLOCKED"
+    assert verdict["checks"] == len(blocked["verification"]["obligations"])
+    assert verdict["failed"] == sum(r["result"] == "FAIL" for r in receipts) >= 1
+    assert verdict["passed"] == sum(r["result"] == "PASS" for r in receipts)
+    assert verdict["first_failures"][0]["record_id"] == "saved-cart-2002"
+    assert summary["semantic_scope"] == "BYTE_SHAPE_ONLY"
+    assert client.get("/api/investigations/" + "0" * 32 + "/summary").status_code == 404
+
+
+def test_alternative_that_repeats_the_blocked_plan_gets_one_retry(tmp_path):
+    from rw import graph
+    from rw.pipeline import Session
+
+    name = "rw_test_api_" + uuid4().hex
+    session = Session(snapshot="snap-001", graph_name=name)
+    contexts = []
+
+    def ground(request, tools, alternative_context=None):
+        contexts.append(alternative_context)
+        # the first alternative repeats the blocked cart 1.4 plan; only the retry proposes the fix
+        fixed = alternative_context is not None and "repeated the blocked fleet" in alternative_context
+        rows, _ = graph.releases_for_service(session.g, "cart")
+        release = next(row for row in rows if row["version"] == ("1.5" if fixed else "1.4"))
+        history, _ = tools.release_history("cart")
+        excerpt = next(ex for row in history if row["release_id"] == release["release_id"]
+                       for ex in row["excerpts"] if ex["kind"] == "changelog")
+        proposal = GroundingProposal(changes=[FleetEntry(service="cart", release_id=release["release_id"],
+            flags={"basket_v2": False} if fixed else {})],
+            citations=[Citation(excerpt_id=excerpt["excerpt_id"], content_hash=excerpt["content_hash"],
+                                quote=excerpt["text"])], rationale="test proposal")
+        return GroundingResult(request_text=request, result=proposal, model="fake-grounder", live=True), None
+
+    app = create_app(session_factory=lambda: Session(snapshot="snap-001", graph_name=name, reimport=False),
+                     ground_function=ground, db_path=tmp_path / "sim.sqlite", transcript_dir=tmp_path)
+    try:
+        with TestClient(app) as client:
+            initial = create(client)
+            assert confirm(client, initial)["verification"]["disposition"] == "BLOCKED"
+            response = client.post(f"/api/investigations/{initial['id']}/alternative")
+            assert response.status_code == 200, response.text
+            alternative = response.json()
+            assert len(contexts) == 3  # initial, the repeated alternative, the one retry
+            assert "Blocked fleet (an alternative must differ from it)" in contexts[1]
+            assert "repeated the blocked fleet" in contexts[2]
+            assert alternative["plan_hash"] != initial["plan_hash"]
+            assert len(alternative["attempts"]) == 2  # the repeated proposal is not kept as an attempt
+            assert confirm(client, alternative)["verification"]["disposition"] == "BOUNDED_PASS"
+    finally:
+        session.g.delete()
+
+
 def test_blocked_then_alternative_pass_and_idempotent_simulation(api):
     client, contexts, _ = api
     initial = create(client)

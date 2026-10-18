@@ -257,10 +257,39 @@ def summarize_for_agent(report: dict) -> str:
             passed += 1
 
     lines = [f"Plan {report['plan_id']} disposition: {v['disposition']}."]
+    fleet = (report.get("plan") or {}).get("fleet") or []
+    if fleet:
+        # name the exact fleet that failed, so a proposed alternative can be told apart from it
+        lines.append("Blocked fleet (an alternative must differ from it): " + "; ".join(
+            f"{e['service']} {e['release_id']}" + (f" flags {e['flags']}" if e.get("flags") else "")
+            for e in sorted(fleet, key=lambda e: e["service"])))
     lines += _capped(fail_lines)
     lines += _capped([f"- gap {g['kind']} on {g['subject']}: {g['detail']}" for g in v["gaps"]])
     lines.append(f"PASS: {passed} obligations")
     return "\n".join(lines)
+
+
+def alternative_context(session: "Session", report: dict) -> str:
+    """The trusted summary plus, for every service whose reader failed, the release it runs today.
+
+    Today's release is the one already reading the retained records, so naming it gives the agent a
+    concrete existing artifact to keep instead of repeating the blocked fleet.
+    """
+    text = summarize_for_agent(report)
+    v = report["verification"]
+    failed = {r["tuple"]["release_id"] for r in v["receipts"] if r["result"] == ProbeResult.FAIL.value}
+    services = sorted({ob["tuple"]["service"] for ob in v["obligations"] if ob["tuple"]["release_id"] in failed})
+    if not services:
+        return text
+    rows, _ = G.current_fleet(session.g, session.snapshot_id)
+    current = {row["service"]: row for row in rows}
+    kept = [f"{s} {current[s]['release_id']} (version {current[s]['version']})" for s in services if s in current]
+    if kept:
+        lines = text.splitlines()
+        lines.insert(-1, "Services whose reader failed, and the release each runs today (it already reads these "
+                         "records): " + "; ".join(kept))
+        text = "\n".join(lines)
+    return text
 
 
 def with_answer(request_text: str, question: str, answer: str) -> str:
@@ -329,7 +358,7 @@ def run_investigation(request_text: str, *, ground: Callable[..., tuple[Groundin
         entry["outcome"] = report["verification"]["disposition"]
         if entry["outcome"] == Disposition.BOUNDED_PASS.value or not allow_alternative:
             break
-        context = summarize_for_agent(report)
+        context = alternative_context(session, report)
     out["finished_at"] = _now()
     return out
 

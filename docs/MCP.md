@@ -1,6 +1,6 @@
 # Local MCP orchestration
 
-RollbackWitness offers six stdio tools backed by the **same running HTTP API** as the human
+RollbackWitness offers seven stdio tools backed by the **same running HTTP API** as the human
 console. All data is synthetic. Results cover `BYTE_SHAPE_ONLY`; actions are local simulation only.
 The API's grounding model and provider credentials are still used for live investigations. Replay
 uses saved transcripts and is always labeled `live=false`, `model=replay:<filename>`.
@@ -62,6 +62,7 @@ to 3600. Configure the host to allow at least that duration plus protocol overhe
 | `rw_list_transcripts` | `limit=20`, `cursor=null` | List saved replay metadata, without file contents or absolute paths. |
 | `rw_answer_clarification` | `investigation_id`, `answer`, `replay_path=null` | Supply the user's actual answer once. Never invent an unresolved human preference. |
 | `rw_request_alternative` | `investigation_id`, `replay_path=null` | Request an alternative after a human-confirmed BLOCKED/NEEDS_EVIDENCE report; at most two materialized plans. |
+| `rw_get_verdict` | `investigation_id` | Short per-attempt verdict: proposed fleet, disposition, check counts, first five failures, first ten gaps. Use it to explain a result; full evidence stays at `review_url`. |
 
 1. Discover tools; optionally list transcripts. Start with the exact saved request for replay.
 2. Preserve the returned 32-character investigation ID. Obtain the user's answer for a clarification.
@@ -73,7 +74,7 @@ to 3600. Configure the host to allow at least that duration plus protocol overhe
 6. For BOUNDED_PASS, explain the byte/shape-only scope. Human approval and simulation are separate
    console operations. MCP can retrieve their results but has no action tool.
 
-The six tools do not expose confirmation, verification, approval, simulation, probes, graph reset,
+The tools do not expose confirmation, verification, approval, simulation, probes, graph reset,
 Cypher, arbitrary HTTP, files or shell commands. Tool annotations are hints, not authorization.
 Business outcomes, clarifications and grounding validation errors are successful tool results.
 Missing evidence never becomes a pass. Reads return **stored verification**, not a new freshness
@@ -103,10 +104,10 @@ Each result carries `schema_version="1"`, `synthetic_fixture=true`,
 `semantic_scope="BYTE_SHAPE_ONLY"` and `local_simulation_only=true`. Investigation results include
 mode/model/live, snapshot and latest plan/verification hashes, typed `data`, `next_action` and
 `review_url`. Lists use `{..., items, next_cursor}` envelopes. The SDK publishes `outputSchema` and
-returns the same data as `structuredContent` and JSON text. Upstream JSON is streamed with a 1 MiB
+returns the same data as `structuredContent` and JSON text. Upstream JSON is streamed with a 4 MiB
 cap, independent of Content-Length; serialized result data is capped at 128 KiB before framing.
 The SDK's text copy adds roughly another copy plus JSON escaping/framing; tests check actual wire
-serialization. Oversized evidence fails whole, without silently dropping obligations or gaps.
+serialization. Oversized evidence fails whole, without silently dropping obligations or gaps; the error says whether the operation completed and points to `rw_get_verdict` and the review URL.
 
 At most four HTTP calls are in flight, with one mutation per investigation and one start at a time.
 Mutations are limited to ten per minute per bridge process. A busy error submits nothing. Connect

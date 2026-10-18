@@ -11,10 +11,12 @@ from mcp.server.mcpserver.exceptions import ToolError
 from mcp.shared.exceptions import MCPError
 from mcp.types import ToolAnnotations
 import anyio
+import httpx
 from pydantic import ValidationError
 
-from .mcp_client import BridgeClient, BridgeError
-from .mcp_contracts import INPUTS, InvestigationList, InvestigationResult, TranscriptList
+from .mcp_client import MAX_RESULT_BYTES, BridgeClient, BridgeError
+from .mcp_contracts import (INPUTS, InvestigationList, InvestigationResult, TranscriptList,
+                            VerdictSummary)
 from .repo.contracts import RepoInvestigationResult
 
 
@@ -145,6 +147,24 @@ def create_mcp_server(*, client: BridgeClient | None = None) -> MCPServer:
         from rw.repo.mcp import repo_investigate
         data = await anyio.to_thread.run_sync(repo_investigate, repo, revision, question)
         return RepoInvestigationResult.model_validate(data)
+
+    @server.tool(name="rw_get_verdict", annotations=read)
+    async def verdict(investigation_id: str) -> VerdictSummary:
+        """Read a short verdict per attempt: proposed fleet, disposition, check counts, first failures, gaps.
+
+        Use this to explain a result; rw_get_investigation returns every receipt and can exceed the result
+        budget. Full evidence stays at review_url. Does not verify or recheck freshness.
+        """
+        try:
+            response = await bridge.http.get(f"/api/investigations/{investigation_id}/summary", timeout=15)
+        except httpx.HTTPError:
+            raise ToolError("[backend_unavailable] The RollbackWitness API could not be reached.") from None
+        if response.status_code == 404:
+            raise ToolError("[not_found] Investigation not found.")
+        if response.status_code != 200 or len(response.content) > MAX_RESULT_BYTES:
+            raise ToolError("[invalid_backend_response] The verdict summary could not be read.")
+        data = response.json()
+        return VerdictSummary.model_validate({**data, "review_url": f"{bridge.origin}/?investigation={investigation_id}"})
 
     return server
 

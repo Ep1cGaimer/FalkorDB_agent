@@ -501,6 +501,21 @@ def test_summary_never_lists_a_passing_obligation_and_counts_them():
     assert lines[-1] == "PASS: 2 obligations"
 
 
+def test_summary_names_the_blocked_fleet_so_the_alternative_can_differ():
+    report = _report(["FAIL"])
+    report["plan"] = {"fleet": [
+        {"service": "checkout", "release_id": "release:checkout:3.1", "flags": {}, "changed": True},
+        {"service": "cart", "release_id": "release:cart:1.5", "flags": {"basket_v2": False}, "changed": True}]}
+    lines = summarize_for_agent(report).splitlines()
+    assert lines[1] == ("Blocked fleet (an alternative must differ from it): "
+                        "cart release:cart:1.5 flags {'basket_v2': False}; checkout release:checkout:3.1")
+    assert lines[-1] == "PASS: 0 obligations"
+
+
+def test_summary_without_a_plan_keeps_its_shape():
+    assert not any(line.startswith("Blocked fleet") for line in summarize_for_agent(_report(["FAIL"])).splitlines())
+
+
 def test_summary_caps_the_gap_section_too():
     text = summarize_for_agent(_report(["PASS"], gaps=25))
     gap_lines = [line for line in text.splitlines() if line.startswith("- gap")]
