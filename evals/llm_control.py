@@ -278,26 +278,14 @@ class FlatControlTools:
             if rel is None:
                 raise ValueError(f"unknown release {service} {version}: not an existing artifact")
             declared = dict(rel["declared_flags"])
-            flags = e.get("flags")
-            if flags is None:
-                flags = {}
-            if isinstance(flags, dict):
-                parsed = {str(k): bool(v) for k, v in flags.items()}
-            elif isinstance(flags, list):
-                parsed = {}
-                for f in flags:
-                    if not isinstance(f, dict) or not isinstance(f.get("name"), str):
-                        raise ValueError(f"flags for {service} must be {{name, enabled}} entries")
-                    parsed[str(f["name"])] = bool(f.get("enabled"))
-            else:
-                raise ValueError(f"flags for {service} must be a map or a list of {{name, enabled}}")
+            # Same trusted input predicate as the product: only real booleans and
+            # declared names. A declared default is not a prohibition on overrides.
+            parsed = grounding._flags_dict(e.get("flags"))
             undeclared = sorted(set(parsed) - set(declared))
             if undeclared:
                 raise ValueError(f"flags {undeclared} are not declared by {service} {version}")
             merged = dict(declared)
             merged.update(parsed)
-            if merged != declared:
-                errors.append(f"explicit_flags: {service} {version} {merged}")
             fleet[service] = {"version": version, "flags": merged}
 
         completed = sorted(set(self.deployments) - set(fleet))

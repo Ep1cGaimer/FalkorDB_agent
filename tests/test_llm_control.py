@@ -331,6 +331,21 @@ def test_normalize_fleet_accepts_map_and_entry_list(tools):
     assert tools.normalize_fleet(as_list)[0] == want
 
 
+@pytest.mark.parametrize("flags", [{"basket_v2": False}, [{"name": "basket_v2", "enabled": False}]])
+def test_declared_nondefault_flags_have_same_validity_as_product(tools, flags):
+    fleet, errors, _ = tools.normalize_fleet({"cart": {"version": "1.5", "flags": flags}})
+    assert fleet["cart"]["flags"] == {"basket_v2": False}
+    assert errors == []  # declared defaults do not prohibit an explicit boolean override
+
+
+@pytest.mark.parametrize("value", ["false", "true", 0, 1, None])
+@pytest.mark.parametrize("format", ["map", "entries"])
+def test_control_does_not_coerce_nonboolean_flag_values(tools, value, format):
+    flags = ({"basket_v2": value} if format == "map" else [{"name": "basket_v2", "enabled": value}])
+    with pytest.raises(ValueError, match="bool"):
+        tools.normalize_fleet({"cart": {"version": "1.5", "flags": flags}})
+
+
 # ------------------------------------------------------- product chain + OpenAI-compatible provider
 
 def test_groq_control_round_trip_to_a_scored_answer(tmp_path):
