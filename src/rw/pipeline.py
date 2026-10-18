@@ -22,6 +22,7 @@ from .contracts import (
     GroundingProposal,
     GroundingResult,
     ProbeReceipt,
+    fleet_hash,
     ProbeResult,
     ScopeConfirmation,
     h,
@@ -40,6 +41,12 @@ from .verification import (
 )
 
 DEFAULT_FIXTURE = "shop"
+NO_CHANGE = "NO_CHANGE"
+NO_CHANGE_RETRY = ("\nYour previous proposal kept every service exactly as it runs now, which undoes nothing the "
+                   "operator asked to undo. Call trace_data_origin on failing records to see where their data came "
+                   "from, then propose a change (another existing release or a declared flag) that undoes the "
+                   "requested behavior without running a failing reader. If that change touches a service the operator "
+                   "told you not to change, call ask_clarification naming the change and its evidence.")
 
 
 def fixture_root_from_env() -> Path:
@@ -141,6 +148,10 @@ class Session:
             errors += _agent_citation_gate(proposal, ex_rows)
         plan, plan_errors = materialize_plan(proposal, fleet_rows, releases, self.snapshot_id,
                                              self.manifest_hash, request_text, origin, label)
+        if (origin == "agent" and plan is not None and plan.baseline_fleet_hash
+                and fleet_hash(plan.fleet) == plan.baseline_fleet_hash):
+            # same releases and flags as what runs now: nothing would change, so nothing is undone
+            errors.append(f"{NO_CHANGE}: the proposed fleet is exactly the fleet running now; it undoes nothing")
         return (plan if not errors else None), errors + plan_errors
 
     # ---- the graph + probe check for one confirmed plan
@@ -242,6 +253,7 @@ def summarize_for_agent(report: dict) -> str:
         by_hash.setdefault(r["obligation_hash"], []).append(r)
 
     fail_lines: list[str] = []
+    groups: dict[tuple, list[str]] = {}  # every failing reader/route/store/format/writer, so none is cut by the cap
     passed = 0
     for ob in v["obligations"]:
         t = ob["tuple"]
@@ -253,8 +265,23 @@ def summarize_for_agent(report: dict) -> str:
             fail_lines.append(f"- FAIL reader {t['release_id']} route {t['route_id']} on record "
                               f"{t['record_id']} format {t['format_id']} written by "
                               f"{ob.get('writer_release_id')}: FAIL{detail}")
+            hops = {hop["label"]: hop for hop in ob.get("witness_path") or [] if hop["label"] != "Release"}
+            reader = next((hop.get("display") for hop in ob.get("witness_path") or []
+                           if hop["label"] == "Release" and hop["id"] == t["release_id"]), t["release_id"])
+            route = (hops.get("ReaderRoute") or {}).get("display") or t["route_id"]
+            writer_id = ob.get("writer_release_id")
+            writer_version = next((hop.get("display", "").removeprefix("writer ").strip()
+                                   for hop in ob.get("witness_path") or []
+                                   if hop["label"] == "Release" and hop["id"] == writer_id), "")
+            writer = (f"{writer_id.split(':')[1]} {writer_version} ({writer_id})".replace("  ", " ")
+                      if writer_id and writer_id.count(":") >= 2 else writer_id)
+            groups.setdefault((reader, route, t["store_id"], t["format_id"], writer), []).append(t["record_id"])
         elif ProbeResult.PASS.value in results:
             passed += 1
+    group_lines = [
+        f"* reader {reader} ({route}) fails on {len(ids)} record(s) in {store}, format {fmt}, written by "
+        f"{writer or 'UNKNOWN writer'}; e.g. {', '.join(sorted(ids)[:3])}"
+        for (reader, route, store, fmt, writer), ids in sorted(groups.items(), key=lambda kv: tuple(map(str, kv[0])))]
 
     lines = [f"Plan {report['plan_id']} disposition: {v['disposition']}."]
     fleet = (report.get("plan") or {}).get("fleet") or []
@@ -263,10 +290,50 @@ def summarize_for_agent(report: dict) -> str:
         lines.append("Blocked fleet (an alternative must differ from it): " + "; ".join(
             f"{e['service']} {e['release_id']}" + (f" flags {e['flags']}" if e.get("flags") else "")
             for e in sorted(fleet, key=lambda e: e["service"])))
+    if group_lines:
+        lines.append("Every failing reader, grouped (each listed release fails on these retained records "
+                     "and must not run in the alternative):")
+        lines += _capped(group_lines)
     lines += _capped(fail_lines)
     lines += _capped([f"- gap {g['kind']} on {g['subject']}: {g['detail']}" for g in v["gaps"]])
+    if fail_lines:
+        lines.append("trace_data_origin can follow the failing records' lineage to their origin writer.")
     lines.append(f"PASS: {passed} obligations")
     return "\n".join(lines)
+
+
+def failure_lineage(session: "Session", verification: dict) -> list[str]:
+    """Facts from FalkorDB lineage (DERIVED_FROM) about where the failing records' data came from.
+
+    Trusted code runs the fixed record_origins query on the failing record ids, so the origin of the
+    data reaches the agent even when it does not call trace_data_origin itself.
+    """
+    failing = {}  # (service, record_id) pairs that failed; the lineage query is per record
+    for r in verification["receipts"]:
+        if r["result"] == ProbeResult.FAIL.value:
+            failing.setdefault(r["tuple"]["record_id"], set()).add(r["tuple"]["service"])
+    if not failing:
+        return []
+    rows, log = G.record_origins(session.g, session.snapshot_id, sorted(failing))
+    if not rows:
+        return []
+    label = lambda row: f"{row['origin_service']} {row['origin_version']}" if row["origin_service"] else "an UNKNOWN writer"  # noqa: E731
+    derived: dict[tuple, int] = {}
+    origins: dict[str, int] = {}
+    for row in rows:
+        reads = len(failing.get(row["record_id"], ()))
+        origins[label(row)] = origins.get(label(row), 0) + reads
+        if row["hops"]:
+            key = (row["store_id"], row["origin_store_id"], label(row))
+            derived[key] = derived.get(key, 0) + 1
+    lines = [f"Lineage (DERIVED_FROM): {n} failing record(s) in {store} were derived from records in {origin_store} "
+             f"first written by {writer}." for (store, origin_store, writer), n in sorted(derived.items())]
+    lines.append("Origin of the data behind every failing read: " + "; ".join(
+        f"{writer} ({n} read(s))" for writer, n in sorted(origins.items(), key=lambda kv: -kv[1])) + "."
+                 + (" (lineage query truncated)" if log["truncated"] else ""))
+    lines.append("Retained records stay in their stores after any change: a release listed above as failing "
+                 "fails on them whatever the flags, so the alternative must not run it.")
+    return lines
 
 
 def alternative_context(session: "Session", report: dict) -> str:
@@ -277,6 +344,11 @@ def alternative_context(session: "Session", report: dict) -> str:
     """
     text = summarize_for_agent(report)
     v = report["verification"]
+    lineage = failure_lineage(session, v)
+    if lineage:
+        lines = text.splitlines()
+        lines[-1:-1] = lineage
+        text = "\n".join(lines)
     failed = {r["tuple"]["release_id"] for r in v["receipts"] if r["result"] == ProbeResult.FAIL.value}
     services = sorted({ob["tuple"]["service"] for ob in v["obligations"] if ob["tuple"]["release_id"] in failed})
     if not services:
@@ -290,6 +362,48 @@ def alternative_context(session: "Session", report: dict) -> str:
                          "records): " + "; ".join(kept))
         text = "\n".join(lines)
     return text
+
+
+ABLATABLE_EDGES = ("EXECUTES_ROUTE", "READS_FROM", "IN_STORE", "WRITTEN_BY", "DERIVED_FROM")
+
+
+def ablate(session: "Session", fleet: list, removed: list[str]) -> dict[str, Any]:
+    """Re-run one fleet on a disposable copy of the graph with some relationship types deleted.
+
+    Every node, property and payload stays; only the named edge types are removed. The session's own
+    graph is never touched: the copy is a fresh import under a unique name, deleted afterwards.
+    """
+    import uuid
+    from .contracts import FleetEntry
+
+    if not removed or any(edge not in ABLATABLE_EDGES for edge in removed):
+        raise ValueError(f"removed must name edge types from {list(ABLATABLE_EDGES)}")
+    copy = Session(snapshot=session.snapshot, graph_name=f"rw_ablation_{uuid.uuid4().hex[:8]}",
+                   fixture_root=session.fixture_root)
+    try:
+        deleted = 0
+        for edge in removed:  # names come from the fixed allowlist above, never from the request
+            deleted += int(copy.g.query(f"MATCH ()-[e:{edge}]->() DELETE e").relationships_deleted)
+        entries = [FleetEntry(service=e["service"], release_id=e["release_id"], flags=e.get("flags") or {})
+                   for e in fleet]
+        plan, errors = copy.plan_from_proposal(
+            GroundingProposal(changes=entries, citations=[], rationale="relationship-removal check"),
+            "relationship-removal check", origin="fixture")
+        if plan is None:
+            return {"removed": removed, "edges_deleted": deleted, "disposition": None, "errors": errors}
+        confirmation = ScopeConfirmation(plan_hash=plan.plan_hash(), confirmed_by="relationship-removal check",
+                                         confirmed_at=_now())
+        v = copy.verify(plan, confirmation)["verification"]
+        failing = sorted({r["tuple"]["record_id"] for r in v["receipts"] if r["result"] == ProbeResult.FAIL.value})
+        origin_rows, _ = G.record_origins(copy.g, copy.snapshot_id, failing) if failing else ([], {})
+        return {"removed": removed, "edges_deleted": deleted, "disposition": v["disposition"],
+                "obligations": len(v["obligations"]), "probes_run": len(v["receipts"]),
+                "failures_found": sum(r["result"] == ProbeResult.FAIL.value for r in v["receipts"]),
+                "witness_paths": sum(1 for ob in v["obligations"] if ob.get("witness_path")),
+                "gap_kinds": sorted({g["kind"] for g in v["gaps"]}), "gaps": len(v["gaps"]),
+                "origins_found": sum(1 for row in origin_rows if row["hops"])}
+    finally:
+        copy.g.delete()
 
 
 def with_answer(request_text: str, question: str, answer: str) -> str:
@@ -311,6 +425,7 @@ def run_investigation(request_text: str, *, ground: Callable[..., tuple[Groundin
                            "manifest_hash": session.manifest_hash, "started_at": _now(), "attempts": []}
     context = None
     clarified = False
+    no_change_retried = False
     plans = 0
     while plans < MAX_PLANS_PER_SESSION:
         grounding, transcript = ground(request_text, tools, alternative_context=context)
@@ -345,6 +460,14 @@ def run_investigation(request_text: str, *, ground: Callable[..., tuple[Groundin
         plan, errors = session.plan_from_proposal(grounding.result, request_text, "agent",
                                                   label=f"candidate {attempt + 1}")
         entry["validation_errors"] = errors
+        if (plan is None and context and not no_change_retried
+                and any(e.startswith(NO_CHANGE) for e in errors)):
+            # one more chance for an alternative that would change nothing (does not count as a plan)
+            no_change_retried = True
+            plans -= 1
+            entry["outcome"] = "NO_CHANGE_RETRY"
+            context += NO_CHANGE_RETRY
+            continue
         if plan is None:
             entry["outcome"] = "REJECTED_PROPOSAL"
             break

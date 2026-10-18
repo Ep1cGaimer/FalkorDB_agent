@@ -1,5 +1,6 @@
 import { el, icon, button, panel, details, hash } from "./dom.mjs";
-import { checks, preferredCheck, recordKey, readerKey, displayStatus, shortHash } from "./model.mjs";
+import { checks, preferredCheck, recordKey, readerKey, displayStatus } from "./model.mjs";
+import { buildGraph, renderGraph, clusterRecords, clusterTarget, CUT_KINDS } from "./graph.mjs";
 import { formatText } from "./explanations.mjs";
 
 export const releaseLabel = (inv, id) => inv?.release_labels?.[id] || id || "Unknown release";
@@ -14,51 +15,98 @@ export function sourcesView(citations, inv) {
     details("Source identity", el("p", { class: "small mono subtle" }, c.excerpt_id, " · ", hash(c.content_hash))))));
 }
 
-function svgNode(tag, attrs, text) {
-  const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
-  for (const [k, v] of Object.entries(attrs || {})) node.setAttribute(k, String(v));
-  if (text) node.textContent = text;
+const cutKey = (s, planHash) => `${s.inv?.id}|${planHash}`;
+const json = v => { try { return JSON.stringify(v); } catch { return String(v); } };
+
+function queryItem(q, extra) {
+  return el("li", { class: "query-item" }, el("div", { class: "row" }, el("strong", { class: "mono" }, q.name),
+    el("span", { class: "tiny muted" }, `${q.rows} row${q.rows === 1 ? "" : "s"}`),
+    q.truncated ? el("span", { class: "badge UNKNOWN" }, "truncated at cap") : null, extra),
+    q.params && Object.keys(q.params).length ? el("p", { class: "tiny muted mono query-params" }, "params: ", json(q.params)) : null,
+    q.cypher ? el("pre", { class: "code-block query-cypher" }, q.cypher) : null);
+}
+
+function ablationBox(s, actions, planHash) {
+  const key = cutKey(s, planHash), results = s.ablation?.[key] || {};
+  const row = (id, title) => {
+    const r = results[id];
+    return el("div", { class: "ablation-row" }, el("div", { class: "row" },
+      button(title, () => actions.ablate(planHash, id), { variant: "secondary", disabled: r === "loading" || !!s.busy, "data-ablate": id }),
+      r === "loading" ? el("span", { class: "spinner" }) : null,
+      r && r !== "loading" && !r.error ? button(s.cutShown === id ? "Restore edges" : "Show cut in graph", () => actions.showCut(s.cutShown === id ? null : id),
+        { variant: "link" }) : null),
+      r?.error ? el("p", { class: "small error-text" }, r.error)
+        : r && r !== "loading" ? el("p", { class: "small mono ablation-result" },
+          `removed ${r.removed.join(", ")} (${r.edges_deleted} edges) → ${r.disposition} · ${r.obligations} obligations · ${r.failures_found} failures · ${r.witness_paths} witness paths · ${r.origins_found} origins`,
+          r.gap_kinds?.length ? ` · gaps: ${r.gap_kinds.join(", ")}` : "") : null);
+  };
+  return el("div", { class: "drawer-section" }, el("h3", {}, "Cut the relationships"),
+    el("p", { class: "tiny muted" }, "Re-run on a disposable copy of the graph; the real graph is untouched."),
+    row("DERIVED_FROM", "Cut DERIVED_FROM"), row("READER_LINKS", "Cut reader/store/record links"));
+}
+
+export function queriesDrawer(s, actions, attempt, originsData) {
+  const calls = attempt.grounding?.tool_calls || [], queries = attempt.report?.queries || [];
+  const planHash = attempt.plan_hash;
+  const node = el("details", { class: "disclosure queries-drawer", id: "queries-drawer", open: !!s.drawerOpen,
+    ontoggle: e => actions.setDrawerOpen(e.target.open) },
+    el("summary", {}, `What FalkorDB was asked · ${calls.length} agent lookups · ${queries.length} checker queries`, icon("down")),
+    el("div", { class: "drawer-body" },
+      el("div", { class: "drawer-section" }, el("h3", {}, "Agent graph lookups"),
+        calls.length ? el("ul", { class: "query-list" }, calls.map(c => el("li", { class: "query-item" },
+          el("div", { class: "row" }, el("strong", { class: "mono" }, c.name), el("span", { class: "tiny muted" }, c.error ? "error" : `${c.rows ?? "?"} rows`)),
+          el("p", { class: "tiny muted mono query-params" }, json(c.args)), c.error ? el("p", { class: "tiny error-text" }, String(c.error)) : null)))
+          : el("p", { class: "small muted" }, "No graph lookups were recorded for this attempt.")),
+      el("div", { class: "drawer-section" }, el("h3", {}, "Checker queries"),
+        queries.length ? el("ul", { class: "query-list" }, queries.map(q => queryItem(q))) : el("p", { class: "small muted" }, "No queries were recorded.")),
+      originsData?.query ? el("div", { class: "drawer-section" }, el("h3", {}, "Origin lineage query"),
+        el("ul", { class: "query-list" }, queryItem(originsData.query))) : null,
+      planHash ? ablationBox(s, actions, planHash) : null));
   return node;
 }
 
-export function witnessPanel(inv, attempt, selected, actions) {
+export function witnessPanel(inv, attempt, selected, actions, s = {}) {
   const v = attempt.report.verification;
   const check = preferredCheck(v, selected);
   if (!check) return null;
   const { obligation: ob, receipt, result } = check, t = ob.tuple;
-  const route = ob.witness_path.find(h => h.label === "ReaderRoute");
-  const map = el("div", { class: "witness-map", "aria-label": "Selected reader and retained-record evidence path" });
-  const markerId = `arrow-${shortHash(ob.obligation_hash)}`;
-  const svg = svgNode("svg", { class: "map-connectors", viewBox: "0 0 720 236", preserveAspectRatio: "none", "aria-hidden": "true" });
-  const defs = svgNode("defs");
-  const marker = svgNode("marker", { id: markerId, markerWidth: 6, markerHeight: 6, refX: 5, refY: 3, orient: "auto", markerUnits: "strokeWidth" });
-  marker.append(svgNode("path", { d: "M0,0 L6,3 L0,6", fill: "#b5c1d2" })); defs.append(marker); svg.append(defs);
-  for (const d of ["M204 69 H264", "M516 69 H456", ...(ob.writer_release_id ? ["M608 113 V150"] : [])]) {
-    svg.append(svgNode("path", { d, stroke: "#bac5d5", "stroke-width": 1.3, fill: "none", "marker-end": `url(#${markerId})` }));
-  }
-  for (const [x, y, text] of [[234, 53, "reads"], [486, 53, "in store"], ...(ob.writer_release_id ? [[648, 137, "written by"]] : [])]) {
-    svg.append(svgNode("text", { x, y, fill: "#99a6b8", "font-size": 9, "text-anchor": "middle", "font-family": "Segoe UI, sans-serif" }, text));
-  }
-  const node = (cls, type, title, subtitle, symbol) => el("div", { class: `map-node ${cls}` },
-    el("span", {}, icon(symbol), type), el("strong", {}, title), subtitle ? el("small", {}, subtitle) : null);
-  map.append(svg,
-    node("map-reader", "Reads saved data", releaseLabel(inv, t.release_id), route?.display || ob.reader_entry, "code"),
-    node("map-store", "Shared storage", t.store_id.replace(/^store:/, ""), "Store on this modeled read path", "database"),
-    el("button", { class: `map-node map-record ${result}`, type: "button", onclick: () => actions.inspect(ob.obligation_hash),
-      "aria-label": `Inspect ${t.record_id}, ${displayStatus(result)}` },
-      el("span", {}, icon("file"), "Retained record"), el("strong", {}, t.record_id), el("small", {}, formatText(t.format_id))),
-    ob.writer_release_id ? node("map-writer", "Saved by version", releaseLabel(inv, ob.writer_release_id), null, "layers")
-      : node("map-writer", "Saved by version", "Unknown", null, "info"));
+  const originsData = s.origins?.[cutKey(s, attempt.plan_hash)];
+  const originsOk = originsData && originsData !== "loading" && !originsData.error ? originsData : null;
+  const graph = buildGraph(attempt.report, originsOk, { label: id => releaseLabel(inv, id) });
+  const cutKinds = s.cutShown ? CUT_KINDS[s.cutShown] : [];
+  const selectedCluster = graph.clusters.find(c => c.id === s.cluster);
+  const svg = renderGraph(graph, { filter: s.cluster, faded: cutKinds,
+    onCluster: c => actions.selectCluster(c.id, clusterTarget(c)) });
   const error = receipt && [receipt.error_type, receipt.message].filter(Boolean).join(": ");
-  return panel("Why this record matters", "How the proposed version can encounter this retained record.",
-    [el("div", { class: "map-scroll" }, map),
+  const legend = el("div", { class: "tg-legend tiny muted" },
+    el("span", { class: "key FAIL" }, "reader failed"), el("span", { class: "key PASS" }, "all passed"),
+    el("span", { class: "key NONE" }, "unresolved / no read"), el("span", { class: "key DERIVED" }, "derived from"),
+    el("span", {}, "Select a record cluster to filter the checks below."));
+  const detail = selectedCluster ? (() => {
+    const { shown, hidden } = clusterRecords(selectedCluster);
+    return el("div", { class: "cluster-detail" }, el("div", { class: "row between" },
+      el("strong", { class: "small" }, `${selectedCluster.records.length} rows in this cluster`),
+      button("Clear filter", () => actions.selectCluster(null, null), { variant: "link" })),
+      el("div", { class: "chip-list" }, shown.map(r => el("button", { type: "button", class: `rec-chip ${r.outcome}`,
+        onclick: () => actions.inspect(r.failHashes[0] || r.hashes[0]) }, r.record_id)),
+        hidden ? el("span", { class: "tiny muted" }, `+${hidden} more (filter applies to the checks below)`) : null));
+  })() : null;
+  const callout = graph.callout ? el("div", { class: "root-callout", role: "note" }, icon("alert"), el("p", {}, graph.callout.text)) : null;
+  const loadingNote = originsData === "loading" ? el("p", { class: "tiny muted" }, "Loading record lineage…") : null;
+  return panel("Why this is blocked — FalkorDB path", "The evidence subgraph the checker walked: plan, readers, stores, records and their writers.",
+    [el("div", { class: "map-scroll" }, el("div", { class: "tgraph-wrap" }, svg)), legend, callout, loadingNote, detail,
+      el("button", { class: `map-record ${result}`, type: "button", onclick: () => actions.inspect(ob.obligation_hash),
+        "aria-label": `Inspect ${t.record_id}, ${displayStatus(result)}` },
+      el("span", { class: "tiny muted" }, icon("file"), " Selected read · ", releaseLabel(inv, t.release_id), " · ", displayStatus(result)),
+      el("strong", {}, t.record_id), el("small", {}, formatText(t.format_id))),
       result === "FAIL" && error ? el("div", { class: "evidence-error mono" }, error) : null,
+      queriesDrawer(s, actions, attempt, originsOk),
       el("div", { class: "panel-footer" }, el("span", {}, t.record_id, " · ", displayStatus(result)),
         button("View read result", () => actions.inspect(ob.obligation_hash), { variant: "link", symbol: "file" }))], badge(null, "FalkorDB path"));
 }
 
-export function matrixPanel(inv, attempt, selected, actions) {
-  const rows = checks(attempt.report.verification);
+export function matrixPanel(inv, attempt, selected, actions, recordFilter = null) {
+  const rows = checks(attempt.report.verification).filter(r => !recordFilter || recordFilter.has(recordKey(r.obligation)));
   if (!rows.length) return panel("Reader checks", "No reader–record checks were derived.",
     el("div", { class: "panel-body small muted" }, "Review the evidence gaps before considering any action."));
   const readers = [...new Map(rows.map(r => [readerKey(r.obligation), r.obligation])).values()];
@@ -80,7 +128,7 @@ export function matrixPanel(inv, attempt, selected, actions) {
     })));
   return panel("Saved-data compatibility", "Rows are software readers; columns are retained records. Select a result to see the recorded check.",
     el("div", { class: "table-scroll" }, el("table", { class: "matrix" }, el("thead", {}, head), el("tbody", {}, body))),
-    badge(null, `${rows.length} checks`));
+    badge(null, recordFilter ? `${rows.length} checks · filtered` : `${rows.length} checks`));
 }
 
 export function gapsPanel(verification) {

@@ -2,6 +2,7 @@ import { el, icon, button, panel, details, hash } from "./dom.mjs";
 import { PASS_SCOPE, disposition, preferredCheck, checkSummary, checks, recordedAnswers,
   replayCandidates, usedReplays, savedDataStatus, transcriptLabel, retainedData, sourceLabel } from "./model.mjs";
 import { badge, releaseLabel, sourcesView, witnessPanel, matrixPanel, gapsPanel, receiptInspector } from "./evidence.mjs";
+import { buildGraph } from "./graph.mjs";
 import { formatText, flagText, flagChip, explainButton, explanationContent } from "./explanations.mjs";
 
 export const currentAttempt = s => s.inv?.attempts[s.attemptIndex] || null;
@@ -18,7 +19,7 @@ export function runLabel(s) {
 
 export function sidebar(s, a) {
   return [el("a", { class: "brand", href: "#", onclick: e => { e.preventDefault(); window.scrollTo(0, 0); } },
-    el("span", { class: "brand-mark" }, icon("rollback")), "RollbackWitness"),
+    el("img", { class: "brand-symbol", src: "/static/brand/app-icon.svg", alt: "", width: 27, height: 27 }), "RollbackWitness"),
     el("div", { class: "new-review" }, button("New investigation", a.newInvestigation,
       { id: "new-investigation", variant: "secondary", symbol: "plus", disabled: !!s.busy })),
     s.history.length ? el("nav", { class: "recent-list", "aria-label": "Recent investigations" },
@@ -135,10 +136,13 @@ function verdictPanel(s, a, attempt) {
     ? `${releaseLabel(s.inv, failed.obligation.tuple.release_id)} cannot read ${failed.obligation.tuple.record_id}, written by ${releaseLabel(s.inv, failed.obligation.writer_release_id)}.`
     : d === "NEEDS_EVIDENCE" ? "No read failure was established, but the evidence is incomplete."
     : `${counts.passed}/${counts.total} required read checks passed, with no evidence gaps.`;
-  return el("section", { class: "panel verdict-panel", "aria-label": "Verification result" },
-    el("div", { class: "verdict-top" }, el("h2", { class: `verdict-title ${d}` }, title),
+  const artwork = { BLOCKED: "blocked", NEEDS_EVIDENCE: "needs-evidence", BOUNDED_PASS: "bounded-pass" }[d];
+  return el("section", { class: "panel verdict-panel", "aria-label": "Verification result", "data-disposition": d },
+    el("div", { class: "verdict-summary" }, el("div", { class: "verdict-copy" },
+      el("div", { class: "verdict-top" }, el("h2", { class: `verdict-title ${d}` }, title),
       el("span", { class: "label-with-help" }, badge(d), explainButton(a, d))),
-    el("p", { class: "verdict-description" }, description),
+      el("p", { class: "verdict-description" }, description)),
+      artwork ? el("img", { class: "verdict-art", src: `/static/brand/state-${artwork}.svg`, alt: "", "aria-hidden": "true", width: 160, height: 101 }) : null),
     sc ? el("div", { class: "startup-pair" },
       el("div", { class: "startup-item" }, el("div", { class: "row" }, el("span", { class: "label" }, "Startup check"),
         badge(sc.result === "GREEN" ? "PASS" : sc.result === "RED" ? "FAIL" : "UNKNOWN")),
@@ -146,7 +150,30 @@ function verdictPanel(s, a, attempt) {
       el("div", { class: "startup-item" }, el("div", { class: "row" }, el("span", { class: "label" }, "Saved-data check"), badge(readStatus)),
         el("p", { class: "small check-question" }, "Can it read the retained records?"),
         el("p", { class: "small" }, failed ? `${failed.obligation.tuple.record_id} · ${failed.obligation.tuple.format_id}` : `${serviceChecks.length} records checked`))) : null,
-    d === "BOUNDED_PASS" ? el("p", { class: "verdict-note" }, PASS_SCOPE) : null);
+    d === "BOUNDED_PASS" ? el("p", { class: "verdict-note" }, PASS_SCOPE) : null,
+    baselineSection(s, a, attempt, counts));
+}
+
+function baselineSection(s, a, attempt, counts) {
+  const key = `${s.inv.id}|${attempt.plan_hash}`, b = s.baseline?.[key];
+  const ask = button("Ask a plain agent (no graph)", () => a.askBaseline(attempt.plan_hash),
+    { id: "baseline-button", variant: "secondary", disabled: b === "loading" || !!s.busy });
+  if (!b) return el("div", { class: "baseline-box" }, ask);
+  if (b === "loading") return el("div", { class: "baseline-box" }, el("div", { class: "row" }, el("span", { class: "spinner" }),
+    el("span", { class: "small" }, "Asking a plain model with the same files (10-40 s)…")));
+  if (b.error) return el("div", { class: "baseline-box" }, ask, el("p", { class: "small error-text" }, b.error));
+  const c = b.check || {};
+  const num = (k, v) => el("div", { class: "cmp-row" }, el("span", {}, k), el("strong", {}, String(v ?? "unknown")));
+  return el("div", { class: "baseline-box" }, ask, el("div", { class: "cmp-grid", "aria-label": "RollbackWitness compared with a plain agent" },
+    el("div", { class: "cmp-card" }, el("h3", {}, "RollbackWitness"), badge(disposition(attempt)),
+      num("Reads checked", counts.total), num("FAIL with receipts", counts.failed), num("Probes run", counts.total), num("Evidence path", "yes")),
+    el("div", { class: "cmp-card" }, el("h3", {}, "Plain agent"), badge(b.disposition, b.disposition),
+      num("Claimed failing", b.claimed_failing?.length), num("Confirmed", c.confirmed), num("Missed", c.missed),
+      num("Claimed but passed", c.claimed_but_passed), num("Probes run", c.probes_run ?? 0), num("Evidence path", "none"))),
+    el("p", { class: "tiny muted" }, "Same model · every release file and decoded record as text · no graph · no probes · one live run, shown as returned.",
+      b.model ? ` Model: ${b.model}${b.live === false ? " (not live)" : ""}.` : ""),
+    b.reason ? el("p", { class: "small" }, b.reason) : null,
+    b.raw ? details("Raw model text", el("pre", { class: "code-block" }, b.raw)) : null);
 }
 
 function nextPanel(s, a, attempt) {
@@ -211,6 +238,12 @@ function comparisonPanel(s, a) {
   return panel("Compare candidates", "Each candidate is a proposed configuration checked separately.", el("div", { class: "panel-body candidate-list" }, choices));
 }
 
+function clusterFilter(s, attempt) {
+  if (!s.cluster || !attempt.report) return null;
+  const cluster = buildGraph(attempt.report, null).clusters.find(c => c.id === s.cluster);
+  return cluster ? new Set(cluster.records.map(r => r.key)) : null;
+}
+
 function activeReview(s, a) {
   const attempt = currentAttempt(s), main = el("div", { class: "stack" });
   const request = el("div", { class: "request-summary" }, icon("rollback"),
@@ -228,8 +261,8 @@ function activeReview(s, a) {
   else {
     if (attempt.report) main.append(verdictPanel(s, a, attempt));
     main.append(fleetPanel(s, a, attempt));
-    if (attempt.report) for (const part of [gapsPanel(attempt.report.verification), witnessPanel(s.inv, attempt, s.selected, a),
-      matrixPanel(s.inv, attempt, s.selected, a)]) if (part) main.append(part);
+    if (attempt.report) for (const part of [gapsPanel(attempt.report.verification), witnessPanel(s.inv, attempt, s.selected, a, s),
+      matrixPanel(s.inv, attempt, s.selected, a, clusterFilter(s, attempt))]) if (part) main.append(part);
   }
   const aside = el("aside", { class: "stack review-aside", "aria-label": "Available action and candidate comparison" },
     nextPanel(s, a, attempt), comparisonPanel(s, a));
@@ -246,8 +279,9 @@ function messages(s, a) {
 }
 
 export function investigationView(s, a) {
-  return [el("div", { class: "page-heading" }, el("div", {}, el("h1", {}, s.inv ? "Rollback investigation" : "Review a rollback"),
-    !s.inv ? el("p", {}, "A rollback switches software to an older version. Check whether it can still read data saved by a newer one.") : null)),
+  return [el("div", { class: `page-heading${s.inv ? "" : " intro-heading"}` }, el("div", {}, el("h1", {}, s.inv ? "Rollback investigation" : "Review a rollback"),
+    !s.inv ? el("p", {}, "A rollback switches software to an older version. Check whether it can still read data saved by a newer one.") : null),
+    !s.inv ? el("img", { class: "intro-art", src: "/static/brand/retained-state-illustration.png", alt: "", "aria-hidden": "true", width: 240, height: 160, decoding: "async" }) : null),
     ...messages(s, a), s.inv ? activeReview(s, a) : el("div", { class: "review-grid" },
       el("div", { class: "stack" }, requestPanel(s, a), retainedPanel(s, a)),
       el("aside", { class: "stack review-aside", "aria-label": "Current fleet" }, currentFleet(s, a)))];

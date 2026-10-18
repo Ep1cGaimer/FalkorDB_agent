@@ -1,0 +1,11 @@
+{
+  "built_at": "2026-09-18T18:03:28Z",
+  "bundle_id": "otel-demo-3.1.0",
+  "flags": [],
+  "no_state_read": true,
+  "previous_version": null,
+  "routes": [],
+  "service": "quote",
+  "version": "3.1.0",
+  "writes": []
+}

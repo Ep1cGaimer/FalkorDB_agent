@@ -35,6 +35,7 @@ class QueryAudit(View):
     params: dict[str, JsonValue]
     rows: int = Field(ge=0)
     truncated: bool
+    cypher: str | None = None  # the fixed query text, for the human UI only
 
 
 class CitationView(Citation):

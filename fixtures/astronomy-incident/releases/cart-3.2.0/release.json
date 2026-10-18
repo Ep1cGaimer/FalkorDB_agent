@@ -1,0 +1,24 @@
+{
+  "built_at": "2026-10-13T09:00:00Z",
+  "bundle_id": "otel-demo-3.2.0",
+  "flags": [],
+  "no_state_read": false,
+  "previous_version": "3.1.0",
+  "routes": [
+    {
+      "contract": "valkey/Cart",
+      "entry": "read_cart",
+      "name": "load_cart",
+      "read_domain": "ALL_KEYS",
+      "reads_from": "cart-cache"
+    }
+  ],
+  "service": "cart",
+  "version": "3.2.0",
+  "writes": [
+    {
+      "entry": "write_cart",
+      "store": "cart-cache"
+    }
+  ]
+}

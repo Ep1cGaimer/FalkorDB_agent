@@ -258,6 +258,10 @@ class Investigation:
             if attempt["report"] is not None:
                 attempt["report"]["release_labels"] = labels
                 enrich_plan(attempt["report"]["plan"])
+                for query in attempt["report"]["queries"]:
+                    text = graph.QUERY_TEXT.get(query["name"]) or graph.QUERY_TEXT.get(query["name"] + ":batches")
+                    if text:
+                        query["cypher"] = text
         return {"id": self.id, "investigation_id": self.id,
                 "request_text": self.request.request_text,
                 "original_request_text": self.original_request_text or self.request.request_text,
@@ -485,8 +489,16 @@ def create_app(*, session_factory: Callable | None = None,
         return (not errors and proposed is not None
                 and any(a.plan and fleet_hash(a.plan.fleet) == fleet_hash(proposed.fleet) for a in inv.attempts))
 
+    def changes_nothing(inv, result):
+        if isinstance(result.result, GroundingClarification) or result.validation_errors:
+            return False
+        _, errors = inv.session.plan_from_proposal(result.result, inv.request.request_text, origin="agent")
+        from .pipeline import NO_CHANGE
+        return any(e.startswith(NO_CHANGE) for e in errors)
+
     def ground_attempt(inv, context=None, replay_path=None):
         from . import grounding
+        from .pipeline import NO_CHANGE_RETRY
 
         transcript = None
         if inv.request.mode == "replay":
@@ -512,6 +524,8 @@ def create_app(*, session_factory: Callable | None = None,
                     raise HTTPException(502, provider_failure(exc)) from exc
 
             result, transcript = live_ground(context)
+            if context and changes_nothing(inv, result):
+                result, transcript = live_ground(context + NO_CHANGE_RETRY)
             if context and repeats_a_plan(inv, result):
                 # one more chance for an alternative that only repeated a checked plan
                 result, transcript = live_ground(
@@ -720,6 +734,72 @@ def create_app(*, session_factory: Callable | None = None,
                 raise HTTPException(422, "replay_path requires replay mode")
             ground_attempt(inv, alternative_context(inv.session, latest.report), replay_path)
             return inv.public()
+
+    def verified_attempt(inv, plan_hash):
+        attempt = get_attempt(inv, plan_hash)
+        if attempt.report is None:
+            raise SimulationRefused("this plan has not been verified yet")
+        return attempt
+
+    @app.get("/api/investigations/{identifier}/plans/{plan_hash}/origins")
+    def plan_origins(identifier: str, plan_hash: str):
+        """Lineage of the plan's failing records: DERIVED_FROM to each root record and its writer."""
+        from . import graph
+        inv = get_investigation(identifier)
+        with inv.lock:
+            report = verified_attempt(inv, plan_hash).report
+            failing = sorted({r["tuple"]["record_id"] for r in report["verification"]["receipts"]
+                              if r["result"] == "FAIL"})
+            rows, log = graph.record_origins(inv.session.g, inv.session.snapshot_id, failing) if failing else ([], None)
+        if log is not None:
+            log = {**log, "cypher": graph.QUERY_TEXT.get("record_origins")}
+        return {"origins": rows, "query": log}
+
+    @app.post("/api/investigations/{identifier}/plans/{plan_hash}/baseline")
+    def plain_agent_baseline(identifier: str, plan_hash: str):
+        """One equal-information call to the same model without the graph or probes; claims checked against receipts."""
+        from . import baseline, graph, grounding
+        inv = get_investigation(identifier)
+        with inv.lock:
+            attempt = verified_attempt(inv, plan_hash)
+            verification = deepcopy(attempt.report["verification"])
+            versions = {}
+            for entry in attempt.plan.fleet:
+                rows, _ = graph.releases_for_service(inv.session.g, entry.service)
+                versions.update({r["release_id"]: r["version"] for r in rows})
+            fleet = [{"service": e.service, "version": versions.get(e.release_id, e.release_id), "flags": dict(e.flags)}
+                     for e in attempt.plan.fleet]
+            used = attempt.grounding.model if attempt.grounding else ""
+            fixture_root, snapshot = inv.session.fixture_root, inv.session.snapshot
+        candidates = [used] if used.startswith("groq:") else []
+        candidates += [m for m in grounding.configured_models() if m.startswith("groq:")]
+        if not candidates:
+            raise SimulationRefused("the plain-agent baseline needs an OpenAI-compatible (groq:) model")
+        model = candidates[0]
+        try:
+            answer = baseline.ask(grounding.make_transport(model),
+                                  baseline.plaintext_context(fixture_root, snapshot), fleet)
+        except grounding.GroundingError as exc:
+            raise HTTPException(502, f"baseline model call failed: {grounding.provider_error_details(exc)}") from None
+        check = baseline.claim_check(answer, verification)
+        return {"model": model, "live": True, "disposition": answer["disposition"], "reason": answer["reason"],
+                "claimed_failing": check.pop("claimed_failing"), "check": check, "raw": answer["raw"],
+                "fleet": fleet}
+
+    @app.post("/api/investigations/{identifier}/plans/{plan_hash}/ablation")
+    def relationship_removal(identifier: str, plan_hash: str, body: dict):
+        """Re-run this plan's fleet on a disposable graph copy with the named relationship types deleted."""
+        from .pipeline import ABLATABLE_EDGES, ablate
+        removed = body.get("remove") if isinstance(body, dict) else None
+        if (not isinstance(removed, list) or not removed
+                or not all(isinstance(e, str) and e in ABLATABLE_EDGES for e in removed)):
+            raise HTTPException(422, f"remove must list edge types from {list(ABLATABLE_EDGES)}")
+        inv = get_investigation(identifier)
+        with inv.lock:
+            attempt = verified_attempt(inv, plan_hash)
+            fleet = [e.model_dump(mode="json") for e in attempt.plan.fleet]
+            session = inv.session
+        return ablate(session, fleet, sorted(set(removed)))
 
     @app.post("/api/investigations/{identifier}/answer", response_model=InvestigationView, responses=ERROR_RESPONSES, response_model_exclude_unset=True)
     def answer_clarification(identifier: str, body: AnswerRequest):
