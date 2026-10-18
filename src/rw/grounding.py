@@ -650,7 +650,8 @@ def make_groq_transport(api_key: str | None = None, sleep: Callable[[float], Non
                 trace.append({"pacing_wait_s": wait, "estimated_request_tokens": estimated_tokens})
                 sleep(wait)
             budget["remaining"] = None
-        return _retrying_post(GROQ_API_URL, request,
+        # RW_GROQ_API_URL points the transport at another OpenAI-compatible endpoint (local testing only)
+        return _retrying_post(os.environ.get("RW_GROQ_API_URL") or GROQ_API_URL, request,
                               {"authorization": f"Bearer {key}", "content-type": "application/json"},
                               sleep, timeout_s, attempts, label, observe)
 

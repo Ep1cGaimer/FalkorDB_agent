@@ -40,8 +40,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 SOURCE = ROOT / "fixtures" / "astronomy-shop"
 OUT = ROOT / "artifacts" / "plaintext_vs_graph"
-GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
-MODEL = "openai/gpt-oss-120b"
+GROQ_URL = os.environ.get("RW_GROQ_API_URL") or "https://api.groq.com/openai/v1/chat/completions"
+MODEL = os.environ.get("RW_COMPARE_MODEL") or "openai/gpt-oss-120b"
 LOCAL = "OrderResult/local-currency"
 
 ALL_BACK = [("checkout", "3.1.0"), ("accounting", "3.1.0"), ("fraud-detection", "3.1.0")]

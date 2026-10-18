@@ -1,4 +1,4 @@
-export const PASS_SCOPE = "Bounded pass means byte/shape readability only for the modeled records checked here. This does not establish behavioral compatibility, production safety or application-level correctness.";
+export const PASS_SCOPE = "Safe for saved data means every checked record was readable (bytes and shape) only for the modeled records checked here. This does not establish behavioral compatibility, production safety or application-level correctness.";
 
 export function retainedData(context) {
   const stores = context?.stores || [];
@@ -29,7 +29,7 @@ export function recordedAnswers(transcripts, requestText, question) {
 }
 export const disposition = attempt => attempt?.report?.verification.disposition || null;
 export const displayStatus = value => ({
-  BLOCKED: "Blocked", NEEDS_EVIDENCE: "Needs evidence", BOUNDED_PASS: "Bounded pass",
+  BLOCKED: "Unsafe: breaks saved data", NEEDS_EVIDENCE: "Can't confirm: data missing", BOUNDED_PASS: "Safe for saved data",
   PASS: "Passed", FAIL: "Failed", UNKNOWN: "Unresolved", MISSING: "No receipt",
   INAPPLICABLE: "Inapplicable", COMPLETE: "Complete", PARTIAL: "Partial",
 })[value] || value || "Not checked";
@@ -73,7 +73,7 @@ export function savedDataStatus(verification, service) {
   return rows.length && rows.every(r => r.result === "PASS") ? "PASS" : "UNKNOWN";
 }
 export function transcriptLabel(t) {
-  const kind = t.answer ? `Answer: ${t.answer}` : t.outcome === "question" ? "Clarification" : "Fleet proposal";
+  const kind = t.answer ? `Answer: ${t.answer}` : t.outcome === "question" ? "Clarification" : "Version proposal";
   const origin = t.live === true ? "Recorded live model" : t.live === false ? "Recorded non-live response" : "Unknown origin";
   const date = t.mtime ? new Date(t.mtime) : null;
   const recordedAt = date && Number.isFinite(date.getTime()) ? date.toLocaleString() : "Unknown recording time";

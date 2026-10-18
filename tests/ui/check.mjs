@@ -169,7 +169,7 @@ try {
   await waitText("This rollback is blocked");
   assert.equal(await evaluate("!!document.querySelector('#approve-button')"), false);
   assert((await body()).includes("Startup check"));
-  await click("button[aria-label='Why this proposal is blocked']");
+  await click("button[aria-label='Why this rollback is unsafe']");
   await waitText("Other passing reads, or a successful startup, do not cancel that failure."); await clickText("Done");
   const investigationId = await evaluate("location.hash.split('/')[1]");
   const investigationsBefore = await (await fetch(`${base}/api/investigations`)).json();
@@ -205,12 +205,12 @@ try {
   await until(() => evaluate("!!document.querySelector('#confirm-button')"), "alternative proposal");
   await confirm(); await waitText("Saved-data checks passed");
   assert.equal(await evaluate("document.querySelectorAll('.startup-item')[1].querySelector('.badge').textContent.trim()"), "Passed");
-  assert((await body()).includes("byte/shape readability only"));
+  assert((await body()).includes("readable (bytes and shape) only"));
   assert.equal(await evaluate("document.querySelector('.map-record strong').textContent"), "saved-cart-2002", "alternative keeps the original failing record in focus");
   await screenshot("04-alternative", true);
   assert((await body()).includes("basket_v2: Off"));
   assert.equal(await evaluate("document.querySelectorAll('.candidate-choice button').length"), 0, "candidate buttons do not contain nested help buttons");
-  await click("button[aria-label='What a bounded pass means']"); await waitText("It does not establish production safety"); await clickText("Done");
+  await click("button[aria-label='What safe for saved data means']"); await waitText("It does not establish production safety"); await clickText("Done");
   assert.equal(await evaluate("!!document.querySelector('#approver-name')"), false);
   await click("#approve-button"); await waitText("Run local simulation");
   const approved = await evaluate("fetch('/api/investigations/'+location.hash.split('/')[1]).then(r=>r.json())");
@@ -264,7 +264,7 @@ try {
 
   await clickText("New investigation");
   await click("#settings-trigger"); await click("#mode-replay");
-  const saved = await evaluate("[...document.querySelector('#replay')?.options || []].find(o=>o.textContent.startsWith('Fleet proposal'))?.value");
+  const saved = await evaluate("[...document.querySelector('#replay')?.options || []].find(o=>o.textContent.startsWith('Version proposal'))?.value");
   if (saved) {
     assert(await evaluate("[...document.querySelector('#replay').options].every(o=>o.textContent.includes('Recorded ') && o.textContent.includes(o.value))"));
     assert(await evaluate("document.querySelector('#replay-details').textContent.includes('Recorded ')"));

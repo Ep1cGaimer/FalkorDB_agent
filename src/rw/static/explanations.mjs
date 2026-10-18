@@ -15,7 +15,7 @@ const explanations = {
     title: "Services and software versions",
     paragraphs: [
       "Services are independently versioned parts of the selected system. The running-service list comes from its snapshot; proposed versions come from the grounded plan. Version identifiers name builds, not compatibility guarantees.",
-      "A fleet is the set of service versions and settings used together. In a proposal, an arrow shows the installed version followed by the proposed version. Keep means that service's configuration stays unchanged, not that its checks can be skipped.",
+      "The proposal is the set of service versions and settings used together. In a proposal, an arrow shows the installed version followed by the proposed version. Keep means that service's configuration stays unchanged, not that its checks can be skipped.",
     ],
   },
   format: {
@@ -33,15 +33,15 @@ const explanations = {
     ],
   },
   BLOCKED: {
-    title: "Why this proposal is blocked",
+    title: "Why this rollback is unsafe",
     paragraphs: ["At least one required reader failed on a saved record it could encounter. Other passing reads, or a successful startup, do not cancel that failure. This candidate cannot be approved for simulation."],
   },
   NEEDS_EVIDENCE: {
-    title: "Why more evidence is needed",
+    title: "Why this cannot be confirmed",
     paragraphs: ["No applicable read failure was established, but required information is missing or unresolved. For example, the inventory may be partial or a record's original writer may be unknown. This is not a pass, even if the observed reads succeeded."],
   },
   BOUNDED_PASS: {
-    title: "What a bounded pass means",
+    title: "What safe for saved data means",
     paragraphs: ["Every required check of a software reader against a saved record has a matching passing result, with no required evidence gaps. This establishes byte/shape readability only for the modeled records checked here. It does not establish production safety, application-level correctness, or other untested behavior. Human approval permits a local simulation only."],
   },
   mode: {

@@ -66,14 +66,14 @@ test("saved-data tile never shows a pass over evidence gaps, but failures still 
 test("recording labels include model, origin and ID without pretending unknown metadata is live", () => {
   const recording = { outcome: "proposal", model: "provider:model-a", live: true, file_name: "a.json", mtime: "2026-10-17T10:00:00Z" };
   const label = transcriptLabel(recording);
-  assert(label.startsWith("Fleet proposal · provider:model-a · Recorded live model"));
+  assert(label.startsWith("Version proposal · provider:model-a · Recorded live model"));
   assert(label.includes("a.json"));
   assert(!label.includes("Invalid Date"));
   assert(transcriptLabel({ ...recording, live: false }).includes("Recorded non-live response"));
   assert(transcriptLabel({ outcome: "question", replay_path: "q.json" }).includes("Unknown model · Unknown origin · Unknown recording time · q.json"));
   assert(transcriptLabel({ ...recording, answer: "Keep Checkout", mtime: "invalid" }).startsWith("Answer: Keep Checkout"));
   assert(transcriptLabel({ ...recording, mtime: "invalid" }).includes("Unknown recording time"));
-  assert(PASS_SCOPE.includes("byte/shape readability only"));
+  assert(PASS_SCOPE.includes("readable (bytes and shape) only"));
 });
 
 test("retained-data summary and titles use arbitrary snapshot/store/format identities", () => {
@@ -91,7 +91,7 @@ test("retained-data summary and titles use arbitrary snapshot/store/format ident
   assert.equal(summary.storeCount, 1);
   assert.equal(workspaceTitle(context), "Rollback review · warehouse-27");
   assert.equal(workspaceTitle(context, { report: { verification: { disposition: "NEEDS_EVIDENCE" } } }),
-    "Rollback review · warehouse-27 · Needs evidence");
+    "Rollback review · warehouse-27 · Can't confirm: data missing");
   assert.equal(sourceLabel(context), "warehouse-test");
   assert.equal(sourceLabel({ ...context, data_origin: "synthetic_fixture" }), "Synthetic fixture");
   assert.equal(formatText("event/v7"), "event/v7");
