@@ -49,11 +49,12 @@ For the free-tier operating choice and the browser check of the sanitized quota 
 
 Run it: `$env:RW_FIXTURE="astronomy-shop"; .venv\Scripts\python.exe scripts\serve.py`, then open http://127.0.0.1:8000.
 
-Live results, same model (`gemini-3-flash`) on both sides, small samples on synthetic data. These are indications, not statistically meaningful benchmarks:
+Live results, same model (`gemini-3-flash`) on both sides, small samples on synthetic data. These are indications, not statistically meaningful benchmarks (details and raw files: [docs/results/RESULTS.md](docs/results/RESULTS.md)):
 
 | Comparison | RollbackWitness (graph + checker) | Control without the graph |
 |---|---|---|
-| Shop rollback, equal-information LLM control with the same probe tool (3 runs each) | 3/3 correct, evidence-backed; 0 unsupported "safe" claims | 1/3 correct; 1 "safe" claim without probing a required reader; 1 no answer |
+| Remove the graph's relationships, keep every record (Astronomy Shop, no model) | full graph: unsafe, 32 failing reads found, 80 evidence paths | without reader/store/record links: 0 checks derived, the failures are never found; the verdict falls back to "can't confirm", never to "safe" |
+| Shop rollback, equal-information LLM control with the same probe tool | 13/14 investigations correct and evidence-backed; 0 unsupported "safe" claims | 9/13 correct; 3 "safe" claims without probing a required reader; 1 wrong "safe" |
 | Astronomy Shop, LLM given every file as plain text (6 cases × 3 runs) | 6/6 cases correct | 15/18; on an incomplete order inventory it said "safe" 2/3 times |
 | Request grounding (5 cases × 3 runs) | 13/15 matched the expected proposal/clarification | n/a |
 | SQL joins over the same raw facts (8 hand-derived cases) | 8/8 | 8/8 (a tie: the graph is not exclusive; it drives the agent and supplies the visible evidence path) |

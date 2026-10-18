@@ -1,0 +1,127 @@
+{
+  "fixture": "astronomy-shop",
+  "snapshot": "snap-001",
+  "fleet": [
+    [
+      "checkout",
+      "3.1.0"
+    ],
+    [
+      "accounting",
+      "3.1.0"
+    ],
+    [
+      "fraud-detection",
+      "3.1.0"
+    ]
+  ],
+  "rows": [
+    {
+      "condition": "full graph",
+      "removed": [],
+      "edges_deleted": 0,
+      "nodes": 202,
+      "disposition": "BLOCKED",
+      "obligations": 80,
+      "probes_run": 80,
+      "failures_found": 32,
+      "witness_paths": 80,
+      "gap_kinds": [],
+      "gaps": 0
+    },
+    {
+      "condition": "no EXECUTES_ROUTE",
+      "removed": [
+        "EXECUTES_ROUTE"
+      ],
+      "edges_deleted": 4,
+      "nodes": 202,
+      "disposition": "NEEDS_EVIDENCE",
+      "obligations": 0,
+      "probes_run": 0,
+      "failures_found": 0,
+      "witness_paths": 0,
+      "gap_kinds": [
+        "COVERAGE_INCOMPLETE",
+        "INVENTORY_MISMATCH",
+        "ROUTE_DECLARATION_MISMATCH"
+      ],
+      "gaps": 84
+    },
+    {
+      "condition": "no READS_FROM",
+      "removed": [
+        "READS_FROM"
+      ],
+      "edges_deleted": 4,
+      "nodes": 202,
+      "disposition": "NEEDS_EVIDENCE",
+      "obligations": 0,
+      "probes_run": 0,
+      "failures_found": 0,
+      "witness_paths": 0,
+      "gap_kinds": [
+        "COVERAGE_INCOMPLETE",
+        "INVENTORY_MISMATCH",
+        "ROUTE_DECLARATION_MISMATCH"
+      ],
+      "gaps": 84
+    },
+    {
+      "condition": "no IN_STORE",
+      "removed": [
+        "IN_STORE"
+      ],
+      "edges_deleted": 121,
+      "nodes": 202,
+      "disposition": "NEEDS_EVIDENCE",
+      "obligations": 0,
+      "probes_run": 0,
+      "failures_found": 0,
+      "witness_paths": 0,
+      "gap_kinds": [
+        "INVENTORY_MISMATCH"
+      ],
+      "gaps": 120
+    },
+    {
+      "condition": "no WRITTEN_BY",
+      "removed": [
+        "WRITTEN_BY"
+      ],
+      "edges_deleted": 120,
+      "nodes": 202,
+      "disposition": "BLOCKED",
+      "obligations": 80,
+      "probes_run": 80,
+      "failures_found": 32,
+      "witness_paths": 80,
+      "gap_kinds": [
+        "WRITER_UNKNOWN"
+      ],
+      "gaps": 40
+    },
+    {
+      "condition": "no relationships (all four)",
+      "removed": [
+        "EXECUTES_ROUTE",
+        "READS_FROM",
+        "IN_STORE",
+        "WRITTEN_BY"
+      ],
+      "edges_deleted": 249,
+      "nodes": 202,
+      "disposition": "NEEDS_EVIDENCE",
+      "obligations": 0,
+      "probes_run": 0,
+      "failures_found": 0,
+      "witness_paths": 0,
+      "gap_kinds": [
+        "COVERAGE_INCOMPLETE",
+        "INVENTORY_MISMATCH",
+        "ROUTE_DECLARATION_MISMATCH"
+      ],
+      "gaps": 84
+    }
+  ]
+}
