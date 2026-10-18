@@ -133,7 +133,7 @@ def test_bad_json_content_type_and_shapes_fail_closed(content, headers):
 
 class Chunks(httpx.AsyncByteStream):
     async def __aiter__(self):
-        for _ in range(17):
+        for _ in range(65):  # just over MAX_HTTP_BYTES (4 MiB)
             yield b" " * 65536
 
 
@@ -157,8 +157,9 @@ def test_result_size_fails_instead_of_truncating():
     async def check():
         bridge = BridgeClient(transport=httpx.MockTransport(lambda r: httpx.Response(200,json=state)))
         try:
-            with pytest.raises(BridgeError, match="response_too_large"):
+            with pytest.raises(BridgeError, match="response_too_large") as error:
                 await bridge.invoke("rw_get_investigation", {"investigation_id": ID})
+            assert "rw_get_verdict" in str(error.value) and "/?investigation=" in str(error.value)
         finally:
             await bridge.aclose()
     run(check)

@@ -22,7 +22,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
 from .contracts import (Approval, CandidatePlan, Disposition, FleetEntry,
-                        GroundingClarification, GroundingResult, MAX_PLANS_PER_SESSION,
+                        GroundingClarification, GroundingResult, MAX_PLANS_PER_SESSION, ProbeResult,
                         ScopeConfirmation, SimulationReceipt, VerificationResult, fleet_hash)
 from .api_contracts import (ERROR_RESPONSES, PAGE_RESPONSES, InvestigationView,
                             InvestigationSummary, TranscriptSummary, ReportView)
@@ -477,6 +477,14 @@ def create_app(*, session_factory: Callable | None = None,
             raise SimulationRefused("a human identity is required")
         return forbidden
 
+    def repeats_a_plan(inv, result):
+        """Whether a grounded proposal materializes to a plan this investigation already holds."""
+        if isinstance(result.result, GroundingClarification) or result.validation_errors:
+            return False
+        proposed, errors = inv.session.plan_from_proposal(result.result, inv.request.request_text, origin="agent")
+        return (not errors and proposed is not None
+                and any(a.plan and fleet_hash(a.plan.fleet) == fleet_hash(proposed.fleet) for a in inv.attempts))
+
     def ground_attempt(inv, context=None, replay_path=None):
         from . import grounding
 
@@ -494,12 +502,21 @@ def create_app(*, session_factory: Callable | None = None,
             transcript = str(path)
         else:
             tools = grounding.GroundingTools(inv.session.g, inv.session.snapshot_id)
-            try:
-                result, transcript = (ground_function or grounding.ground)(
-                    inv.request.request_text, tools, alternative_context=context)
-            except grounding.GroundingError as exc:
-                log.warning("grounding unavailable: %s", exc)
-                raise HTTPException(502, provider_failure(exc)) from exc
+
+            def live_ground(ctx):
+                try:
+                    return (ground_function or grounding.ground)(
+                        inv.request.request_text, tools, alternative_context=ctx)
+                except grounding.GroundingError as exc:
+                    log.warning("grounding unavailable: %s", exc)
+                    raise HTTPException(502, provider_failure(exc)) from exc
+
+            result, transcript = live_ground(context)
+            if context and repeats_a_plan(inv, result):
+                # one more chance for an alternative that only repeated a checked plan
+                result, transcript = live_ground(
+                    context + "\nYour previous proposal repeated the blocked fleet exactly. Propose a "
+                    "different fleet, or call ask_clarification saying that no alternative exists.")
         if (inv.request.mode == "live" and isinstance(result.result, GroundingClarification)
                 and len(result.result.question) > 3000):
             raise HTTPException(502, {"code": "provider_error", "message": PROVIDER_MESSAGES["provider_error"]})
@@ -514,7 +531,8 @@ def create_app(*, session_factory: Callable | None = None,
             errors.extend(validation)
             if not errors:
                 plan = proposed
-            if plan and any(a.plan and a.plan.plan_hash() == plan.plan_hash() for a in inv.attempts):
+            if plan and any(a.plan and fleet_hash(a.plan.fleet) == fleet_hash(plan.fleet) for a in inv.attempts):
+                # same versions and flags as a checked plan: different citations do not make it new
                 raise SimulationRefused("alternative must be a different plan")
         inv.attempts.append(Attempt(result, str(transcript) if transcript else None, plan, errors))
 
@@ -629,6 +647,48 @@ def create_app(*, session_factory: Callable | None = None,
                               "snapshot_id": "snapshot:" + manifest["snapshot"]})
         return snapshots
 
+    @app.get("/api/investigations/{identifier}/summary")
+    def investigation_summary(identifier: str):
+        """A bounded verdict summary per attempt: counts, the first failures and the gaps.
+
+        The full evidence (every obligation and receipt) stays at the investigation and its review URL;
+        this view exists for callers with a small result budget, such as MCP hosts.
+        """
+        inv = get_investigation(identifier)
+        with inv.lock:
+            attempts = []
+            for index, attempt in enumerate(inv.attempts):
+                entry = {"attempt": index + 1, "kind": "clarification"
+                         if isinstance(attempt.grounding.result, GroundingClarification) else "proposal",
+                         "model": attempt.grounding.model, "live": attempt.grounding.live,
+                         "rationale": getattr(attempt.grounding.result, "rationale", None),
+                         "question": getattr(attempt.grounding.result, "question", None),
+                         "validation_errors": list(attempt.errors),
+                         "plan_hash": attempt.plan.plan_hash() if attempt.plan else None,
+                         "fleet": [{"service": f.service, "release_id": f.release_id, "flags": f.flags,
+                                    "changed": f.changed} for f in attempt.plan.fleet] if attempt.plan else [],
+                         "verdict": None}
+                if attempt.report:
+                    v = attempt.report["verification"]
+                    results = [r["result"] for r in v["receipts"]]
+                    failures = [{"reader_release_id": r["tuple"]["release_id"], "record_id": r["tuple"]["record_id"],
+                                 "format_id": r["tuple"]["format_id"], "error": r.get("message")}
+                                for r in v["receipts"] if r["result"] == ProbeResult.FAIL.value]
+                    entry["verdict"] = {
+                        "disposition": v["disposition"], "checks": len(v["obligations"]),
+                        "passed": results.count(ProbeResult.PASS.value),
+                        "failed": results.count(ProbeResult.FAIL.value),
+                        "first_failures": failures[:5], "more_failures": max(0, len(failures) - 5),
+                        "gaps": [{"kind": g["kind"], "subject": g["subject"]} for g in v["gaps"][:10]],
+                        "more_gaps": max(0, len(v["gaps"]) - 10),
+                        "approved": attempt.approval is not None,
+                        "simulated": bool(attempt.simulation)}
+                attempts.append(entry)
+            return {"investigation_id": inv.id, "request_text": inv.request.request_text,
+                    "mode": inv.request.mode, "snapshot_id": inv.session.snapshot_id,
+                    "semantic_scope": "BYTE_SHAPE_ONLY", "synthetic_fixture": True,
+                    "attempts": attempts}
+
     @app.post("/api/investigations/{identifier}/plans/{plan_hash}/confirm-scope", response_model=ReportView, responses=ERROR_RESPONSES, response_model_exclude_unset=True)
     def confirm_scope(identifier: str, plan_hash: str, body: ScopeRequest):
         inv = get_investigation(identifier)
@@ -644,7 +704,7 @@ def create_app(*, session_factory: Callable | None = None,
 
     @app.post("/api/investigations/{identifier}/alternative", response_model=InvestigationView, responses=ERROR_RESPONSES, response_model_exclude_unset=True)
     def alternative(identifier: str, body: AlternativeRequest | None = None):
-        from .pipeline import summarize_for_agent
+        from .pipeline import alternative_context
         inv = get_investigation(identifier)
         with inv.lock:
             if sum(1 for a in inv.attempts if a.plan) >= MAX_PLANS_PER_SESSION:
@@ -658,7 +718,7 @@ def create_app(*, session_factory: Callable | None = None,
                 raise SimulationRefused("a separate replay_path is required for the alternative")
             if inv.request.mode == "live" and replay_path:
                 raise HTTPException(422, "replay_path requires replay mode")
-            ground_attempt(inv, summarize_for_agent(latest.report), replay_path)
+            ground_attempt(inv, alternative_context(inv.session, latest.report), replay_path)
             return inv.public()
 
     @app.post("/api/investigations/{identifier}/answer", response_model=InvestigationView, responses=ERROR_RESPONSES, response_model_exclude_unset=True)

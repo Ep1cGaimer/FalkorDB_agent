@@ -29,7 +29,7 @@ def test_tools_schemas_output_refs_annotations_and_parity():
                 assert tool.input_schema["additionalProperties"] is False
                 assert tool.annotations.read_only_hint == (tool.name in {
                     "rw_get_investigation","rw_list_investigations","rw_list_transcripts",
-                    "repo_investigate"})  # repository retrieval (S5) is read-only
+                    "repo_investigate","rw_get_verdict"})  # repository retrieval (S5) and verdicts are read-only
                 assert tool.annotations.idempotent_hint == tool.annotations.read_only_hint
             result = await server.call_tool("rw_get_investigation",{"investigation_id":ID})
             assert not result.is_error

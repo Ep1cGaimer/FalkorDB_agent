@@ -364,7 +364,7 @@ relationship is not sufficient evidence of completeness or safety.
 
 Install the optional bridge with `sh scripts/setup.sh --mcp` (PowerShell: `scripts\setup.ps1 -Mcp`).
 Start the existing HTTP API with `scripts/serve.py`; a stdio host then launches `scripts/serve_mcp.py`
-using absolute interpreter/script paths. Six tools start, list and read investigations/transcripts,
+using absolute interpreter/script paths. Seven tools start, list and read investigations/transcripts, read a short verdict,
 answer a clarification and request an alternative. Human scope confirmation, approval and local
 simulation remain in the console through the returned review URL. See [docs/MCP.md](docs/MCP.md)
 for host configuration, strict inputs, size/time limits and restart/retry behavior.

@@ -162,6 +162,19 @@ class RepoInvestigateInput(Input):
     question: str = Field(min_length=1, max_length=2000)
 
 
+class VerdictSummary(BaseModel):
+    """Bounded per-attempt verdict view (counts, first failures, gaps); full evidence is at review_url."""
+    model_config = ConfigDict(extra="forbid")
+    investigation_id: str
+    request_text: str
+    mode: str
+    snapshot_id: str
+    semantic_scope: str
+    synthetic_fixture: bool
+    review_url: str
+    attempts: list[dict]
+
+
 INPUTS = {
     "rw_start_investigation": StartInput,
     "rw_get_investigation": GetInput,
@@ -170,4 +183,5 @@ INPUTS = {
     "rw_answer_clarification": AnswerInput,
     "rw_request_alternative": AlternativeInput,
     "repo_investigate": RepoInvestigateInput,
+    "rw_get_verdict": GetInput,
 }
