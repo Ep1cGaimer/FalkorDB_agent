@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="0.370" timestamp="2026-10-18T15:21:27.773966+05:30" hostname="Vinays-MacBook-Air.local"><testcase classname="tests.repo.test_git_grafts" name="test_retry_replaces_parent_edges_left_by_an_old_grafted_import" time="0.252"><failure message="AssertionError: assert [['20715be190...0e3bf303', 0]] == [['8ee8424180...487ba671', 0]]&#10;  &#10;  At index 0 diff: ['20715be190301ff762abb2f2fd6d24250e3bf303', 0] != ['8ee8424180a85258ffaff948a9798649487ba671', 0]&#10;  Use -v to get more diff">tests/repo/test_git_grafts.py:52: in test_retry_replaces_parent_edges_left_by_an_old_grafted_import
+    assert q._q("MATCH (:Commit {sha:$s})-[e:PARENT]-&gt;(p:Commit) RETURN p.sha, e.order", {"s": tip}) == [[middle, 0]]
+E   AssertionError: assert [['20715be190...0e3bf303', 0]] == [['8ee8424180...487ba671', 0]]
+E     
+E     At index 0 diff: ['20715be190301ff762abb2f2fd6d24250e3bf303', 0] != ['8ee8424180a85258ffaff948a9798649487ba671', 0]
+E     Use -v to get more diff</failure></testcase></testsuite></testsuites>

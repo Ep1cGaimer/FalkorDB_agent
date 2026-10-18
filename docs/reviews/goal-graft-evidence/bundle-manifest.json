@@ -1,0 +1,17 @@
+{
+  "schema": "evidence-file-manifest/v1",
+  "files": {
+    "git-grafts-baseline.log": "a6663281b77e3e660847b7f330d8fd1279c71b72793da1adb86eb26a79458032",
+    "git-grafts-baseline.xml": "02e1ae26d0ae8cf048988745489d223201429cd0064b61d45f909dd3f04eecb9",
+    "git-grafts-current.log": "e6cd894db84707257c8eecb8ced7167b7f59b130d5ad9073a5048634b86c1baf",
+    "git-grafts-current.xml": "bd5b139dcf13278c8fb59062717fea5816bb34abe7e948bdc5136935eaf181fc",
+    "git-grafts-final-002.log": "4007d5338bc2f990058c2ebce1925c90dcc66f5a200ee5088126ff7e99793bfb",
+    "git-grafts-final-002.xml": "7a1938e03207ad9e0c0095bbe19706f4d22884484a5e7b796a601d508ba7d300",
+    "git-grafts-final.log": "ca830df25721f36a8dcede9218ccfd37f83cf2c73888c7da29051fe905a925ae",
+    "git-grafts-final.xml": "d4526495fc329223b5fe425543f5b88d40cd12293a3a139e70e4aec9595eadf0",
+    "git-grafts-recovery-baseline.log": "6fe22c26d047c816164ba447f62f83557be20f65b224ef4b3d86e1a25bd18129",
+    "git-grafts-recovery-baseline.xml": "1e787ac89ed8787fd3c14aaa7dd9ca576dbe39ae4544703ee10ff47fb542d3c7",
+    "implementation-manifest.json": "bfd2477f3c93e2fe1f16bc6704dddd7e257d14d921b09d061355e76ef9eae08e",
+    "run-summary.json": "4c2a4705a9a27e7fa341a21b958c74e0b8697ceeb3c3965281102c71be857c82"
+  }
+}

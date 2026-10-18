@@ -1,0 +1,342 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="34" failures="3" skipped="0" tests="37" time="10.413" timestamp="2026-10-18T15:21:45.680490+05:30" hostname="Vinays-MacBook-Air.local"><testcase classname="tests.repo.test_git_grafts" name="test_local_grafts_cannot_rewrite_imported_ancestry[hide_all_parents]" time="0.184"><failure message="NameError: name 'todo' is not defined">tests/repo/test_git_grafts.py:28: in test_local_grafts_cannot_rewrite_imported_ancestry
+    report = index_repository(cfg, graph_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</failure></testcase><testcase classname="tests.repo.test_git_grafts" name="test_local_grafts_cannot_rewrite_imported_ancestry[skip_middle_commit]" time="0.186"><failure message="NameError: name 'todo' is not defined">tests/repo/test_git_grafts.py:28: in test_local_grafts_cannot_rewrite_imported_ancestry
+    report = index_repository(cfg, graph_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</failure></testcase><testcase classname="tests.repo.test_git_grafts" name="test_retry_replaces_parent_edges_left_by_an_old_grafted_import" time="0.139"><failure message="NameError: name 'todo' is not defined">tests/repo/test_git_grafts.py:45: in test_retry_replaces_parent_edges_left_by_an_old_grafted_import
+    index_repository(cfg, graph_name)
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</failure></testcase><testcase classname="tests.repo.test_review_regressions" name="test_cursor_rejects_changed_query_and_new_publication" time="0.065"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_review_regressions.py:27: in indexed
+    index_repository(cfg, graph_name)
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_review_regressions" name="test_revision_pages_and_api_listing_bind_current_publication" time="0.065"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_review_regressions.py:27: in indexed
+    index_repository(cfg, graph_name)
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_review_regressions" name="test_cached_query_refreshes_after_update" time="0.062"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_review_regressions.py:27: in indexed
+    index_repository(cfg, graph_name)
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_review_regressions" name="test_failed_reextraction_retry_restores_exact_results" time="0.063"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_review_regressions.py:27: in indexed
+    index_repository(cfg, graph_name)
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_review_regressions" name="test_conflicting_writer_is_rejected_and_reads_expose_incomplete" time="0.067"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_review_regressions.py:27: in indexed
+    index_repository(cfg, graph_name)
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_review_regressions" name="test_relative_targets_survive_nested_packages_calls_and_identical_non_source" time="0.063"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_review_regressions.py:27: in indexed
+    index_repository(cfg, graph_name)
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_review_regressions" name="test_malformed_source_never_proves_symbol_absence" time="0.063"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_review_regressions.py:27: in indexed
+    index_repository(cfg, graph_name)
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_review_regressions" name="test_colliding_qualified_names_require_path_clarification" time="0.064"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_review_regressions.py:27: in indexed
+    index_repository(cfg, graph_name)
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_review_regressions" name="test_deletion_only_fix_is_rechecked_at_current_tree" time="0.063"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_review_regressions.py:27: in indexed
+    index_repository(cfg, graph_name)
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_review_regressions" name="test_recovery_after_each_persistence_boundary" time="0.061"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_review_regressions.py:27: in indexed
+    index_repository(cfg, graph_name)
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_review_regressions" name="test_writer_cannot_mutate_after_lease_ownership_changes" time="0.069"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_review_regressions.py:27: in indexed
+    index_repository(cfg, graph_name)
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_review_regressions" name="test_process_crash_expires_lease_and_retry_recovers" time="0.064"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_review_regressions.py:27: in indexed
+    index_repository(cfg, graph_name)
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_s3_revisions" name="test_merge_commit_has_two_ordered_parents" time="0.421"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_s3_revisions.py:99: in br
+    q, info = _index(make_branchy_repo, write_config, graph_name)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/repo/test_s3_revisions.py:92: in _index
+    report = index_repository(cfg, graph_name=graph_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_s3_revisions" name="test_all_branch_tips_indexed_and_resolve" time="0.416"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_s3_revisions.py:99: in br
+    q, info = _index(make_branchy_repo, write_config, graph_name)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/repo/test_s3_revisions.py:92: in _index
+    report = index_repository(cfg, graph_name=graph_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_s3_revisions" name="test_parent_edges_match_git_for_every_commit" time="0.420"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_s3_revisions.py:99: in br
+    q, info = _index(make_branchy_repo, write_config, graph_name)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/repo/test_s3_revisions.py:92: in _index
+    report = index_repository(cfg, graph_name=graph_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_s3_revisions" name="test_is_ancestor_across_branches" time="0.468"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_s3_revisions.py:99: in br
+    q, info = _index(make_branchy_repo, write_config, graph_name)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/repo/test_s3_revisions.py:92: in _index
+    report = index_repository(cfg, graph_name=graph_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_s3_revisions" name="test_fix_present_at_merge_release" time="0.416"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_s3_revisions.py:99: in br
+    q, info = _index(make_branchy_repo, write_config, graph_name)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/repo/test_s3_revisions.py:92: in _index
+    report = index_repository(cfg, graph_name=graph_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_s3_revisions" name="test_fix_absent_after_revert_although_ancestor" time="0.415"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_s3_revisions.py:99: in br
+    q, info = _index(make_branchy_repo, write_config, graph_name)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/repo/test_s3_revisions.py:92: in _index
+    report = index_repository(cfg, graph_name=graph_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_s3_revisions" name="test_fix_absent_before_it_was_made" time="0.420"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_s3_revisions.py:99: in br
+    q, info = _index(make_branchy_repo, write_config, graph_name)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/repo/test_s3_revisions.py:92: in _index
+    report = index_repository(cfg, graph_name=graph_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_s3_revisions" name="test_fix_present_again_after_reapply" time="0.415"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_s3_revisions.py:99: in br
+    q, info = _index(make_branchy_repo, write_config, graph_name)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/repo/test_s3_revisions.py:92: in _index
+    report = index_repository(cfg, graph_name=graph_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_s3_revisions" name="test_fix_later_modified_is_not_present" time="0.420"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_s3_revisions.py:99: in br
+    q, info = _index(make_branchy_repo, write_config, graph_name)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/repo/test_s3_revisions.py:92: in _index
+    report = index_repository(cfg, graph_name=graph_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_s3_revisions" name="test_identical_cherry_pick_is_present_by_patch_equivalence" time="0.414"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_s3_revisions.py:99: in br
+    q, info = _index(make_branchy_repo, write_config, graph_name)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/repo/test_s3_revisions.py:92: in _index
+    report = index_repository(cfg, graph_name=graph_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_s3_revisions" name="test_modified_backport_is_uncertain" time="0.419"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_s3_revisions.py:99: in br
+    q, info = _index(make_branchy_repo, write_config, graph_name)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/repo/test_s3_revisions.py:92: in _index
+    report = index_repository(cfg, graph_name=graph_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_s3_revisions" name="test_unknown_fix_commit_reports_gap" time="0.420"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_s3_revisions.py:99: in br
+    q, info = _index(make_branchy_repo, write_config, graph_name)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/repo/test_s3_revisions.py:92: in _index
+    report = index_repository(cfg, graph_name=graph_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_s3_revisions" name="test_unknown_rev_reports_gap" time="0.418"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_s3_revisions.py:99: in br
+    q, info = _index(make_branchy_repo, write_config, graph_name)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/repo/test_s3_revisions.py:92: in _index
+    report = index_repository(cfg, graph_name=graph_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_s3_revisions" name="test_fix_status_by_branch_name_cites_branch_tip" time="0.423"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_s3_revisions.py:99: in br
+    q, info = _index(make_branchy_repo, write_config, graph_name)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/repo/test_s3_revisions.py:92: in _index
+    report = index_repository(cfg, graph_name=graph_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_s3_revisions" name="test_rename_with_edits_is_detected" time="0.420"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_s3_revisions.py:99: in br
+    q, info = _index(make_branchy_repo, write_config, graph_name)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/repo/test_s3_revisions.py:92: in _index
+    report = index_repository(cfg, graph_name=graph_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_s3_revisions" name="test_renamed_symbols_cite_path_of_their_revision" time="0.430"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_s3_revisions.py:99: in br
+    q, info = _index(make_branchy_repo, write_config, graph_name)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/repo/test_s3_revisions.py:92: in _index
+    report = index_repository(cfg, graph_name=graph_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    todo_set = {c.sha for c in todo}
+                               ^^^^
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_s3_revisions" name="test_deleted_file_symbols_disappear" time="0.414"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_s3_revisions.py:99: in br
+    q, info = _index(make_branchy_repo, write_config, graph_name)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/repo/test_s3_revisions.py:92: in _index
+    report = index_repository(cfg, graph_name=graph_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    tp = time.perf_counter()
+                             
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_s3_revisions" name="test_feature_branch_file_absent_before_merge" time="0.418"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_s3_revisions.py:99: in br
+    q, info = _index(make_branchy_repo, write_config, graph_name)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/repo/test_s3_revisions.py:92: in _index
+    report = index_repository(cfg, graph_name=graph_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    tp = time.perf_counter()
+                             
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_s3_revisions" name="test_two_repos_with_identical_files_do_not_share_identity" time="0.414"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_s3_revisions.py:99: in br
+    q, info = _index(make_branchy_repo, write_config, graph_name)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/repo/test_s3_revisions.py:92: in _index
+    report = index_repository(cfg, graph_name=graph_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    tp = time.perf_counter()
+                             
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_s3_revisions" name="test_fix_status_citations_always_full_sha_of_requested_rev" time="0.440"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_s3_revisions.py:99: in br
+    q, info = _index(make_branchy_repo, write_config, graph_name)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/repo/test_s3_revisions.py:92: in _index
+    report = index_repository(cfg, graph_name=graph_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    tp = time.perf_counter()
+                             
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_lease_renewal" name="test_renewal_between_watch_and_exec_does_not_abort_owned_import" time="0.132"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_lease_renewal.py:14: in publication
+    index_repository(cfg, graph_name)
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    tp = time.perf_counter()
+                             
+E   NameError: name 'todo' is not defined</error></testcase><testcase classname="tests.repo.test_lease_renewal" name="test_owner_replaced_between_watch_and_exec_cannot_delete_symbols" time="0.136"><error message="failed on setup with &quot;NameError: name 'todo' is not defined&quot;">tests/repo/test_lease_renewal.py:14: in publication
+    index_repository(cfg, graph_name)
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:248: in _index_repository
+    tp = time.perf_counter()
+                             
+E   NameError: name 'todo' is not defined</error></testcase></testsuite></testsuites>

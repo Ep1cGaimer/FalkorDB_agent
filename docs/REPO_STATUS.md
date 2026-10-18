@@ -24,6 +24,10 @@ questions in [an unsigned draft package](../evals/confirmatory/README.md), and i
 reproducing the implementation from a clean environment. Neither activity releases
 the pending acceptance or advantage claims.
 
+The [Git graft follow-up](reviews/goal-git-grafts.md) records ancestry-overlay
+hardening and normal-retry recovery of stale parent edges. The independent full
+reproduction uses its newer implementation commit, `f8faa67`.
+
 The implementation remains Python-only repository evidence retrieval, with fixture-only runtime
 verification and local simulation. No substantial FalkorDB advantage, v1 acceptance pass,
 production-safety claim or hackathon outcome is asserted.

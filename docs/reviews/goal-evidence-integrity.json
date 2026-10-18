@@ -1,0 +1,42 @@
+{
+  "schema": "goal-curated-evidence-integrity/v1",
+  "recorded_at": "2026-10-18T09:57:24.368274+00:00",
+  "artifact_manifests": [
+    {
+      "manifest": "docs/reviews/goal-budget-evidence/bundle-manifest.json",
+      "files": 35,
+      "mismatches": []
+    },
+    {
+      "manifest": "docs/reviews/goal-control-flags-evidence/bundle-manifest.json",
+      "files": 11,
+      "mismatches": []
+    },
+    {
+      "manifest": "docs/reviews/goal-freshness-evidence/bundle-manifest.json",
+      "files": 23,
+      "mismatches": []
+    },
+    {
+      "manifest": "docs/reviews/goal-graft-evidence/bundle-manifest.json",
+      "files": 12,
+      "mismatches": []
+    },
+    {
+      "manifest": "docs/reviews/goal-repair-evidence/bundle-manifest.json",
+      "files": 13,
+      "mismatches": []
+    }
+  ],
+  "ledger_missing_links": [],
+  "current_source_manifest": "docs/reviews/goal-graft-evidence/implementation-manifest.json",
+  "current_source_files": 168,
+  "current_source_mismatches": [],
+  "current_implementation_commit": "f8faa67f5b9c9d0d2682ecff7d10d3ac084cf242",
+  "acceptance_statuses": [
+    "IN_PROGRESS"
+  ],
+  "acceptance_validated": false,
+  "interpretation": "Byte/link integrity only, not correctness, independent scoring, performance or advantage validation",
+  "errors": []
+}
