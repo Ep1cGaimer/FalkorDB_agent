@@ -8,7 +8,7 @@ Scenario: checkout 3.2.0 charges shoppers in their own currency (EUR, GBP, CAD, 
 `orders` messages are no longer all in USD. accounting and fraud-detection 3.2.0 convert any of these
 currencies; their 3.1.0 readers only handle USD and fail with
 `UnsupportedCurrencyError: Order is priced in EUR; this build only handles USD.` Design and upstream sources:
-[docs/plans/astronomy-shop-fixture.md](../../docs/plans/astronomy-shop-fixture.md).
+[DESIGN.md](DESIGN.md).
 
 ## Layout
 

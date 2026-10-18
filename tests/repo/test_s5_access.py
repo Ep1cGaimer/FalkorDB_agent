@@ -1,4 +1,4 @@
-"""S5 — accessible investigation (remquirements-v1.md S5; docs/plans/repo-integration-v1.md "Access surfaces").
+"""S5 — accessible investigation (docs/repo/REQUIREMENTS.md S5; docs/repo/DESIGN.md "Access surfaces").
 
 Graph tests need FalkorDB at 127.0.0.1:6379. Each test uses a unique repo name (``s5-<hex>``) so the
 default graph ``rw_repo_<name>`` is unique; it is deleted afterwards.

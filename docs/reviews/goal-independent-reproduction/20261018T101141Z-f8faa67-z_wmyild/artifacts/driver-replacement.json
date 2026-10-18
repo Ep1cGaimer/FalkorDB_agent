@@ -1,9 +1,0 @@
-{
-  "at": "2026-10-18T09:52:34.841829+00:00",
-  "driver_pid": 42853,
-  "signal": "SIGKILL to stopped owned driver only",
-  "reason": "Replace pre-fix driver with explicitly gated new-commit run; keep owned Docker setup processes/state and all artifacts",
-  "source_or_expectation_edits": false,
-  "product_tests_started": false,
-  "pending_setup_result": "Original apt command result was not collected by terminated driver; full log and package state will be verified independently"
-}

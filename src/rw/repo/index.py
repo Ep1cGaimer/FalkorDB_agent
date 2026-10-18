@@ -1,4 +1,4 @@
-"""Index a configured Git repository into its own FalkorDB graph (schema: docs/plans/repo-integration-v1.md).
+"""Index a configured Git repository into its own FalkorDB graph (schema: docs/repo/DESIGN.md).
 
 Content is keyed by sha256 of blob bytes: each distinct blob is extracted once per run, and blobs
 already extracted by the same adapter version in an earlier run are reused (incremental indexing).

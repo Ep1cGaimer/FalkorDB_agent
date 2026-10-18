@@ -1,4 +1,4 @@
-"""S1 — configurable repository integration (docs/plans/repo-integration-v1.md).
+"""S1 — configurable repository integration (docs/repo/DESIGN.md).
 
 Graph tests need FalkorDB at 127.0.0.1:6379 and use unique graph names that are deleted afterwards.
 

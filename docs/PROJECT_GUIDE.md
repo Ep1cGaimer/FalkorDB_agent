@@ -2,7 +2,7 @@
 
 Study date: 2026-10-16. Source checkout: `771ce3814e7ad8bb6c5902e4ac9de83a711abbee` on `main`.
 
-Start here to understand the application. Read [the issue #3 analysis](ISSUE_3_ANALYSIS.md) afterwards for the evaluation problem and possible fixes. This guide describes the inspected implementation; older design documents sometimes still describe it as proposed.
+Start here to understand the application. This guide describes the implemented code; [STATUS.md](STATUS.md) says what currently works and what is open, and [results/RESULTS.md](results/RESULTS.md) holds the measured comparisons.
 
 ## 1. What problem does it solve?
 
@@ -231,8 +231,6 @@ Open `http://127.0.0.1:8000`. Live grounding needs a configured provider key. Re
 
 The flat-context control is allowed to tie or outperform the product. It tests the complete workflows: the product uses a deterministic checker, whereas the control asks the model to enumerate probes and state a disposition. This experiment alone cannot isolate a graph-only causal advantage.
 
-## 10. What was checked during this study
-
-See [the study evidence in the issue analysis](ISSUE_3_ANALYSIS.md#study-evidence) for the initial commands and results. That initial study did not run live models. Subsequent authorized implementation and live testing are recorded separately in [the issue #3 fix report](ISSUE_3_FIX_REPORT.md). Historical scores in [STATUS.md](STATUS.md) belong to their recorded earlier runs.
+## 10. Where to read next
 
 For deeper reading, follow `Session.verify` in [`pipeline.py`](../src/rw/pipeline.py), then `build_evidence` and `dispose` in [`verification.py`](../src/rw/verification.py). The shared data models are in [`contracts.py`](../src/rw/contracts.py). Read [CONTRACTS.md](CONTRACTS.md) for the full field-level contract.

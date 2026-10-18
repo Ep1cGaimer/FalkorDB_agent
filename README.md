@@ -12,17 +12,13 @@ An on-call engineer asks for a behavioral rollback — *"Undo the basket rollout
 
 Only a `BOUNDED_PASS` can be approved for an idempotent **local simulation**. Nothing is ever deployed. The grounding agent and the MCP tools cannot approve; the local HTTP API is unauthenticated and trusts whoever can reach it, so the approver label is a local operator name, not a verified identity.
 
-> The rollback workflow uses a **synthetic fixture** (Cart and Checkout services, two releases each, one cache, retained saved carts). The separate repository-evidence demo uses real pinned ItsDangerous source and an explicitly synthetic Git-revert example. Replayed runs are labeled as replays.
+> The rollback workflow runs on **synthetic fixtures**: `fixtures/astronomy-shop` (the demo: four services modeled on the OpenTelemetry Astronomy Shop, Kafka `orders` topic) and `fixtures/shop` (the default for tests, the oracle and the controls: cart and checkout, two releases each, one cache, saved carts). The separate repository-evidence demo uses real pinned ItsDangerous source and an explicitly synthetic Git-revert example. Replayed runs are labeled as replays.
 
-New to the codebase? Read the [project guide with examples and Mermaid diagrams](docs/PROJECT_GUIDE.md). The [initial issue #3 analysis](docs/ISSUE_3_ANALYSIS.md) preserves the investigation and solution options before implementation.
+New to the codebase? Read the [project guide with examples and Mermaid diagrams](docs/PROJECT_GUIDE.md), then [docs/STATUS.md](docs/STATUS.md) for what currently works and what is open.
 
 The separate repository-evidence demo runs on port 8127. Its setup and graph
 model are documented below, with implementation details in the
 [query and algorithm reference](docs/GRAPH_QUERIES.md).
-
-The [issue #3 implementation report](docs/ISSUE_3_FIX_REPORT.md) explains the tool-call and rate-limit changes, why each was needed, and their verification results. The [historical live comparison](docs/ISSUE_3_COMPARISON.md) contains author-reported results; its raw artifacts are not committed and those numbers are not independently verifiable acceptance evidence.
-
-For the free-tier operating choice and the browser check of the sanitized quota message, see the [issue #4 quota plan](docs/ISSUE_4_QUOTA.md).
 
 ## The thirty-second story
 
@@ -355,10 +351,12 @@ for host configuration, strict inputs, size/time limits and restart/retry behavi
 ```text
 src/rw/            product: contracts, graph, verification, probes, grounding, pipeline, api, simulation, static UI
 tests/             unit, integration (live FalkorDB) and acceptance tests
+src/rw/repo/       secondary workflow: repository/Git-history indexing and deterministic evidence queries
 fixtures/shop/     synthetic releases (code + changelogs), snapshots, retained payloads, probe harness
-evals/             independent expected outcomes, SQL and LLM controls, grounding eval runner, reviews
-scripts/           setup, smoke, investigate (CLI), serve (UI), fixture builder
-docs/              QUICKSTART, CONTRACTS, ARCHITECTURE, STATUS, UI, MCP, PROJECT_GUIDE, issue #3/#4 reports
+fixtures/astronomy-shop/  the demo fixture (design: fixtures/astronomy-shop/DESIGN.md)
+evals/             independent expected outcomes, SQL and LLM controls, ablation, grounding eval runner
+scripts/           setup, smoke, investigate (CLI), serve (UI), MCP bridge, fixture builders, repo demo
+docs/              STATUS, QUICKSTART, PROJECT_GUIDE, ARCHITECTURE, CONTRACTS, GRAPH_QUERIES, UI, MCP, results/, repo/
 ```
 
 Design questions and known gaps are tracked as repository issues (see GitHub Issues). HiveMind is a separate project; this repository does not build it.

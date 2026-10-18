@@ -1,36 +1,0 @@
-Reading package lists...
-Building dependency tree...
-Reading state information...
-The following additional packages will be installed:
-  gcc-12-base libgcc-s1 libstdc++6
-The following NEW packages will be installed:
-  libatomic1
-The following packages will be upgraded:
-  gcc-12-base libgcc-s1 libstdc++6
-3 upgraded, 1 newly installed, 0 to remove and 35 not upgraded.
-Need to get 639 kB of archives.
-After this operation, 81.9 kB of additional disk space will be used.
-Get:1 https://deb.debian.org/debian bookworm/main arm64 gcc-12-base arm64 12.2.0-14+deb12u1 [37.6 kB]
-Get:2 https://deb.debian.org/debian bookworm/main arm64 libstdc++6 arm64 12.2.0-14+deb12u1 [557 kB]
-Get:3 https://deb.debian.org/debian bookworm/main arm64 libgcc-s1 arm64 12.2.0-14+deb12u1 [34.8 kB]
-Get:4 https://deb.debian.org/debian bookworm/main arm64 libatomic1 arm64 12.2.0-14+deb12u1 [9568 B]
-debconf: delaying package configuration, since apt-utils is not installed
-Fetched 639 kB in 8s (76.7 kB/s)
-(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 9889 files and directories currently installed.)
-Preparing to unpack .../gcc-12-base_12.2.0-14+deb12u1_arm64.deb ...
-Unpacking gcc-12-base:arm64 (12.2.0-14+deb12u1) over (12.2.0-14) ...
-Setting up gcc-12-base:arm64 (12.2.0-14+deb12u1) ...
-(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 9889 files and directories currently installed.)
-Preparing to unpack .../libstdc++6_12.2.0-14+deb12u1_arm64.deb ...
-Unpacking libstdc++6:arm64 (12.2.0-14+deb12u1) over (12.2.0-14) ...
-Setting up libstdc++6:arm64 (12.2.0-14+deb12u1) ...
-(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 9889 files and directories currently installed.)
-Preparing to unpack .../libgcc-s1_12.2.0-14+deb12u1_arm64.deb ...
-Unpacking libgcc-s1:arm64 (12.2.0-14+deb12u1) over (12.2.0-14) ...
-Setting up libgcc-s1:arm64 (12.2.0-14+deb12u1) ...
-Selecting previously unselected package libatomic1:arm64.
-(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 9889 files and directories currently installed.)
-Preparing to unpack .../libatomic1_12.2.0-14+deb12u1_arm64.deb ...
-Unpacking libatomic1:arm64 (12.2.0-14+deb12u1) ...
-Setting up libatomic1:arm64 (12.2.0-14+deb12u1) ...
-Processing triggers for libc-bin (2.36-9+deb12u10) ...

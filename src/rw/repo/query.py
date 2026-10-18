@@ -1,4 +1,4 @@
-"""Bounded, read-only evidence queries over a per-repository graph (docs/plans/repo-integration-v1.md).
+"""Bounded, read-only evidence queries over a per-repository graph (docs/repo/DESIGN.md).
 
 Every query resolves the requested revision in the current COMPLETE publication, then reads
 that commit's file map (HAS_FILE{path} -> Blob) and the symbols/relations of those blobs.

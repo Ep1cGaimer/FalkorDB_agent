@@ -1,4 +1,4 @@
-"""S4 - large histories with bounded retrieval (remquirements-v1.md S4; docs/plans/repo-integration-v1.md).
+"""S4 - large histories with bounded retrieval (docs/repo/REQUIREMENTS.md S4; docs/repo/DESIGN.md).
 
 Needs FalkorDB at 127.0.0.1:6379. Builds a synthetic repo in tmp_path: 30 modules pkg/mNN.py x 20
 functions fNN. Inside a module f_j calls f_{j+1..j+4}; f19 of module i calls pkg.m{i+1}.f00 (imported).
