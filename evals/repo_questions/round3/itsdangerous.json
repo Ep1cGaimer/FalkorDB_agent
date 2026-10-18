@@ -1,0 +1,258 @@
+{
+ "repo": "itsdangerous",
+ "upstream": "pallets/itsdangerous",
+ "clone": "artifacts/repos/itsdangerous",
+ "prepared": "2026-10-18",
+ "prepared_by": "independent test writer, round 3 (hand-verified with git)",
+ "notes": "Round-3 held-out questions, written by hand with read-only git (git show/log/diff -M/tag --contains/merge-base --is-ancestor, plus ast parsing of `git show` output) AFTER round-2 results were seen (artifacts/repo_history_eval/20261018T050406Z.json; only failure categories were read); disjoint from every round-1 and round-2 question. No rw.repo output was consulted. Do not edit after any run. expected_facts follows the round-3 contract in tests/repo/test_s23_round3.py: changes facts list function/method qualnames only (classes under classes_*, deleted files under deleted_files, renames as {old,new,similarity}; symbols of a renamed file are matched by module-relative name; test files only in tests_changed, and only when indexed); constants carry is_plain_literal/evaluated; partially dotted names resolve on dotted-component suffixes; fix `state` is PRESENT when the fix commit is an ancestor and every non-blank added line is present. Names are matched as dotted suffixes of the full qualname.",
+ "required_revisions": [
+  "1.1.0",
+  "2.0.0",
+  "2.0.1",
+  "2.1.0",
+  "2.1.1",
+  "2.1.2",
+  "2.2.0"
+ ],
+ "questions": [
+  {
+   "id": "r3id-01",
+   "category": "partial_dotted_name",
+   "question": "At 2.1.0, which exceptions does SigningAlgorithm.get_signature raise?",
+   "revision": "2.1.0",
+   "expected_answer": "NotImplementedError (src/itsdangerous/signer.py lines 21-23).",
+   "expected_citations": [
+    {
+     "path": "src/itsdangerous/signer.py",
+     "start_line": 21,
+     "end_line": 23,
+     "revision": "2.1.0"
+    }
+   ],
+   "expected_facts": {
+    "symbol": "SigningAlgorithm.get_signature",
+    "exceptions": [
+     "NotImplementedError"
+    ]
+   }
+  },
+  {
+   "id": "r3id-02",
+   "category": "partial_dotted_name",
+   "question": "At 2.0.1, which exceptions does Serializer.load_payload raise?",
+   "revision": "2.0.1",
+   "expected_answer": "BadPayload (src/itsdangerous/serializer.py lines 137-162); not URLSafeSerializerMixin.load_payload.",
+   "expected_citations": [
+    {
+     "path": "src/itsdangerous/serializer.py",
+     "start_line": 137,
+     "end_line": 162,
+     "revision": "2.0.1"
+    }
+   ],
+   "expected_facts": {
+    "symbol": "itsdangerous.serializer.Serializer.load_payload",
+    "exceptions": [
+     "BadPayload"
+    ]
+   }
+  },
+  {
+   "id": "r3id-03",
+   "category": "constant_plain_literal",
+   "question": "At 1.1.0, what is the value of JSONWebSignatureSerializer.default_algorithm?",
+   "revision": "1.1.0",
+   "expected_answer": "\"HS512\" (src/itsdangerous/jws.py line 34), a plain literal.",
+   "expected_citations": [
+    {
+     "path": "src/itsdangerous/jws.py",
+     "start_line": 34,
+     "end_line": 34,
+     "revision": "1.1.0"
+    }
+   ],
+   "expected_facts": {
+    "symbol": "JSONWebSignatureSerializer.default_algorithm",
+    "value": "HS512",
+    "is_plain_literal": true,
+    "evaluated": true
+   }
+  },
+  {
+   "id": "r3id-04",
+   "category": "constant_plain_literal",
+   "question": "At 2.2.0, what is the value of Serializer.default_fallback_signers?",
+   "revision": "2.2.0",
+   "expected_answer": "[] (an annotated assignment, src/itsdangerous/serializer.py lines 104-106), a plain literal.",
+   "expected_citations": [
+    {
+     "path": "src/itsdangerous/serializer.py",
+     "start_line": 104,
+     "end_line": 106,
+     "revision": "2.2.0"
+    }
+   ],
+   "expected_facts": {
+    "symbol": "Serializer.default_fallback_signers",
+    "value": [],
+    "is_plain_literal": true,
+    "evaluated": true
+   }
+  },
+  {
+   "id": "r3id-05",
+   "category": "constant_non_literal",
+   "question": "At 2.2.0, what is the value of Serializer.default_signer?",
+   "revision": "2.2.0",
+   "expected_answer": "The name Signer (src/itsdangerous/serializer.py line 101); not a literal, so it is not evaluated.",
+   "expected_citations": [
+    {
+     "path": "src/itsdangerous/serializer.py",
+     "start_line": 101,
+     "end_line": 101,
+     "revision": "2.2.0"
+    }
+   ],
+   "expected_facts": {
+    "symbol": "Serializer.default_signer",
+    "expression": "Signer",
+    "is_plain_literal": false,
+    "evaluated": false
+   }
+  },
+  {
+   "id": "r3id-06",
+   "category": "constant_non_literal",
+   "question": "At 2.0.1, what is the value of encoding._t_str_bytes?",
+   "revision": "2.0.1",
+   "expected_answer": "The type expression _t.Union[str, bytes] (src/itsdangerous/encoding.py line 8); not evaluated.",
+   "expected_citations": [
+    {
+     "path": "src/itsdangerous/encoding.py",
+     "start_line": 8,
+     "end_line": 8,
+     "revision": "2.0.1"
+    }
+   ],
+   "expected_facts": {
+    "symbol": "itsdangerous.encoding._t_str_bytes",
+    "expression": "_t.Union[str, bytes]",
+    "is_plain_literal": false,
+    "evaluated": false
+   }
+  },
+  {
+   "id": "r3id-07",
+   "category": "changes_non_adjacent",
+   "question": "What changed between 2.1.0 and 2.1.2?",
+   "revision": "2.2.0",
+   "expected_answer": "Across 2.1.1 to 2.1.2 only TimestampSigner.unsign (src/itsdangerous/timed.py) changed among functions/methods; no files added, deleted or renamed in the indexed scope. Citations only at 2.1.0 or 2.1.2.",
+   "expected_citations": [
+    {
+     "path": "src/itsdangerous/timed.py",
+     "start_line": 1,
+     "end_line": 234,
+     "revision": "2.1.2"
+    }
+   ],
+   "expected_facts": {
+    "added": [],
+    "removed": [],
+    "modified": [
+     "TimestampSigner.unsign"
+    ],
+    "classes_added": [],
+    "classes_removed": [],
+    "deleted_files": [],
+    "renamed": []
+   }
+  },
+  {
+   "id": "r3id-08",
+   "category": "changes_function_level",
+   "question": "What changed between 2.0.0 and 2.1.0?",
+   "revision": "2.1.0",
+   "expected_answer": "Deprecated code removed: src/itsdangerous/jws.py deleted (both JWS serializers), DeprecatedJSON removed; seven functions/methods modified.",
+   "expected_citations": [
+    {
+     "path": "src/itsdangerous/jws.py",
+     "start_line": 1,
+     "end_line": 259,
+     "revision": "2.0.0"
+    }
+   ],
+   "expected_facts": {
+    "added": [],
+    "removed": [
+     "_json.DeprecatedJSON.__getattribute__",
+     "JSONWebSignatureSerializer.__init__",
+     "JSONWebSignatureSerializer.dump_payload",
+     "JSONWebSignatureSerializer.dumps",
+     "JSONWebSignatureSerializer.load_payload",
+     "JSONWebSignatureSerializer.loads",
+     "JSONWebSignatureSerializer.loads_unsafe",
+     "JSONWebSignatureSerializer.make_algorithm",
+     "JSONWebSignatureSerializer.make_header",
+     "JSONWebSignatureSerializer.make_signer",
+     "TimedJSONWebSignatureSerializer.__init__",
+     "TimedJSONWebSignatureSerializer.get_issue_date",
+     "TimedJSONWebSignatureSerializer.loads",
+     "TimedJSONWebSignatureSerializer.make_header",
+     "TimedJSONWebSignatureSerializer.now"
+    ],
+    "modified": [
+     "_CompactJSON.dumps",
+     "_CompactJSON.loads",
+     "encoding.base64_decode",
+     "serializer.Serializer.__init__",
+     "serializer.Serializer.load_payload",
+     "signer.Signer.__init__",
+     "url_safe.URLSafeSerializerMixin.load_payload"
+    ],
+    "classes_added": [],
+    "classes_removed": [
+     "_json.DeprecatedJSON",
+     "jws.JSONWebSignatureSerializer",
+     "jws.TimedJSONWebSignatureSerializer"
+    ],
+    "deleted_files": [
+     "src/itsdangerous/jws.py"
+    ],
+    "renamed": []
+   }
+  },
+  {
+   "id": "r3id-09",
+   "category": "fix_present_ancestor",
+   "question": "Is fix 177196d (catch OSError on Windows) present at 2.1.1?",
+   "revision": "2.1.1",
+   "expected_answer": "PRESENT: the commit is an ancestor of 2.1.1 and its added lines are at src/itsdangerous/timed.py 129-130 (and the docstring line 41); first tag containing it is 2.1.1.",
+   "expected_citations": [
+    {
+     "path": "src/itsdangerous/timed.py",
+     "start_line": 129,
+     "end_line": 130,
+     "revision": "2.1.1"
+    }
+   ],
+   "expected_facts": {
+    "fix_commit": "177196d3a5c7ad37b8ccbd0f88445aced07f1ca0",
+    "state": "PRESENT",
+    "first_tag_containing": "2.1.1"
+   }
+  },
+  {
+   "id": "r3id-10",
+   "category": "symbol_history",
+   "question": "At 2.1.2, when did JSONWebSignatureSerializer.make_header disappear?",
+   "revision": "2.1.2",
+   "expected_answer": "Present at 2.0.1 (src/itsdangerous/jws.py), absent from 2.1.0 on (jws.py deleted); absent at 2.1.2. TimedJSONWebSignatureSerializer.make_header is a different symbol.",
+   "expected_citations": [],
+   "expected_facts": {
+    "symbol": "JSONWebSignatureSerializer.make_header",
+    "first_absent_revision": "2.1.0",
+    "present_at_requested": false
+   }
+  }
+ ]
+}

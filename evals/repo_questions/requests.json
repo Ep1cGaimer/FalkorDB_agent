@@ -1,0 +1,286 @@
+{
+ "repo": "requests",
+ "upstream": "psf/requests",
+ "clone": "artifacts/repos/requests",
+ "prepared": "2026-10-18",
+ "prepared_by": "independent test writer (hand-verified with git)",
+ "notes": "Held-out questions on the real clone, prepared by hand with read-only git commands (git show/ls-tree/log/tag --contains); no rw.repo output was consulted. Do not edit after any E2/E4 run: changes require a new evaluation retaining the originals.",
+ "questions": [
+  {
+   "id": "rq-01",
+   "category": "dependencies",
+   "question": "At v2.32.0, trace requests.get down to the Session method that builds and sends the request.",
+   "revision": "v2.32.0",
+   "expected_answer": "api.get returns request('get', ...); api.request opens sessions.Session() and calls session.request; Session.request calls self.prepare_request(req) then self.send(prep, ...).",
+   "expected_citations": [
+    {
+     "path": "src/requests/api.py",
+     "start_line": 62,
+     "end_line": 73,
+     "revision": "v2.32.0"
+    },
+    {
+     "path": "src/requests/api.py",
+     "start_line": 58,
+     "end_line": 59,
+     "revision": "v2.32.0"
+    },
+    {
+     "path": "src/requests/sessions.py",
+     "start_line": 500,
+     "end_line": 500,
+     "revision": "v2.32.0"
+    },
+    {
+     "path": "src/requests/sessions.py",
+     "start_line": 575,
+     "end_line": 589,
+     "revision": "v2.32.0"
+    }
+   ]
+  },
+  {
+   "id": "rq-02",
+   "category": "dependencies",
+   "question": "At v2.32.0, which HTTPAdapter method does Session.send ultimately use to obtain a urllib3 connection?",
+   "revision": "v2.32.0",
+   "expected_answer": "Session.send calls adapter.send(request, **kwargs); HTTPAdapter.send calls self._get_connection(request, verify, proxies=proxies, cert=cert), defined in adapters.py.",
+   "expected_citations": [
+    {
+     "path": "src/requests/sessions.py",
+     "start_line": 673,
+     "end_line": 673,
+     "revision": "v2.32.0"
+    },
+    {
+     "path": "src/requests/sessions.py",
+     "start_line": 703,
+     "end_line": 703,
+     "revision": "v2.32.0"
+    },
+    {
+     "path": "src/requests/adapters.py",
+     "start_line": 512,
+     "end_line": 512,
+     "revision": "v2.32.0"
+    },
+    {
+     "path": "src/requests/adapters.py",
+     "start_line": 532,
+     "end_line": 532,
+     "revision": "v2.32.0"
+    },
+    {
+     "path": "src/requests/adapters.py",
+     "start_line": 377,
+     "end_line": 377,
+     "revision": "v2.32.0"
+    }
+   ]
+  },
+  {
+   "id": "rq-03",
+   "category": "distant_release",
+   "question": "Where and how is the package version declared at v2.0.0 compared with v2.32.0?",
+   "revision": "v2.32.0",
+   "expected_answer": "v2.0.0: __version__ = '2.0.0' in requests/__init__.py (line 45). v2.32.0: __version__ = \"2.32.0\" in src/requests/__version__.py (line 8); the package moved under src/.",
+   "expected_citations": [
+    {
+     "path": "requests/__init__.py",
+     "start_line": 45,
+     "end_line": 45,
+     "revision": "v2.0.0"
+    },
+    {
+     "path": "src/requests/__version__.py",
+     "start_line": 8,
+     "end_line": 8,
+     "revision": "v2.32.0"
+    }
+   ],
+   "compare_revision": "v2.0.0"
+  },
+  {
+   "id": "rq-04",
+   "category": "rename_delete",
+   "question": "In which release tag did the package source move from requests/ to src/requests/?",
+   "revision": "v2.32.0",
+   "expected_answer": "v2.32.0 is the first v2 tag with src/requests/__init__.py; v2.31.0 still has requests/__init__.py.",
+   "expected_citations": [
+    {
+     "path": "src/requests/__init__.py",
+     "start_line": 1,
+     "end_line": 1,
+     "revision": "v2.32.0"
+    },
+    {
+     "path": "requests/__init__.py",
+     "start_line": 1,
+     "end_line": 1,
+     "revision": "v2.31.0"
+    }
+   ]
+  },
+  {
+   "id": "rq-05",
+   "category": "rename_delete",
+   "question": "When was the vendored urllib3 copy under requests/packages/ removed, and what replaced it?",
+   "revision": "v2.16.1",
+   "expected_answer": "v2.15.1 still vendors requests/packages/urllib3 (urllib3 1.21.1); v2.16.0 has no requests/packages at all; from v2.16.1 a requests/packages.py compatibility shim imports the external chardet, urllib3 and idna packages.",
+   "expected_citations": [
+    {
+     "path": "requests/packages/urllib3/__init__.py",
+     "start_line": 35,
+     "end_line": 35,
+     "revision": "v2.15.1"
+    },
+    {
+     "path": "requests/packages.py",
+     "start_line": 1,
+     "end_line": 3,
+     "revision": "v2.16.1"
+    }
+   ]
+  },
+  {
+   "id": "rq-06",
+   "category": "fix_appeared",
+   "question": "Commit c0813a2d ('Use TLS settings in selecting connection pool') fixed verify=False reuse of connection pools. What is the first release tag containing it, and what does it add?",
+   "revision": "v2.32.0",
+   "expected_answer": "First tag: v2.32.0. It adds the module function _urllib3_request_context and HTTPAdapter._get_connection(request, verify, proxies, cert); HTTPAdapter.send uses _get_connection instead of get_connection.",
+   "expected_citations": [
+    {
+     "path": "src/requests/adapters.py",
+     "start_line": 81,
+     "end_line": 81,
+     "revision": "v2.32.0"
+    },
+    {
+     "path": "src/requests/adapters.py",
+     "start_line": 377,
+     "end_line": 377,
+     "revision": "v2.32.0"
+    },
+    {
+     "path": "src/requests/adapters.py",
+     "start_line": 532,
+     "end_line": 532,
+     "revision": "v2.32.0"
+    }
+   ],
+   "fix_commit": "c0813a2d910ea6b4f8438b91d315b8d181302356"
+  },
+  {
+   "id": "rq-07",
+   "category": "changes_between",
+   "question": "Between v2.32.0 and v2.32.3, how did the connection-selection API in adapters.py change?",
+   "revision": "v2.32.3",
+   "expected_answer": "HTTPAdapter._get_connection (v2.32.0) was replaced by public get_connection_with_tls_context (first present in v2.32.2) plus build_connection_pool_key_attributes; send calls get_connection_with_tls_context in v2.32.3.",
+   "expected_citations": [
+    {
+     "path": "src/requests/adapters.py",
+     "start_line": 377,
+     "end_line": 377,
+     "revision": "v2.32.0"
+    },
+    {
+     "path": "src/requests/adapters.py",
+     "start_line": 396,
+     "end_line": 396,
+     "revision": "v2.32.3"
+    },
+    {
+     "path": "src/requests/adapters.py",
+     "start_line": 446,
+     "end_line": 446,
+     "revision": "v2.32.3"
+    },
+    {
+     "path": "src/requests/adapters.py",
+     "start_line": 633,
+     "end_line": 633,
+     "revision": "v2.32.3"
+    }
+   ],
+   "compare_revision": "v2.32.0"
+  },
+  {
+   "id": "rq-08",
+   "category": "fix_appeared",
+   "question": "Commit d9cb18ad made verify=False respected on a session after a verified request to the same host. Which tag first contains it and what code did it add?",
+   "revision": "v0.9.3",
+   "expected_answer": "First tag v0.9.3; it added an else branch in requests/models.py setting conn.cert_reqs = 'CERT_NONE' and conn.ca_certs = None.",
+   "expected_citations": [
+    {
+     "path": "requests/models.py",
+     "start_line": 457,
+     "end_line": 458,
+     "revision": "v0.9.3"
+    }
+   ],
+   "fix_commit": "d9cb18ad2a5dcc54a9c931d094d112be167078ba"
+  },
+  {
+   "id": "rq-09",
+   "category": "branches_merges",
+   "question": "Merge commit 5dc68d00 (PR #696, koordinates/develop) changed client-certificate handling. What changed and which tag first contains it?",
+   "revision": "v0.13.2",
+   "expected_answer": "Two-parent merge (8f0ac668 + 74a4d06d) changing `if self.cert and self.verify:` to `if self.cert:` in requests/models.py so client certs are used even when verify=False; first tag v0.13.2.",
+   "expected_citations": [
+    {
+     "path": "requests/models.py",
+     "start_line": 564,
+     "end_line": 564,
+     "revision": "v0.13.2"
+    }
+   ],
+   "merge_commit": "5dc68d0070e1946b90228f061a7b40d017b9d2f3"
+  },
+  {
+   "id": "rq-10",
+   "category": "ambiguous",
+   "question": "At v2.32.0, what does `get` do?",
+   "revision": "v2.32.0",
+   "expected_answer": "Ambiguous: several definitions named get exist - api.get (HTTP GET helper), Session.get (calls self.request('GET', ...)), RequestsCookieJar.get (cookie lookup) and LookupDict.get in structures.py. A correct answer lists candidates or asks which is meant.",
+   "expected_citations": [
+    {
+     "path": "src/requests/api.py",
+     "start_line": 62,
+     "end_line": 62,
+     "revision": "v2.32.0"
+    },
+    {
+     "path": "src/requests/sessions.py",
+     "start_line": 593,
+     "end_line": 593,
+     "revision": "v2.32.0"
+    },
+    {
+     "path": "src/requests/cookies.py",
+     "start_line": 194,
+     "end_line": 194,
+     "revision": "v2.32.0"
+    },
+    {
+     "path": "src/requests/structures.py",
+     "start_line": 98,
+     "end_line": 98,
+     "revision": "v2.32.0"
+    }
+   ],
+   "acceptable": [
+    "asks for clarification",
+    "lists the candidates"
+   ]
+  },
+  {
+   "id": "rq-11",
+   "category": "missing_evidence",
+   "question": "At v2.0.0, which module implements HTTP/2 support?",
+   "revision": "v2.0.0",
+   "expected_answer": "No evidence: v2.0.0 contains no HTTP/2 implementation; the correct answer reports that it is not present rather than inventing one.",
+   "expected_citations": [],
+   "expect_gap": true
+  }
+ ]
+}

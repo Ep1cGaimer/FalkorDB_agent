@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "declared_at": "2026-10-18",
+  "declared_before_measurement": true,
+  "requirement": "E3 (S4) - scale and updates",
+  "corpus": {
+    "repository": "psf/requests",
+    "path": "artifacts/repos/requests",
+    "total_commits": 6736,
+    "total_tags": 162,
+    "tag_pattern": "^v\\d+\\.\\d+\\.\\d+$",
+    "selected_tags_approx": 159,
+    "languages": ["python"],
+    "approx_python_bytes_at_head": 407127,
+    "approx_python_files_at_head": 37,
+    "update_scenario": "index all selected tags except the newest N=5 first, then index the remaining 5 tags as an incremental update"
+  },
+  "context_budget": {
+    "tokens": 128000,
+    "token_estimate": "bytes / 4 over the concatenated plaintext of all selected revisions' indexed source files",
+    "requirement": "measured plaintext token size of the selected corpus must exceed context_budget.tokens"
+  },
+  "budgets": {
+    "initial_index_seconds_max": 1800,
+    "update_seconds_max": 120,
+    "peak_memory_mb_max": 2048,
+    "query_latency_p95_ms_max": 2000,
+    "query_page_limit": 50,
+    "index_size_mb_max": 1024,
+    "failures_max": 0
+  },
+  "rationale": "Budgets are set for a developer laptop running FalkorDB locally. 30 minutes for a one-off initial import of ~160 releases is acceptable; an update adding a handful of releases must reuse unchanged blobs and finish within 2 minutes; 2 GB peak Python memory and 1 GB graph size keep the index feasible on a laptop; paged queries (limit 50) must answer interactively (p95 <= 2 s) so an agent can iterate through pages. Any query failure counts against the budget; truncation is allowed but must be reported."
+}

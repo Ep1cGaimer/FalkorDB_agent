@@ -1,0 +1,267 @@
+{
+ "repo": "round3-synthetic",
+ "builder": "evals/repo_questions/round3/build_round3_synthetic.py",
+ "prepared": "2026-10-18",
+ "prepared_by": "independent test writer, round 3 (hand-verified with git)",
+ "notes": "Round-3 held-out questions, written by hand with read-only git (git show/log/diff -M/tag --contains/merge-base --is-ancestor, plus ast parsing of `git show` output) AFTER round-2 results were seen (artifacts/repo_history_eval/20261018T050406Z.json; only failure categories were read); disjoint from every round-1 and round-2 question. No rw.repo output was consulted. Do not edit after any run. expected_facts follows the round-3 contract in tests/repo/test_s23_round3.py: changes facts list function/method qualnames only (classes under classes_*, deleted files under deleted_files, renames as {old,new,similarity}; symbols of a renamed file are matched by module-relative name; test files only in tests_changed, and only when indexed); constants carry is_plain_literal/evaluated; partially dotted names resolve on dotted-component suffixes; fix `state` is PRESENT when the fix commit is an ancestor and every non-blank added line is present. Names are matched as dotted suffixes of the full qualname.",
+ "tag_pattern": "^v\\d+\\.\\d+\\.\\d+$",
+ "shas": {
+  "v1.0.0": "b7860e1d9a4091edda0876c11bb174c64c202686",
+  "v1.1.0": "d8167fb6a0562182841746b3e72670a7334aecb3",
+  "v1.2.0": "aed1b7b15f2b8293cf123b77afe0305802ff2030",
+  "v1.3.0": "af76678a5012a2abd90ae99e4c2c785525e5bb75",
+  "fix": "add06e1bc03390c42a7be98fd4712c1dfda8c6aa"
+ },
+ "questions": [
+  {
+   "id": "r3sy-01",
+   "category": "partial_dotted_name",
+   "question": "At v1.0.0, which exceptions does Store.reserve raise?",
+   "revision": "v1.0.0",
+   "expected_answer": "OutOfStock (inv/store.py lines 11-14); not ColdStore.reserve.",
+   "expected_citations": [
+    {
+     "path": "inv/store.py",
+     "start_line": 11,
+     "end_line": 14,
+     "revision": "v1.0.0"
+    }
+   ],
+   "expected_facts": {
+    "symbol": "inv.store.Store.reserve",
+    "exceptions": [
+     "OutOfStock"
+    ]
+   }
+  },
+  {
+   "id": "r3sy-02",
+   "category": "partial_dotted_name",
+   "question": "At v1.2.0, which exceptions does ColdStore.reserve raise?",
+   "revision": "v1.2.0",
+   "expected_answer": "OutOfStock and TempError (inv/store.py lines 26-31).",
+   "expected_citations": [
+    {
+     "path": "inv/store.py",
+     "start_line": 26,
+     "end_line": 31,
+     "revision": "v1.2.0"
+    }
+   ],
+   "expected_facts": {
+    "symbol": "inv.store.ColdStore.reserve",
+    "exceptions": [
+     "OutOfStock",
+     "TempError"
+    ]
+   }
+  },
+  {
+   "id": "r3sy-03",
+   "category": "constant_non_literal",
+   "question": "At v1.0.0, what is the value of BATCH?",
+   "revision": "v1.0.0",
+   "expected_answer": "The expression 4 * 25 (inv/limits.py line 2); not a plain literal, not evaluated.",
+   "expected_citations": [
+    {
+     "path": "inv/limits.py",
+     "start_line": 2,
+     "end_line": 2,
+     "revision": "v1.0.0"
+    }
+   ],
+   "expected_facts": {
+    "symbol": "inv.limits.BATCH",
+    "expression": "4 * 25",
+    "is_plain_literal": false,
+    "evaluated": false
+   }
+  },
+  {
+   "id": "r3sy-04",
+   "category": "constant_plain_literal",
+   "question": "At v1.1.0, what is the value of Store.default_zone?",
+   "revision": "v1.1.0",
+   "expected_answer": "\"us\" (inv/store.py line 6).",
+   "expected_citations": [
+    {
+     "path": "inv/store.py",
+     "start_line": 6,
+     "end_line": 6,
+     "revision": "v1.1.0"
+    }
+   ],
+   "expected_facts": {
+    "symbol": "inv.store.Store.default_zone",
+    "value": "us",
+    "is_plain_literal": true,
+    "evaluated": true
+   }
+  },
+  {
+   "id": "r3sy-05",
+   "category": "constant_plain_literal",
+   "question": "At v1.1.0, what is the value of limits.MAX_ITEMS?",
+   "revision": "v1.1.0",
+   "expected_answer": "120 (inv/limits.py line 1).",
+   "expected_citations": [
+    {
+     "path": "inv/limits.py",
+     "start_line": 1,
+     "end_line": 1,
+     "revision": "v1.1.0"
+    }
+   ],
+   "expected_facts": {
+    "symbol": "inv.limits.MAX_ITEMS",
+    "value": 120,
+    "is_plain_literal": true,
+    "evaluated": true
+   }
+  },
+  {
+   "id": "r3sy-06",
+   "category": "changes_function_level",
+   "question": "What changed between v1.0.0 and v1.1.0?",
+   "revision": "v1.1.0",
+   "expected_answer": "Added Store.restock and export.dump_lines; removed report.summary and Report.render (inv/report.py deleted, class Report removed); modified Store.release; inv/csvio.py renamed to inv/export.py (71% similar, dump unchanged); tests/test_store.py added as a test file.",
+   "expected_citations": [
+    {
+     "path": "inv/store.py",
+     "start_line": 1,
+     "end_line": 31,
+     "revision": "v1.1.0"
+    }
+   ],
+   "expected_facts": {
+    "added": [
+     "inv.export.dump_lines",
+     "inv.store.Store.restock"
+    ],
+    "removed": [
+     "inv.report.Report.render",
+     "inv.report.summary"
+    ],
+    "modified": [
+     "inv.store.Store.release"
+    ],
+    "classes_added": [],
+    "classes_removed": [
+     "inv.report.Report"
+    ],
+    "deleted_files": [
+     "inv/report.py"
+    ],
+    "renamed": [
+     {
+      "old": "inv/csvio.py",
+      "new": "inv/export.py",
+      "similarity": 71
+     }
+    ],
+    "tests_changed": [
+     "tests/test_store.py"
+    ]
+   }
+  },
+  {
+   "id": "r3sy-07",
+   "category": "changes_non_adjacent",
+   "question": "What changed between v1.0.0 and v1.3.0?",
+   "revision": "v1.3.0",
+   "expected_answer": "Across v1.1.0 and v1.2.0: added Store.restock, export.dump_lines, Ledger.__init__, Ledger.record (class Ledger); removed report.summary, Report.render, store.audit (class Report); modified Store.release and ColdStore.reserve; inv/report.py deleted; csvio.py -> export.py; test_store.py and test_ledger.py added. Citations only at v1.0.0 or v1.3.0.",
+   "expected_citations": [
+    {
+     "path": "inv/store.py",
+     "start_line": 1,
+     "end_line": 32,
+     "revision": "v1.3.0"
+    }
+   ],
+   "expected_facts": {
+    "added": [
+     "inv.export.dump_lines",
+     "inv.ledger.Ledger.__init__",
+     "inv.ledger.Ledger.record",
+     "inv.store.Store.restock"
+    ],
+    "removed": [
+     "inv.report.Report.render",
+     "inv.report.summary",
+     "inv.store.audit"
+    ],
+    "modified": [
+     "inv.store.ColdStore.reserve",
+     "inv.store.Store.release"
+    ],
+    "classes_added": [
+     "inv.ledger.Ledger"
+    ],
+    "classes_removed": [
+     "inv.report.Report"
+    ],
+    "deleted_files": [
+     "inv/report.py"
+    ],
+    "renamed": [
+     {
+      "old": "inv/csvio.py",
+      "new": "inv/export.py",
+      "similarity": 71
+     }
+    ],
+    "tests_changed": [
+     "tests/test_ledger.py",
+     "tests/test_store.py"
+    ]
+   }
+  },
+  {
+   "id": "r3sy-08",
+   "category": "fix_present_non_contiguous",
+   "question": "Is fix add06e1b (reject non-positive restock quantities, #9) present at v1.3.0?",
+   "revision": "v1.3.0",
+   "expected_answer": "PRESENT: ancestor of v1.3.0 and both added lines are at inv/store.py lines 20 and 22 (a comment was inserted between them at line 21); first tag containing it is v1.2.0.",
+   "expected_citations": [
+    {
+     "path": "inv/store.py",
+     "start_line": 20,
+     "end_line": 22,
+     "revision": "v1.3.0"
+    }
+   ],
+   "expected_facts": {
+    "fix_commit": "add06e1bc03390c42a7be98fd4712c1dfda8c6aa",
+    "state": "PRESENT",
+    "first_tag_containing": "v1.2.0"
+   }
+  },
+  {
+   "id": "r3sy-09",
+   "category": "fix_absent",
+   "question": "Is fix add06e1b (reject non-positive restock quantities, #9) present at v1.1.0?",
+   "revision": "v1.1.0",
+   "expected_answer": "ABSENT: it landed after v1.1.0; first tag containing it is v1.2.0.",
+   "expected_citations": [],
+   "expected_facts": {
+    "fix_commit": "add06e1bc03390c42a7be98fd4712c1dfda8c6aa",
+    "state": "ABSENT",
+    "first_tag_containing": "v1.2.0"
+   }
+  },
+  {
+   "id": "r3sy-10",
+   "category": "symbol_history",
+   "question": "At v1.3.0, when did inv.store.audit disappear?",
+   "revision": "v1.3.0",
+   "expected_answer": "Present from v1.0.0 through v1.2.0 (inv/store.py lines 34-35 at v1.2.0), absent from v1.3.0; no top-level citation outside v1.3.0.",
+   "expected_citations": [],
+   "expected_facts": {
+    "symbol": "inv.store.audit",
+    "first_present_revision": "v1.0.0",
+    "first_absent_revision": "v1.3.0",
+    "present_at_requested": false
+   }
+  }
+ ]
+}

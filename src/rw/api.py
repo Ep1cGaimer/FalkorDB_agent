@@ -314,6 +314,80 @@ def _now():
     return datetime.now(timezone.utc).isoformat()
 
 
+class RepoInvestigateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    revision: str | None = Field(default=None, max_length=200)
+    question: str = Field(min_length=1, max_length=2000)
+
+
+def _repo_config(name: str):
+    """Config for a repository NAME (never a path): 422 on a bad name, 404 when not configured."""
+    from .repo.config import NAME_RE, load_config
+    if not isinstance(name, str) or not NAME_RE.fullmatch(name):
+        raise HTTPException(422, "invalid repository name")
+    try:
+        return load_config(name)
+    except FileNotFoundError:
+        raise HTTPException(404, "repository not configured") from None
+    except (OSError, ValueError):
+        raise HTTPException(422, "repository configuration is invalid") from None
+
+
+def _repo_listing_entry(cfg) -> dict:
+    from .repo.index import graph_name_for
+    entry = {"name": cfg.name, "import_status": None, "revisions": []}
+    try:
+        from . import graph as G
+        g = G.connect().select_graph(graph_name_for(cfg))
+        runs = g.ro_query("MATCH (r:ImportRun) RETURN r.status, r.started_at "
+                          "ORDER BY r.started_at DESC LIMIT 1").result_set
+        if runs:
+            entry["import_status"] = runs[0][0]
+        rows = g.ro_query("MATCH (:ImportRun {status:'COMPLETE'})-[:INDEXED]->(c:Commit)<-[:POINTS_TO]-(t:Tag) "
+                          "RETURN c.sha, collect(DISTINCT t.name) ORDER BY c.sha").result_set
+        entry["revisions"] = [{"sha": sha, "refs": sorted(refs)} for sha, refs in rows]
+    except Exception:  # graph absent or database unavailable: listed as not indexed
+        pass
+    return entry
+
+
+def _add_repo_routes(app: FastAPI) -> None:
+    """S5 repository access: index, list, investigate (deterministic retrieval, no LLM)."""
+
+    @app.get("/api/repos")
+    def list_repos():
+        from .repo.config import RepoConfig, repos_dir
+        out = []
+        d = repos_dir()
+        for p in sorted(d.glob("*.json")) if d.is_dir() else []:
+            try:
+                cfg = RepoConfig(**json.loads(p.read_text(encoding="utf-8")))
+            except (OSError, ValueError):
+                continue
+            if cfg.name != p.stem:
+                continue
+            out.append(_repo_listing_entry(cfg))
+        return out
+
+    @app.post("/api/repos/{name}/index")
+    def index_repo(name: str):
+        from dataclasses import asdict
+        from .repo.index import index_repository
+        cfg = _repo_config(name)
+        try:
+            report = index_repository(cfg)
+        except Exception as exc:
+            logging.getLogger(__name__).warning("repository index failed: %s", type(exc).__name__)
+            raise HTTPException(502, f"indexing failed ({type(exc).__name__})") from None
+        return json.loads(json.dumps(asdict(report), default=str))
+
+    @app.post("/api/repos/{name}/investigate")
+    def investigate_repo(name: str, body: RepoInvestigateRequest):
+        from .repo.investigate import investigate
+        cfg = _repo_config(name)
+        return investigate(name, body.revision, body.question, config=cfg).to_dict()
+
+
 def create_app(*, session_factory: Callable | None = None,
                ground_function: Callable | None = None, replay_function: Callable | None = None,
                db_path: Path = ROOT / "artifacts/sim.sqlite",
@@ -669,6 +743,8 @@ def create_app(*, session_factory: Callable | None = None,
             receipt = simulation.simulate(db_path, attempt.approval, result, manifest_hash, fleet, attempt.plan)
             attempt.simulation = receipt.model_dump(mode="json")
             return receipt
+
+    _add_repo_routes(app)
 
     @app.get("/")
     def index():

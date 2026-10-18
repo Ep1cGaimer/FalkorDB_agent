@@ -1,0 +1,9 @@
+{
+  "name": "itsdangerous",
+  "path": "artifacts/repos/itsdangerous",
+  "revisions": ["2.0.0", "2.1.0", "2.2.0"],
+  "languages": ["python"],
+  "include": ["src/**", "CHANGES.rst"],
+  "release_notes": ["CHANGES.rst"],
+  "unseen": true
+}

@@ -1,0 +1,9 @@
+{
+ "name": "round3-synthetic",
+ "path": "D:\\Projects\\FalkorDB_agent\\artifacts\\question_repos\\round3-synthetic",
+ "revisions": [],
+ "tag_pattern": "^v\\d+\\.\\d+\\.\\d+$",
+ "languages": [
+  "python"
+ ]
+}
