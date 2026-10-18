@@ -1,0 +1,24 @@
+{
+  "schema": "development-evidence-files/v1",
+  "files": {
+    "goal-evaluation-runner-combined-001.xml": "d69491d6b5c00c97a80812f32b4cf41de11e1494bbb7d568ebe0b444b9bc1294",
+    "goal-evaluation-runner-combined-002.xml": "2cf5790261a025a97c55299b56892e3755a3cd5c8053cadbcd0f513f70c525ba",
+    "goal-evaluation-runner-combined-003.xml": "29883f10ce0342130f0beaa1f455a6b9e6e4cc45ed40df2b328c1d775ea95725",
+    "goal-model-meter-tests-001.xml": "aadbdfd2eb8bbb0f2b81dbfb7601fc0cab70cb88d4ba2ae06ba4f7fea25a898e",
+    "goal-model-runner-tests-001.xml": "01815106c27a412b51fdf353cc7800a4d86ef997e123f836a9c0a3a0d7dbf802",
+    "goal-model-runner-tests-002.xml": "da3bf2b9d219d31e056d7e4d23ab2ed9768c58f5937c5d6121893789ba8d5582",
+    "implementation-manifest.json": "f52f94382a5d17cfe3d9e4f7d98f1342701a52a441908c3aaf488a36645d6a69",
+    "live-development/neutral-meter-001/events.jsonl": "8afb92a9612190a6919b7373a66cb678263c1850714a66602057c1583cc09798",
+    "live-development/neutral-meter-001/result.json": "3dd753f8dcfb8c41417e737cbfefd18ea6430b36afe6057c1caed16e354397d1",
+    "live-development/requests-development-task.json": "0151a985c130b38201677ce60c0e5656da0cc0f37f72ed71dfaa3521c5ccd743",
+    "live-development/requests-runner-001/events.jsonl": "85691e9cb542b04239693c57cd52e140c272484ef5fab174809e2dbb5fb85249",
+    "live-development/requests-runner-001/result.json": "94eacea879d9fda07bc83bbc9c05357524e2fb911d4cc1820f62b7be057873cb",
+    "live-development/requests-runner-001/setup.json": "524628660480091bdc25e2dc650881b97c6d524cc9089a5a4bf8e815d401e476",
+    "live-development/requests-runner-002/events.jsonl": "f26c4f83297d0b00601bf7639074c06e100bb67002edd72c4360386aa417078d",
+    "live-development/requests-runner-002/result.json": "7a957d550961002418e41fb03b4216b3f5af1302885c00a98d58dc4864ee6bf7",
+    "live-development/requests-runner-002/setup.json": "49bad794438d0ea7ca0bca90db1bfa362e6b72296fe712d028aff4b022305740",
+    "run-summary.json": "a4295e5c73ef7d7ca5d8fbb41fc6a45436f3995566630f2f225af4cdf3a09bd0",
+    "source-snapshot.tar.gz": "85ae3c8a831b535b9b2279de23076a674f5c9bf2b05b4c5bd1a4456500dda636"
+  },
+  "acceptance_validated": false
+}

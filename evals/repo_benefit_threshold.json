@@ -1,0 +1,54 @@
+{
+ "schema": "repo_benefit_threshold/v1",
+ "declared": "2026-10-18",
+ "declared_before_any_run": true,
+ "evidence": ["E2", "E4"],
+ "amendment_rule": "Any change to questions, budgets, contestants or thresholds after inspecting results requires a new evaluation with a new declaration file; the original declaration and results are retained unmodified.",
+ "question_files": [
+  {"path": "evals/repo_questions/requests.json", "sha256": "a17cfee5f811a9f95ba8f9e5dcbcfd3722db9fcae0ab4c1f2a35e8b300514937"},
+  {"path": "evals/repo_questions/itsdangerous.json", "sha256": "4bb40d80709791209e4b319a19c09d70feb246e1a89397977a8f9665c79a8c2a"}
+ ],
+ "repos": ["requests", "itsdangerous"],
+ "model": {"provider": "groq", "name": "openai/gpt-oss-120b", "temperature": 0, "max_completion_tokens_per_call": 1500},
+ "instructions": "Identical system prompt for every contestant: answer the question for the stated repository and revision; cite every claim as {path, start_line, end_line, revision}; if the evidence is absent or the request is ambiguous, say so instead of guessing.",
+ "contestants": [
+  {"name": "graph_tools", "description": "LLM with tools wrapping rw.repo RepoQuery (resolve, symbols, dependencies, dependents, changes_between, history) and investigate, over the indexed graph of the same clone."},
+  {"name": "plaintext_direct", "description": "Single call with the relevant source files at the requested revision(s) plus `git log` for them as prompt text; if the prompt plus completion would exceed the per-task token budget, record a CONTEXT_LIMIT failure (scored incorrect, zero evidence) without truncating."},
+  {"name": "plaintext_search", "description": "LLM with grep, read_file(path, revision, start, end), git_log(path?, rev_range?), git_show(rev, path?) and list_tags tools over the same clone; same bounded outputs."}
+ ],
+ "budget": {
+  "groq_tokens_per_minute_limit": 8000,
+  "max_turns_per_task": 6,
+  "max_total_tokens_per_task": 7500,
+  "max_tokens_per_request": 7500,
+  "max_tool_output_chars": 6000,
+  "max_tool_calls_per_task": 8,
+  "pacing": "wait so that no rolling 60 s window exceeds 8000 tokens; wait time is excluded from latency but recorded",
+  "exceeding_budget": "the task stops and is scored on what was answered so far; recorded as budget_exhausted"
+ },
+ "repeats": 2,
+ "pairing": "every contestant runs every question in each repeat; order of contestants randomised per question with a recorded seed",
+ "scoring": {
+  "answer_accuracy": "final answer judged correct against expected_answer (required facts present, no contradicting claim, correct revision); ambiguous: correct iff it asks or lists candidates; missing_evidence: correct iff it reports absence. Scored separately from evidence.",
+  "evidence_recall": "fraction of expected_citations overlapped (same path and revision, line spans intersect) by a returned citation",
+  "evidence_precision": "fraction of returned citations that overlap some expected citation",
+  "citation_validity": "fraction of returned citations whose revision resolves in the requested repo (git rev-parse) and whose path exists at that revision with end_line <= file length",
+  "wrong_revision": "count of answers whose claims or citations refer to a revision other than the requested/compare revision"
+ },
+ "primary_metric": "grounded_answer_accuracy = answer correct AND evidence_recall > 0 (missing_evidence questions: answer correct and no fabricated citation)",
+ "baseline_for_comparison": "the stronger of plaintext_direct and plaintext_search by grounded_answer_accuracy, per repository and overall",
+ "threshold": {
+  "PASS_if_any": [
+   "graph_tools grounded_answer_accuracy >= baseline + 15 percentage points with mean tokens per task within +/-20% of the baseline",
+   "graph_tools mean tokens per task <= 70% of the baseline with grounded_answer_accuracy and evidence_recall each not lower than the baseline by more than 5 percentage points"
+  ],
+  "FAIL": "neither PASS condition holds and the run is complete",
+  "INCONCLUSIVE": "any repeat missing, more than 10% of tasks failed for infrastructure reasons (API errors, not context-limit or budget), or the two repeats disagree on the verdict",
+  "applies_to": "overall (both repositories pooled); per-repository verdicts are reported but the claim requires the overall PASS",
+  "tokens_include": "prompt + completion tokens of all calls in the task; graph_tools additionally reports indexing cost (E1/E3 records) amortised and un-amortised"
+ },
+ "secondary_metrics": ["evidence_recall", "evidence_precision", "citation_validity", "wrong_revision", "tokens", "tool_calls", "latency_s", "cost_usd", "context_limit_failures", "indexing_cost"],
+ "cost_model": {"usd_per_million_input_tokens": 0.15, "usd_per_million_output_tokens": 0.75, "note": "declared assumption for gpt-oss-120b; free tier is actually $0"},
+ "indexing_cost_source": "artifacts/repo_onboarding and E3 scale records (wall seconds, peak memory, tokens if any) for each repo at the evaluated revisions",
+ "outputs": ["artifacts/repo_benefit/*.json", "artifacts/repo_history_eval/*.json"]
+}

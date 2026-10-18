@@ -10,7 +10,7 @@ const LOCAL_UI_IDENTITY = "local-ui-user";
 const state = {
   inv: null, attemptIndex: 0, busy: null, error: null,
   selected: null, focusRecord: null, overlay: null, returnFocus: null, contexts: [], contextError: null,
-  transcripts: [], history: [], liveRequest: "", retainedExpanded: false,
+  transcripts: [], samples: [], history: [], liveRequest: "", retainedExpanded: false,
   form: { request: "", snapshot: "", mode: "live", replay: "", answerReplay: "", altReplay: "", answer: "" },
 };
 
@@ -287,6 +287,11 @@ const actions = {
     }
     state.error = null; render();
   },
+  useSample(request) {
+    if (state.inv || state.busy) return;
+    state.form.mode = "live"; state.form.request = state.liveRequest = request;
+    state.error = null; render();
+  },
   setReplay(path) {
     const t = state.transcripts.find(t => t.replay_path === path);
     if (!state.inv && t) { state.form.replay = path; state.form.request = t.request_text; render(); }
@@ -309,7 +314,11 @@ const actions = {
 
 async function boot() {
   history.scrollRestoration = "manual";
-  const results = await Promise.allSettled([api("GET", "/api/snapshots"), api("GET", "/api/transcripts"), loadHistory()]);
+  const results = await Promise.allSettled([api("GET", "/api/snapshots"), api("GET", "/api/transcripts"), loadHistory(),
+    api("GET", "/api/samples")]);
+  if (results[3].status === "fulfilled") state.samples = results[3].value;
+  // A fixture's first sample starts in the request box so a demo can run with one click.
+  if (state.samples.length && !state.form.request) state.form.request = state.liveRequest = state.samples[0].request;
   if (results[0].status === "fulfilled") {
     state.contexts = results[0].value;
     state.form.snapshot = state.contexts[0]?.snapshot || "";

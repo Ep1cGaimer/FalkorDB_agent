@@ -1,0 +1,13 @@
+......F.............                                                     [100%]
+=================================== FAILURES ===================================
+_____ test_release_notes_total_must_not_silently_equal_server_row_ceiling ______
+tests/test_extra_review.py:100: in test_release_notes_total_must_not_silently_equal_server_row_ceiling
+    page = q.release_notes("a" * 40, limit=1)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/rw/repo/query.py:189: in call
+    with read_scope(self.limits) as budget:
+                    ^^^^^^^^^^^
+E   AttributeError: 'RepoQuery' object has no attribute 'limits'
+=========================== short test summary info ============================
+FAILED tests/test_extra_review.py::test_release_notes_total_must_not_silently_equal_server_row_ceiling
+1 failed, 19 passed in 4.38s

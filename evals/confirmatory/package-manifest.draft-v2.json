@@ -1,0 +1,38 @@
+{
+  "created_at": "2026-10-18T09:26:41.357321+00:00",
+  "mandatory_pending": [
+    "Final complete core before/after hash attestation and unseen Click implementation/tuning isolation",
+    "Exact model/version/settings and context/tokenizer verification",
+    "Exact prompt files/hashes and comparable baseline implementations/tuning effort",
+    "Exact corpus serialization/token count and beyond-context comparison",
+    "Pilot development-data power/sample-size rationale for Gate B",
+    "Final budget/environment/database image/cache/price verification",
+    "Named two independent blind scorers and third adjudicator with prompt/model identities",
+    "Runner permission/allowlist proof excluding sealed files",
+    "Independent frozen-plan review/signature before any confirmatory result"
+  ],
+  "plan": {
+    "path": "evals/confirmatory/plan.draft-v2.json",
+    "sha256": "ffe7f4257c329841d3b2be6b60fe145e6befc2e23d6f4d8c9014d9c0545409bc"
+  },
+  "prior_drafts_preserved": [
+    "evals/confirmatory/PROTOCOL.draft-v1.md",
+    "evals/confirmatory/tasks.draft-v1.json",
+    "evals/confirmatory/task-manifest.draft-v1.json",
+    "artifacts/confirmatory/sealed/oracles.draft-v1.json"
+  ],
+  "public_tasks": {
+    "path": "evals/confirmatory/tasks.draft-v2.json",
+    "sha256": "79e39f531005db4254af8c188da9cc3fc883ea8aa9704fb03251491862ef0ab3"
+  },
+  "review": {
+    "path": "evals/confirmatory/review.draft-v2.json",
+    "sha256": "a64675eea0e46b1c065018d4979a56036d4b101aa491acc5d078cfd61a80729a"
+  },
+  "schema": "confirmatory-package-manifest/v2",
+  "sealed_oracle": {
+    "path": "artifacts/confirmatory/sealed/oracles.draft-v2.json",
+    "sha256": "9b97b4f462e94d7158cbdcde2349977e70489dacef3c03078c0b6cf5f6913b2d"
+  },
+  "status": "DRAFT_NOT_FROZEN"
+}

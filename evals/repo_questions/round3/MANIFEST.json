@@ -1,0 +1,22 @@
+{
+ "written_after_round2": true,
+ "statement": "These questions were written after round-2 results were seen (artifacts/repo_history_eval/20261018T050406Z.json; only failure categories were read) and are disjoint from all round-1 (evals/repo_questions/*.json) and round-2 (evals/repo_questions/round2/*.json) questions: no question text is reused and no round-2 symbol or fix commit is asked about again. Earlier question files, thresholds and budgets are retained unchanged.",
+ "prepared": "2026-10-18",
+ "files": {
+  "itsdangerous.json": {
+   "sha256": "7ae5c92e0adbf86ceb17330b7e60cad9a6c03bf53fdf527e63846b84f7af811d",
+   "questions": 10
+  },
+  "requests.json": {
+   "sha256": "d399a998f14d222daf1af548f1afeb865b9f18e96c64d6423a3fc4eb71e3159c",
+   "questions": 10
+  },
+  "synthetic.json": {
+   "sha256": "dafd732154ff6548b3deaa37e3a1200722eaa7a6864f770a7e8746377891669b",
+   "questions": 10
+  },
+  "build_round3_synthetic.py": {
+   "sha256": "84c81aea7edc6ad860c43c4854002ddb20aa20af58afa49184d20bfacafb29f8"
+  }
+ }
+}

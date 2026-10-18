@@ -89,6 +89,9 @@ textarea { resize: vertical; min-height: 105px; line-height: 1.8; }
 textarea:read-only { background: #fafbfc; }
 .request-input { font-size: 15px; padding: 17px 18px; line-height: 1.75; min-height: 135px; background: #fcfcfd; }
 .request-toolbar { display: flex; align-items: center; justify-content: flex-end; gap: 14px; margin-top: 15px; }
+.sample-requests { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
+.sample-request { border: 1px solid var(--line); background: #fafbfc; color: var(--subtle); border-radius: 999px; padding: 4px 10px; font-size: 11px; cursor: pointer; }
+.sample-request:hover:not(:disabled) { border-color: #b8c2cf; color: inherit; }
 .form-field { margin-top: 17px; }
 .form-field:first-child { margin-top: 0; }
 .field-help { color: var(--muted); font-size: 10px; margin-top: 6px; line-height: 1.7; }

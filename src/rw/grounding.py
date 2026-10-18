@@ -180,12 +180,12 @@ class GroundingTools:
 
     def release_history(self, service: str):
         if not isinstance(service, str) or not re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", service):
-            raise ValueError("service must be a short service name such as 'cart'")
+            raise ValueError("service must be a short service name as returned by current_fleet")
         return self._graph().release_history(self._g, self._snapshot_id, service)
 
     def store_readers(self, store_id: str):
         if not isinstance(store_id, str) or not re.fullmatch(r"(store:)?[A-Za-z0-9_.-]{1,64}", store_id):
-            raise ValueError("store_id must look like 'store:cart-cache'")
+            raise ValueError("store_id must look like 'store:<name>' (a reads_from store of a release route)")
         if not store_id.startswith("store:"):
             store_id = "store:" + store_id
         return self._graph().store_readers(self._g, store_id)
@@ -237,7 +237,7 @@ TOOL_SPECS: list[dict] = [
      "description": "Release history of one service (newest first) with each release's excerpts (changelog and code).",
      "parameters": {"type": "object", "properties": {"service": _S}, "required": ["service"]}},
     {"name": "store_readers",
-     "description": "List releases/routes that read a state store, e.g. store:cart-cache.",
+     "description": "List releases/routes that read a state store, e.g. store:<name> from a release route's reads_from.",
      "parameters": {"type": "object", "properties": {"store_id": _S}, "required": ["store_id"]}},
     {"name": "get_excerpts",
      "description": "Fetch full excerpt rows (text, content_hash) by excerpt id.",

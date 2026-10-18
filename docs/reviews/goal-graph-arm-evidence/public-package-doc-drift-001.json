@@ -1,0 +1,1 @@
+{"classification":"development documentation dependency drift","checker_result":"FAIL: hash mismatch: repos/README.md","resolution":"Preserved historical dependency bytes and moved new configuration documentation to repos/PATH_MATCHING.md; independent draft files/questions/oracles unchanged.","gate_validated":false}

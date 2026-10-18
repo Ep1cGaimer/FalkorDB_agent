@@ -1,0 +1,251 @@
+{
+ "repo": "requests",
+ "upstream": "psf/requests",
+ "clone": "artifacts/repos/requests",
+ "prepared": "2026-10-18",
+ "prepared_by": "independent test writer, round 2 (hand-verified with git)",
+ "notes": "Round-2 held-out questions, written by hand with read-only git (git show/log/diff -M/tag --contains) AFTER round-1 (E2) results were seen; disjoint from every round-1 question in evals/repo_questions/*.json. No rw.repo output was consulted. Do not edit after any run: changes require a new evaluation retaining the originals. expected_facts holds the concrete answer (values are Python literals; `first_tag_containing` is the earliest tag matching the repo's tag_pattern whose commit has the fix commit as an ancestor; fix `state` is judged on content).",
+ "required_revisions": [
+  "v2.31.0",
+  "v2.32.0",
+  "v2.32.3",
+  "v2.32.4"
+ ],
+ "questions": [
+  {
+   "id": "r2rq-01",
+   "category": "constant_value",
+   "question": "At v2.32.0, what is the value of DEFAULT_POOLSIZE in requests.adapters?",
+   "revision": "v2.32.0",
+   "expected_answer": "10 (src/requests/adapters.py line 71).",
+   "expected_citations": [
+    {
+     "path": "src/requests/adapters.py",
+     "start_line": 71,
+     "end_line": 71,
+     "revision": "v2.32.0"
+    }
+   ],
+   "expected_facts": {
+    "symbol": "DEFAULT_POOLSIZE",
+    "value": 10
+   }
+  },
+  {
+   "id": "r2rq-02",
+   "category": "constant_value",
+   "question": "At v2.32.0, what is DEFAULT_REDIRECT_LIMIT set to in requests.models?",
+   "revision": "v2.32.0",
+   "expected_answer": "30 (src/requests/models.py line 79).",
+   "expected_citations": [
+    {
+     "path": "src/requests/models.py",
+     "start_line": 79,
+     "end_line": 79,
+     "revision": "v2.32.0"
+    }
+   ],
+   "expected_facts": {
+    "symbol": "DEFAULT_REDIRECT_LIMIT",
+    "value": 30
+   }
+  },
+  {
+   "id": "r2rq-03",
+   "category": "constant_value",
+   "question": "At v2.32.0, what is the value of CONTENT_CHUNK_SIZE in requests.models?",
+   "revision": "v2.32.0",
+   "expected_answer": "It is the expression 10 * 1024 (= 10240 bytes), not a plain literal (src/requests/models.py line 80).",
+   "expected_citations": [
+    {
+     "path": "src/requests/models.py",
+     "start_line": 80,
+     "end_line": 80,
+     "revision": "v2.32.0"
+    }
+   ],
+   "expected_facts": {
+    "symbol": "CONTENT_CHUNK_SIZE",
+    "expression": "10 * 1024",
+    "evaluated": 10240,
+    "is_plain_literal": false
+   }
+  },
+  {
+   "id": "r2rq-04",
+   "category": "exceptions",
+   "question": "At v2.32.0, which exception does Session.get_adapter raise?",
+   "revision": "v2.32.0",
+   "expected_answer": "InvalidSchema, when no adapter matches the URL (src/requests/sessions.py 781-792, raise at 792).",
+   "expected_citations": [
+    {
+     "path": "src/requests/sessions.py",
+     "start_line": 781,
+     "end_line": 792,
+     "revision": "v2.32.0"
+    }
+   ],
+   "expected_facts": {
+    "symbol": "Session.get_adapter",
+    "exceptions": [
+     "InvalidSchema"
+    ]
+   }
+  },
+  {
+   "id": "r2rq-05",
+   "category": "exceptions",
+   "question": "At v2.32.0, which exception types does HTTPAdapter.cert_verify raise?",
+   "revision": "v2.32.0",
+   "expected_answer": "Only OSError (three raise sites: lines 309, 331, 336) for missing CA bundle / cert / key files.",
+   "expected_citations": [
+    {
+     "path": "src/requests/adapters.py",
+     "start_line": 285,
+     "end_line": 338,
+     "revision": "v2.32.0"
+    }
+   ],
+   "expected_facts": {
+    "symbol": "HTTPAdapter.cert_verify",
+    "exceptions": [
+     "OSError"
+    ]
+   }
+  },
+  {
+   "id": "r2rq-06",
+   "category": "exceptions",
+   "question": "At v2.32.0, what exception does SessionRedirectMixin.resolve_redirects raise when there are too many redirects?",
+   "revision": "v2.32.0",
+   "expected_answer": "TooManyRedirects (raised at sessions.py line 191 inside resolve_redirects, lines 159-280).",
+   "expected_citations": [
+    {
+     "path": "src/requests/sessions.py",
+     "start_line": 159,
+     "end_line": 280,
+     "revision": "v2.32.0"
+    }
+   ],
+   "expected_facts": {
+    "symbol": "SessionRedirectMixin.resolve_redirects",
+    "exceptions": [
+     "TooManyRedirects"
+    ]
+   }
+  },
+  {
+   "id": "r2rq-07",
+   "category": "fix_first_tag",
+   "question": "Is commit 96ba401c ('Only use hostname to do netrc lookup instead of netloc') present at v2.32.4, and which tag first contains it?",
+   "revision": "v2.32.4",
+   "expected_answer": "PRESENT: get_netrc_auth uses `host = ri.hostname` (src/requests/utils.py line 232 at v2.32.4); first tag containing the commit is v2.32.4.",
+   "expected_citations": [
+    {
+     "path": "src/requests/utils.py",
+     "start_line": 232,
+     "end_line": 232,
+     "revision": "v2.32.4"
+    }
+   ],
+   "expected_facts": {
+    "fix_commit": "96ba401c1296ab1dda74a2365ef36d88f7d144ef",
+    "state": "PRESENT",
+    "first_tag_containing": "v2.32.4"
+   }
+  },
+  {
+   "id": "r2rq-08",
+   "category": "fix_first_tag",
+   "question": "Is commit 96ba401c (netrc lookup by hostname) present at v2.32.3?",
+   "revision": "v2.32.3",
+   "expected_answer": "ABSENT: at v2.32.3 get_netrc_auth still splits ri.netloc on ':'; the fix first ships in v2.32.4.",
+   "expected_citations": [
+    {
+     "path": "src/requests/utils.py",
+     "start_line": 204,
+     "end_line": 258,
+     "revision": "v2.32.3"
+    }
+   ],
+   "expected_facts": {
+    "fix_commit": "96ba401c1296ab1dda74a2365ef36d88f7d144ef",
+    "state": "ABSENT",
+    "first_tag_containing": "v2.32.4"
+   }
+  },
+  {
+   "id": "r2rq-09",
+   "category": "rename_old_new",
+   "question": "Between v2.31.0 and v2.32.0, what are the old and new paths of the module holding __version__, and was it edited?",
+   "revision": "v2.32.0",
+   "expected_answer": "requests/__version__.py -> src/requests/__version__.py (git -M similarity 83%, i.e. renamed and edited: version strings bumped).",
+   "expected_citations": [
+    {
+     "path": "src/requests/__version__.py",
+     "start_line": 1,
+     "end_line": 14,
+     "revision": "v2.32.0"
+    }
+   ],
+   "expected_facts": {
+    "renamed": [
+     {
+      "old": "requests/__version__.py",
+      "new": "src/requests/__version__.py",
+      "similarity": 83
+     }
+    ]
+   }
+  },
+  {
+   "id": "r2rq-10",
+   "category": "changed_symbols",
+   "question": "Which functions or methods under src/ changed between v2.32.3 and v2.32.4?",
+   "revision": "v2.32.4",
+   "expected_answer": "Modified: utils.super_len, utils.get_netrc_auth, models.Response.json (docstring only); compat.py gained module-level is_urllib3_1 detection; no function added or removed; no rename.",
+   "expected_citations": [
+    {
+     "path": "src/requests/utils.py",
+     "start_line": 136,
+     "end_line": 204,
+     "revision": "v2.32.4"
+    },
+    {
+     "path": "src/requests/utils.py",
+     "start_line": 207,
+     "end_line": 248,
+     "revision": "v2.32.4"
+    },
+    {
+     "path": "src/requests/models.py",
+     "start_line": 947,
+     "end_line": 980,
+     "revision": "v2.32.4"
+    },
+    {
+     "path": "src/requests/compat.py",
+     "start_line": 16,
+     "end_line": 23,
+     "revision": "v2.32.4"
+    }
+   ],
+   "expected_facts": {
+    "modified": [
+     "super_len",
+     "get_netrc_auth",
+     "Response.json"
+    ],
+    "added": [],
+    "removed": [],
+    "renamed": [],
+    "files_modified": [
+     "src/requests/__version__.py",
+     "src/requests/compat.py",
+     "src/requests/models.py",
+     "src/requests/utils.py"
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,19 @@
+{
+  "name": "rw-physical-lines-cfcddb7170",
+  "image": "falkordb/falkordb@sha256:107455e862a824e45e8e9f5a7fbfdf5e00a08b14e13eae2577c72fd9e3f59ba6",
+  "attempt": "graph-tools-001",
+  "host_port": "65293",
+  "command": [
+    "/tmp/rw-mcp-compat/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "tests/repo/test_confirmatory_graph_tools.py",
+    "tests/repo/test_corpus_path_matching.py",
+    "tests/repo/test_physical_source_lines.py",
+    "--tb=short",
+    "--junitxml=artifacts/goal-physical-lines/graph-tools-001.xml"
+  ],
+  "exit_code": 1,
+  "cleanup_exit_code": 0
+}

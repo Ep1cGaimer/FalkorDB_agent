@@ -1,0 +1,9 @@
+{
+  "name": "synthetic-history",
+  "path": "../../artifacts/question_repos/synthetic-history",
+  "revisions": [],
+  "tag_pattern": "^v\\d+\\.\\d+\\.\\d+$",
+  "languages": [
+    "python"
+  ]
+}

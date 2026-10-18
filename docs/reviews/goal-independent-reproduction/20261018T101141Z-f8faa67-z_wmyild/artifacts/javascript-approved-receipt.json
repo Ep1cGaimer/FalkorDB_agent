@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-18T10:03:35.149527+00:00",
+  "result": {
+    "command": [
+      "node",
+      "--test",
+      "/private/tmp/rw-independent-812ecf7-z_wmyild/repo/tests/js/evidence.test.mjs",
+      "/private/tmp/rw-independent-812ecf7-z_wmyild/repo/tests/js/handoff.test.mjs",
+      "/private/tmp/rw-independent-812ecf7-z_wmyild/repo/tests/js/replay_matcher.test.mjs"
+    ],
+    "cwd": "/private/tmp/rw-independent-812ecf7-z_wmyild/repo",
+    "elapsed_seconds": 0.2428355000447482,
+    "ended_at": "2026-10-18T10:03:35.149138+00:00",
+    "label": "javascript-host-approved",
+    "log": "/private/tmp/rw-independent-812ecf7-z_wmyild/artifacts/33-javascript-host-approved.log",
+    "returncode": 0,
+    "sequence": 33,
+    "started_at": "2026-10-18T10:03:34.905956+00:00",
+    "timeout_seconds": 120
+  },
+  "scope": "Host JavaScript deterministic unit tests; no database or model calls",
+  "source_commit": "f8faa67f5b9c9d0d2682ecff7d10d3ac084cf242"
+}

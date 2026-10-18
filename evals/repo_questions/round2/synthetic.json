@@ -1,0 +1,248 @@
+{
+ "repo": "round2-synthetic",
+ "builder": "evals/repo_questions/round2/build_round2_synthetic.py",
+ "prepared": "2026-10-18",
+ "notes": "Round-2 held-out questions, written by hand with read-only git (git show/log/diff -M/tag --contains) AFTER round-1 (E2) results were seen; disjoint from every round-1 question in evals/repo_questions/*.json. No rw.repo output was consulted. Do not edit after any run: changes require a new evaluation retaining the originals. expected_facts holds the concrete answer (values are Python literals; `first_tag_containing` is the earliest tag matching the repo's tag_pattern whose commit has the fix commit as an ancestor; fix `state` is judged on content). Shas are those produced by the deterministic builder.",
+ "tag_pattern": "^v\\d+\\.\\d+\\.\\d+$",
+ "shas": {
+  "v1.0.0": "b1cd10e93dabc5672fac37df36792b50f323f673",
+  "v1.1.0": "67732f23287ff2888efcf41b32d58e71688a9af1",
+  "v1.2.0": "e930af5a641758708c13ee71d4254cbd261b5d2a",
+  "v1.3.0": "d8b6b1d6f133de6d87c14611df74619b3c4401bb",
+  "v1.4.0": "e42b1e4fdc71f3f0aacbe58c071c0916607a1f42",
+  "fix": "efbad9e173a7b5a32470eb269347229335a1c290"
+ },
+ "questions": [
+  {
+   "id": "r2sy-01",
+   "category": "constant_value",
+   "question": "At v1.0.0, what is the value of MAX_WEIGHT_KG?",
+   "revision": "v1.0.0",
+   "expected_answer": "30 (ship/limits.py line 1).",
+   "expected_citations": [
+    {
+     "path": "ship/limits.py",
+     "start_line": 1,
+     "end_line": 1,
+     "revision": "v1.0.0"
+    }
+   ],
+   "expected_facts": {
+    "symbol": "ship.limits.MAX_WEIGHT_KG",
+    "value": 30
+   }
+  },
+  {
+   "id": "r2sy-03",
+   "category": "constant_value",
+   "question": "At v1.1.0, which carriers does CARRIERS list?",
+   "revision": "v1.1.0",
+   "expected_answer": "(\"dhl\", \"ups\", \"fedex\") (ship/limits.py line 2).",
+   "expected_citations": [
+    {
+     "path": "ship/limits.py",
+     "start_line": 2,
+     "end_line": 2,
+     "revision": "v1.1.0"
+    }
+   ],
+   "expected_facts": {
+    "symbol": "ship.limits.CARRIERS",
+    "value": [
+     "dhl",
+     "ups",
+     "fedex"
+    ]
+   }
+  },
+  {
+   "id": "r2sy-04",
+   "category": "constant_value",
+   "question": "At v1.0.0, what is TIMEOUT_S?",
+   "revision": "v1.0.0",
+   "expected_answer": "The expression 2 * 5 (= 10), not a plain literal (ship/limits.py line 4).",
+   "expected_citations": [
+    {
+     "path": "ship/limits.py",
+     "start_line": 4,
+     "end_line": 4,
+     "revision": "v1.0.0"
+    }
+   ],
+   "expected_facts": {
+    "symbol": "ship.limits.TIMEOUT_S",
+    "expression": "2 * 5",
+    "evaluated": 10,
+    "is_plain_literal": false
+   }
+  },
+  {
+   "id": "r2sy-05",
+   "category": "exceptions",
+   "question": "At v1.2.0, which exceptions can ship.quote.check_weight raise?",
+   "revision": "v1.2.0",
+   "expected_answer": "ValueError (negative weight, line 7) and OverweightError (line 9).",
+   "expected_citations": [
+    {
+     "path": "ship/quote.py",
+     "start_line": 5,
+     "end_line": 10,
+     "revision": "v1.2.0"
+    }
+   ],
+   "expected_facts": {
+    "symbol": "ship.quote.check_weight",
+    "exceptions": [
+     "OverweightError",
+     "ValueError"
+    ]
+   }
+  },
+  {
+   "id": "r2sy-06",
+   "category": "exceptions",
+   "question": "At v1.4.0, which exceptions can ship.quote.check_weight raise?",
+   "revision": "v1.4.0",
+   "expected_answer": "Only OverweightError (line 7); the ValueError check was dropped in v1.4.0.",
+   "expected_citations": [
+    {
+     "path": "ship/quote.py",
+     "start_line": 5,
+     "end_line": 8,
+     "revision": "v1.4.0"
+    }
+   ],
+   "expected_facts": {
+    "symbol": "ship.quote.check_weight",
+    "exceptions": [
+     "OverweightError"
+    ]
+   }
+  },
+  {
+   "id": "r2sy-07",
+   "category": "fix_first_tag",
+   "question": "Is fix efbad9e1 (reject negative weights, #3) present at v1.3.0, and which tag first contains it?",
+   "revision": "v1.3.0",
+   "expected_answer": "PRESENT (ship/quote.py lines 6-7 at v1.3.0); the fix commit is untagged and first ships in v1.2.0.",
+   "expected_citations": [
+    {
+     "path": "ship/quote.py",
+     "start_line": 6,
+     "end_line": 7,
+     "revision": "v1.3.0"
+    }
+   ],
+   "expected_facts": {
+    "fix_commit": "efbad9e173a7b5a32470eb269347229335a1c290",
+    "state": "PRESENT",
+    "first_tag_containing": "v1.2.0"
+   }
+  },
+  {
+   "id": "r2sy-08",
+   "category": "fix_first_tag",
+   "question": "Is fix efbad9e1 (reject negative weights, #3) still present at v1.4.0?",
+   "revision": "v1.4.0",
+   "expected_answer": "ABSENT: the commit is an ancestor, but v1.4.0 removed the check by hand (ship/quote.py check_weight lines 5-8 has no negative test). First tag containing the commit: v1.2.0.",
+   "expected_citations": [
+    {
+     "path": "ship/quote.py",
+     "start_line": 5,
+     "end_line": 8,
+     "revision": "v1.4.0"
+    }
+   ],
+   "expected_facts": {
+    "fix_commit": "efbad9e173a7b5a32470eb269347229335a1c290",
+    "state": "ABSENT",
+    "first_tag_containing": "v1.2.0"
+   }
+  },
+  {
+   "id": "r2sy-09",
+   "category": "changed_symbols",
+   "question": "What changed between v1.2.0 and v1.3.0?",
+   "revision": "v1.3.0",
+   "expected_answer": "ship/fmt.py renamed (with edit, similarity 51%) to ship/labels.py, adding ship.labels.short; ship/track.py deleted, removing ship.track.track; CHANGELOG.md modified.",
+   "expected_citations": [
+    {
+     "path": "ship/labels.py",
+     "start_line": 1,
+     "end_line": 6,
+     "revision": "v1.3.0"
+    },
+    {
+     "path": "CHANGELOG.md",
+     "start_line": 3,
+     "end_line": 4,
+     "revision": "v1.3.0"
+    }
+   ],
+   "expected_facts": {
+    "renamed": [
+     {
+      "old": "ship/fmt.py",
+      "new": "ship/labels.py"
+     }
+    ],
+    "added": [
+     "ship.labels.short"
+    ],
+    "removed": [
+     "ship.track.track"
+    ],
+    "deleted_files": [
+     "ship/track.py"
+    ]
+   }
+  },
+  {
+   "id": "r2sy-10",
+   "category": "symbol_history",
+   "question": "When did ship.track.track appear and disappear?",
+   "revision": "v1.3.0",
+   "expected_answer": "First present at v1.1.0 (absent at v1.0.0); first absent at v1.3.0 (ship/track.py deleted).",
+   "expected_citations": [
+    {
+     "path": "ship/track.py",
+     "start_line": 1,
+     "end_line": 4,
+     "revision": "v1.1.0"
+    }
+   ],
+   "expected_facts": {
+    "symbol": "ship.track.track",
+    "first_present_revision": "v1.1.0",
+    "first_absent_revision": "v1.3.0"
+   }
+  },
+  {
+   "id": "r2sy-11",
+   "category": "dependencies",
+   "question": "At v1.0.0, what does ship.quote.quote depend on?",
+   "revision": "v1.0.0",
+   "expected_answer": "ship.quote.check_weight (call, line 16) and ship.errors.ShipError (raised, line 15); reads ship.limits.CARRIERS.",
+   "expected_citations": [
+    {
+     "path": "ship/quote.py",
+     "start_line": 13,
+     "end_line": 16,
+     "revision": "v1.0.0"
+    },
+    {
+     "path": "ship/quote.py",
+     "start_line": 5,
+     "end_line": 8,
+     "revision": "v1.0.0"
+    }
+   ],
+   "expected_facts": {
+    "resolved_targets_include": [
+     "ship.quote.check_weight",
+     "ship.errors.ShipError"
+    ]
+   }
+  }
+ ]
+}

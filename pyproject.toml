@@ -10,7 +10,8 @@ mcp = ["mcp==2.3.0"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
-markers = ["live: calls the live LLM provider (needs GEMINI_API_KEY and network)"]
+markers = ["live: calls the live LLM provider (needs GEMINI_API_KEY and network)",
+           "realrepo: needs a real clone under artifacts/repos"]
 filterwarnings = [
     # Starlette 1.8 warns when its TestClient runs on httpx, which is the client this project pins;
     # it is a third-party deprecation notice with no httpx2 in this stack, so it is narrowly silenced

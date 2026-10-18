@@ -16,7 +16,7 @@ from rw.mcp_server import create_mcp_server
 from test_mcp_client import ID, clarification_state
 
 
-def test_six_tools_schemas_output_refs_annotations_and_parity():
+def test_tools_schemas_output_refs_annotations_and_parity():
     async def check():
         bridge = BridgeClient(transport=httpx.MockTransport(lambda r: httpx.Response(200,json=clarification_state())))
         server = create_mcp_server(client=bridge)
@@ -28,7 +28,8 @@ def test_six_tools_schemas_output_refs_annotations_and_parity():
                 Draft202012Validator.check_schema(tool.output_schema)
                 assert tool.input_schema["additionalProperties"] is False
                 assert tool.annotations.read_only_hint == (tool.name in {
-                    "rw_get_investigation","rw_list_investigations","rw_list_transcripts"})
+                    "rw_get_investigation","rw_list_investigations","rw_list_transcripts",
+                    "repo_investigate"})  # repository retrieval (S5) is read-only
                 assert tool.annotations.idempotent_hint == tool.annotations.read_only_hint
             result = await server.call_tool("rw_get_investigation",{"investigation_id":ID})
             assert not result.is_error

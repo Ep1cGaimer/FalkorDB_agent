@@ -1,0 +1,37 @@
+{
+  "created_at": "2026-10-18T09:28:57.289575+00:00",
+  "draft_history_preserved": true,
+  "protocol_frozen": false,
+  "public_authoring_oracle_constants": "NONE: source expectations and manual required-fact strings live only in sealed author_cases_v1.py; exact oracle proposition scan found zero public-script matches",
+  "public_checker_sealed_access": "NONE: it rejects any path containing a sealed directory component and never traverses the sealed_oracle record",
+  "public_scripts": [
+    {
+      "contains_exact_oracle_fact_constants": false,
+      "path": "evals/confirmatory/author_inventory.py",
+      "sha256": "8bde782b7d77f68c467859a7745e5537e525aa0e5c48fa3cf2ab411a5a3898fb",
+      "syntax_parse": "PASS"
+    },
+    {
+      "contains_exact_oracle_fact_constants": false,
+      "path": "evals/confirmatory/check_public_package.py",
+      "sha256": "347edfda0084ec0efebcb8a08a283435a9ec159aace2cbbe5c64a23639863e31",
+      "syntax_parse": "PASS"
+    },
+    {
+      "contains_exact_oracle_fact_constants": false,
+      "path": "evals/confirmatory/create_plan_draft_v2.py",
+      "sha256": "c17c6bbfba44bc473150b6b8727bfb27367b663da5ae6c3a37798fecefc63a81",
+      "syntax_parse": "PASS"
+    },
+    {
+      "contains_exact_oracle_fact_constants": false,
+      "path": "evals/confirmatory/history_inventory.py",
+      "sha256": "081cf69064d6df25413ce75fcc295ce98637fe11a91f7f21bfadfa2fcbdb4991",
+      "syntax_parse": "PASS"
+    }
+  ],
+  "reviewer": "Independent Codex AI evaluator",
+  "schema": "confirmatory-public-isolation-audit/v1",
+  "scope": "Public Python authoring/checker sources only; no product invocation",
+  "source_or_answer_contents_in_receipt": false
+}

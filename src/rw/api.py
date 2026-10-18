@@ -314,6 +314,115 @@ def _now():
     return datetime.now(timezone.utc).isoformat()
 
 
+class RepoInvestigateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    revision: str | None = Field(default=None, max_length=200)
+    question: str = Field(min_length=1, max_length=2000)
+
+
+def _repo_config(name: str):
+    """Config for a repository NAME (never a path): 422 on a bad name, 404 when not configured."""
+    from .repo.config import NAME_RE, load_config
+    if not isinstance(name, str) or not NAME_RE.fullmatch(name):
+        raise HTTPException(422, "invalid repository name")
+    try:
+        return load_config(name)
+    except FileNotFoundError:
+        raise HTTPException(404, "repository not configured") from None
+    except (OSError, ValueError):
+        raise HTTPException(422, "repository configuration is invalid") from None
+
+
+def _repo_listing_entry(cfg) -> dict:
+    from .repo.index import graph_name_for
+    entry = {"name": cfg.name, "import_status": None, "index_generation": None, "revisions": []}
+    try:
+        from . import graph as G
+        g = G.connect().select_graph(graph_name_for(cfg))
+        params = {"name": cfg.name}
+        state_query = "MATCH (r:Repository {name:$name}) RETURN r.status, r.generation"
+        state = g.ro_query(state_query, params).result_set
+        if not state:
+            return entry
+        entry["import_status"], entry["index_generation"] = state[0]
+        if entry["import_status"] != "COMPLETE":
+            return entry
+        from .repo.query import RepoQuery
+        q = RepoQuery(graph_name_for(cfg), cfg.name)
+        page = q.revisions(limit=200)
+        if g.ro_query(state_query, params).result_set != state:
+            entry["import_status"] = "INDEX_CHANGED"
+            entry["index_generation"] = None
+            return entry
+        entry["revisions"] = page.items
+        entry["revision_coverage"] = {**page.coverage, "next_cursor": page.next_cursor,
+                                      "truncated": page.truncated}
+    except Exception:
+        entry.update(import_status="INDEX_UNAVAILABLE", index_generation=None, revisions=[])
+    return entry
+
+
+def _add_repo_routes(app: FastAPI) -> None:
+    """S5 repository access: index, list, investigate (deterministic retrieval, no LLM)."""
+
+    @app.get("/api/repos")
+    def list_repos():
+        from .repo.config import load_config, repos_dir
+        out = []
+        d = repos_dir()
+        for p in sorted(d.glob("*.json")) if d.is_dir() else []:
+            try:
+                cfg = load_config(p)
+            except (OSError, ValueError):
+                continue
+            if cfg.name != p.stem:
+                continue
+            out.append(_repo_listing_entry(cfg))
+        return out
+
+    @app.post("/api/repos/{name}/index")
+    def index_repo(name: str):
+        from dataclasses import asdict
+        from .repo.index import index_repository
+        cfg = _repo_config(name)
+        try:
+            report = index_repository(cfg)
+        except Exception as exc:
+            logging.getLogger(__name__).warning("repository index failed: %s", type(exc).__name__)
+            raise HTTPException(502, f"indexing failed ({type(exc).__name__})") from None
+        return json.loads(json.dumps(asdict(report), default=str))
+
+    @app.get("/api/repos/{name}/revisions")
+    def repo_revisions(name: str, limit: int = Query(50, ge=1, le=200),
+                       cursor: str | None = Query(None, max_length=2048)):
+        from dataclasses import asdict
+        from .repo.index import graph_name_for
+        from .repo.query import RepoQuery, IndexChangedError
+        cfg = _repo_config(name)
+        try:
+            return asdict(RepoQuery(graph_name_for(cfg), cfg.name).revisions(limit, cursor))
+        except ValueError:
+            raise HTTPException(422, "invalid revision pagination cursor") from None
+        except IndexChangedError:
+            raise HTTPException(409, "repository index changed; restart pagination") from None
+        except Exception as exc:
+            raise HTTPException(502, f"revision listing failed ({type(exc).__name__})") from None
+
+    @app.post("/api/repos/{name}/investigate")
+    def investigate_repo(name: str, body: RepoInvestigateRequest):
+        from .repo.config import NAME_RE
+        from .repo.investigate import investigate
+        if not NAME_RE.fullmatch(name):
+            raise HTTPException(422, "invalid repository name")
+        result = investigate(name, body.revision, body.question)
+        kinds = {g.kind for g in result.gaps}
+        if "UNKNOWN_REPOSITORY" in kinds:
+            return JSONResponse(status_code=404, content=result.to_dict())
+        if kinds & {"INVALID_CONFIGURATION", "REPOSITORY_SELECTION_MISMATCH"}:
+            return JSONResponse(status_code=422, content=result.to_dict())
+        return result.to_dict()
+
+
 def create_app(*, session_factory: Callable | None = None,
                ground_function: Callable | None = None, replay_function: Callable | None = None,
                db_path: Path = ROOT / "artifacts/sim.sqlite",
@@ -497,6 +606,16 @@ def create_app(*, session_factory: Callable | None = None,
         with inv.lock:
             return inv.public()
 
+    @app.get("/api/samples")
+    def list_samples():
+        """Example requests a fixture ships for demos (sample_requests.json); never used by checks."""
+        from .pipeline import FIXTURE_ROOT
+
+        path = FIXTURE_ROOT / "sample_requests.json"
+        rows = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else []
+        return [{"label": str(r["label"]), "request": str(r["request"])} for r in rows
+                if isinstance(r, dict) and r.get("label") and r.get("request")]
+
     @app.get("/api/snapshots")
     def list_snapshots():
         """Read-only fixture context; does not initialize a graph or call a model."""
@@ -659,6 +778,8 @@ def create_app(*, session_factory: Callable | None = None,
             receipt = simulation.simulate(db_path, attempt.approval, result, manifest_hash, fleet, attempt.plan)
             attempt.simulation = receipt.model_dump(mode="json")
             return receipt
+
+    _add_repo_routes(app)
 
     @app.get("/")
     def index():

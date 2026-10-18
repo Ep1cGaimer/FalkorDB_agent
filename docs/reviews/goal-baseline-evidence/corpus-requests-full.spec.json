@@ -1,0 +1,23 @@
+{
+  "exclude": [
+    "requests/packages/*"
+  ],
+  "include": [
+    "requests/*.py",
+    "src/requests/*.py",
+    "HISTORY.rst",
+    "HISTORY.md",
+    "CHANGES.rst",
+    "CHANGES.md",
+    "CHANGELOG.rst",
+    "CHANGELOG.md",
+    "pyproject.toml",
+    "setup.py",
+    "setup.cfg"
+  ],
+  "repository": "requests-development",
+  "roots": [
+    "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+  ],
+  "schema": "source-corpus-spec/v1"
+}

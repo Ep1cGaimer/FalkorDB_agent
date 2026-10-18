@@ -1,0 +1,12 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+________ test_retry_replaces_parent_edges_left_by_an_old_grafted_import ________
+tests/repo/test_git_grafts.py:52: in test_retry_replaces_parent_edges_left_by_an_old_grafted_import
+    assert q._q("MATCH (:Commit {sha:$s})-[e:PARENT]->(p:Commit) RETURN p.sha, e.order", {"s": tip}) == [[middle, 0]]
+E   AssertionError: assert [['20715be190...0e3bf303', 0]] == [['8ee8424180...487ba671', 0]]
+E     
+E     At index 0 diff: ['20715be190301ff762abb2f2fd6d24250e3bf303', 0] != ['8ee8424180a85258ffaff948a9798649487ba671', 0]
+E     Use -v to get more diff
+=========================== short test summary info ============================
+FAILED tests/repo/test_git_grafts.py::test_retry_replaces_parent_edges_left_by_an_old_grafted_import
+1 failed, 2 deselected in 0.39s

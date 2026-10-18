@@ -1,0 +1,53 @@
+[
+    {
+        "Id": "sha256:48a11b7ba705fd53bf15248d1f94d36c39549903c5d59edcfa2f3f84126e7b44",
+        "RepoTags": [
+            "python:3.12.9-slim-bookworm"
+        ],
+        "RepoDigests": [
+            "python@sha256:48a11b7ba705fd53bf15248d1f94d36c39549903c5d59edcfa2f3f84126e7b44"
+        ],
+        "Comment": "buildkit.dockerfile.v0",
+        "Created": "2025-02-04T21:54:55Z",
+        "Config": {
+            "Env": [
+                "PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "LANG=C.UTF-8",
+                "GPG_KEY=7169605F62C751356D054A26A821E680E5FA6305",
+                "PYTHON_VERSION=3.12.9",
+                "PYTHON_SHA256=7220835d9f90b37c006e9842a8dff4580aaca4318674f947302b8d28f3f81112"
+            ],
+            "Cmd": [
+                "python3"
+            ]
+        },
+        "Architecture": "arm64",
+        "Variant": "v8",
+        "Os": "linux",
+        "Size": 211458859,
+        "RootFS": {
+            "Type": "layers",
+            "Layers": [
+                "sha256:c9b18059ed426422229b2c624582e54e7e32862378c9556b90a99c116ae10a04",
+                "sha256:72bbb1662472ad6910e83fcbd167e4e25a5ae7485cedc06ae347a6e77985dc30",
+                "sha256:e265360b64fd896333c6a748331480903f1b0bd625f10d40901f89e708101b1e",
+                "sha256:a91260a6af033b82455eca14c9fcc0d100a8467217375ff4ef4b17e2b965b6e7"
+            ]
+        },
+        "Metadata": {
+            "LastTagTime": "2026-09-04T10:39:02.998074845Z"
+        },
+        "Descriptor": {
+            "mediaType": "application/vnd.oci.image.index.v1+json",
+            "digest": "sha256:48a11b7ba705fd53bf15248d1f94d36c39549903c5d59edcfa2f3f84126e7b44",
+            "size": 9124
+        },
+        "Identity": {
+            "Pull": [
+                {
+                    "Repository": "docker.io/library/python"
+                }
+            ]
+        }
+    }
+]

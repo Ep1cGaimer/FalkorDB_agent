@@ -1,0 +1,55 @@
+Get:1 https://deb.debian.org/debian bookworm InRelease [151 kB]
+Get:2 https://deb.debian.org/debian bookworm-updates InRelease [55.4 kB]
+Get:3 https://deb.debian.org/debian-security bookworm-security InRelease [34.8 kB]
+Get:4 https://deb.debian.org/debian bookworm/main arm64 Packages [8689 kB]
+Get:5 https://deb.debian.org/debian bookworm-updates/main arm64 Packages [6936 B]
+Get:6 https://deb.debian.org/debian-security bookworm-security/main arm64 Packages [352 kB]
+Fetched 9290 kB in 2min 56s (52.6 kB/s)
+Reading package lists...
+Reading package lists...
+Building dependency tree...
+Reading state information...
+The following additional packages will be installed:
+  git-man libbrotli1 libc-ares2 libcurl3-gnutls liberror-perl libexpat1
+  libgdbm-compat4 libicu72 libldap-2.5-0 libnghttp2-14 libnode108 libperl5.36
+  libpsl5 librtmp1 libsasl2-2 libsasl2-modules-db libssh2-1 libuv1 node-acorn
+  node-busboy node-cjs-module-lexer node-undici node-xtend perl perl-base
+  perl-modules-5.36
+Suggested packages:
+  gettext-base git-daemon-run | git-daemon-sysvinit git-doc git-email git-gui
+  gitk gitweb git-cvs git-mediawiki git-svn sensible-utils npm perl-doc
+  libterm-readline-gnu-perl | libterm-readline-perl-perl make
+  libtap-harness-archive-perl
+Recommended packages:
+  patch less ssh-client libldap-common publicsuffix libsasl2-modules
+  nodejs-doc
+The following NEW packages will be installed:
+  git git-man libbrotli1 libc-ares2 libcurl3-gnutls liberror-perl libexpat1
+  libgdbm-compat4 libicu72 libldap-2.5-0 libnghttp2-14 libnode108 libperl5.36
+  libpsl5 librtmp1 libsasl2-2 libsasl2-modules-db libssh2-1 libuv1 node-acorn
+  node-busboy node-cjs-module-lexer node-undici node-xtend nodejs perl
+  perl-modules-5.36
+The following packages will be upgraded:
+  ca-certificates perl-base
+2 upgraded, 27 newly installed, 0 to remove and 38 not upgraded.
+Need to get 39.1 MB of archives.
+After this operation, 191 MB of additional disk space will be used.
+Get:1 https://deb.debian.org/debian-security bookworm-security/main arm64 perl-base arm64 5.36.0-7+deb12u4 [1478 kB]
+Get:2 https://deb.debian.org/debian-security bookworm-security/main arm64 perl-modules-5.36 all 5.36.0-7+deb12u4 [2817 kB]
+Get:3 https://deb.debian.org/debian bookworm/main arm64 libgdbm-compat4 arm64 1.23-3 [48.0 kB]
+Get:4 https://deb.debian.org/debian-security bookworm-security/main arm64 libperl5.36 arm64 5.36.0-7+deb12u4 [4002 kB]
+Get:5 https://deb.debian.org/debian-security bookworm-security/main arm64 perl arm64 5.36.0-7+deb12u4 [239 kB]
+Get:6 https://deb.debian.org/debian-security bookworm-security/main arm64 ca-certificates all 20250419~deb12u1 [162 kB]
+Get:7 https://deb.debian.org/debian bookworm/main arm64 libbrotli1 arm64 1.0.9-2+b6 [269 kB]
+Get:8 https://deb.debian.org/debian bookworm/main arm64 libsasl2-modules-db arm64 2.1.28+dfsg-10 [20.8 kB]
+Get:9 https://deb.debian.org/debian bookworm/main arm64 libsasl2-2 arm64 2.1.28+dfsg-10 [58.0 kB]
+Get:10 https://deb.debian.org/debian bookworm/main arm64 libldap-2.5-0 arm64 2.5.13+dfsg-5 [171 kB]
+Get:11 https://deb.debian.org/debian bookworm/main arm64 libnghttp2-14 arm64 1.52.0-1+deb12u3 [69.0 kB]
+Get:12 https://deb.debian.org/debian bookworm/main arm64 libpsl5 arm64 0.21.2-1 [58.6 kB]
+Get:13 https://deb.debian.org/debian bookworm/main arm64 librtmp1 arm64 2.4+20151223.gitfa8646d.1-2+b2 [59.4 kB]
+Get:14 https://deb.debian.org/debian-security bookworm-security/main arm64 libssh2-1 arm64 1.10.0-3+deb12u1 [169 kB]
+Get:15 https://deb.debian.org/debian bookworm/main arm64 libcurl3-gnutls arm64 7.88.1-10+deb12u15 [362 kB]
+Get:16 https://deb.debian.org/debian-security bookworm-security/main arm64 libexpat1 arm64 2.5.0-1+deb12u4 [89.2 kB]
+Get:17 https://deb.debian.org/debian bookworm/main arm64 liberror-perl all 0.17029-2 [29.0 kB]
+Get:18 https://deb.debian.org/debian bookworm/main arm64 git-man all 1:2.39.5-0+deb12u3 [2053 kB]
+Get:19 https://deb.debian.org/debian bookworm/main arm64 git arm64 1:2.39.5-0+deb12u3 [7153 kB]

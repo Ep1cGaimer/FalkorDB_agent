@@ -6,6 +6,8 @@ snapshot IDs, Cypher, probe execution or approval.
 from __future__ import annotations
 
 import json
+import os
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
@@ -37,7 +39,23 @@ from .verification import (
     validate_citations,
 )
 
-FIXTURE_ROOT = REPO_ROOT / "fixtures" / "shop"
+DEFAULT_FIXTURE = "shop"
+
+
+def fixture_root_from_env() -> Path:
+    """Fixture selected by RW_FIXTURE (a directory name under fixtures/); `shop` when unset.
+
+    Every fixture uses the same snapshot names (ALL_SNAPSHOTS), so the API, UI and scripts need no
+    per-fixture configuration. An unknown name fails at import instead of silently using `shop`.
+    """
+    name = os.environ.get("RW_FIXTURE", "").strip() or DEFAULT_FIXTURE
+    root = REPO_ROOT / "fixtures" / name
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,63}", name) or not (root / "releases").is_dir():
+        raise ValueError(f"RW_FIXTURE={name!r} is not a fixture directory under fixtures/")
+    return root
+
+
+FIXTURE_ROOT = fixture_root_from_env()
 ALL_SNAPSHOTS = ["snap-001", "snap-002-partial", "snap-003-orphan"]
 ARTIFACTS = REPO_ROOT / "artifacts"
 
@@ -84,11 +102,13 @@ def startup_check(codec_path: str, timeout_s: int = 5) -> dict[str, Any]:
 class Session:
     """Server-side binding of one graph + snapshot; nothing here comes from model output."""
 
-    def __init__(self, snapshot: str = "snap-001", graph_name: str = GRAPH_NAME, reimport: bool = True,
+    def __init__(self, snapshot: str = "snap-001", graph_name: str | None = None, reimport: bool = True,
                  host: str = "127.0.0.1", port: int = 6379, fixture_root: Path | None = None):
         self.db = G.connect(host, port)
-        self.graph_name = graph_name
         self.fixture_root = Path(fixture_root) if fixture_root is not None else FIXTURE_ROOT
+        if graph_name is None:  # one graph per fixture, so a browser shows which data it holds
+            graph_name = GRAPH_NAME if self.fixture_root.name == DEFAULT_FIXTURE else f"rw_fixture_{self.fixture_root.name}"
+        self.graph_name = graph_name
         self.snapshot = snapshot
         self.import_report = (G.reset_and_import(self.db, graph_name, self.fixture_root, ALL_SNAPSHOTS)
                              if reimport else None)

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="2" time="0.560" timestamp="2026-10-18T16:14:01.382012+05:30" hostname="Vinays-MacBook-Air.local"><testcase classname="tests.repo.test_corpus_path_matching" name="test_path_profile_does_not_match_nested_root_metadata" time="0.196"><failure message="AssertionError: assert {'nested/setu...', 'setup.py'} == {'pkg/keep.py', 'setup.py'}&#10;  &#10;  Extra items in the left set:&#10;  'nested/setup.py'&#10;  Use -v to get more diff">tests/repo/test_corpus_path_matching.py:16: in test_path_profile_does_not_match_nested_root_metadata
+    assert set(q._files(sha)) == {"setup.py", "pkg/keep.py"}
+E   AssertionError: assert {'nested/setu...', 'setup.py'} == {'pkg/keep.py', 'setup.py'}
+E     
+E     Extra items in the left set:
+E     'nested/setup.py'
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.repo.test_corpus_path_matching" name="test_default_basename_profile_remains_explicit_and_reconfigurable" time="0.263"><failure message="AssertionError: assert {'nested/setu...', 'setup.py'} == {'setup.py'}&#10;  &#10;  Extra items in the left set:&#10;  'nested/setup.py'&#10;  Use -v to get more diff">tests/repo/test_corpus_path_matching.py:28: in test_default_basename_profile_remains_explicit_and_reconfigurable
+    assert set(q._files(sha)) == {"setup.py"}
+E   AssertionError: assert {'nested/setu...', 'setup.py'} == {'setup.py'}
+E     
+E     Extra items in the left set:
+E     'nested/setup.py'
+E     Use -v to get more diff</failure></testcase></testsuite></testsuites>

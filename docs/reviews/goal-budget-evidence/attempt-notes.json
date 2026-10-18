@@ -1,0 +1,25 @@
+{
+  "schema": "goal-budget-attempt-notes/v1",
+  "interrupted_full_suite": {
+    "passed": 176,
+    "skipped": 5,
+    "deselected": 3,
+    "seconds": 136.37,
+    "reason": "SIGINT to the verified owned pytest PID after diagnostic probe exposed own-renewal WATCH race; superseded by repaired-index validation",
+    "exit_code": 2
+  },
+  "probe_001": {
+    "outcome": "ERROR",
+    "reason": "same-owner lease renewal invalidated WATCH; false lost-lease abort",
+    "raw_record": "artifacts/repo_probes/goal-query-budget-001/record.json",
+    "owned_database_removed": true
+  },
+  "focused_invocation_failures": [
+    {
+      "command_issue": "nonexistent test_s4_bounds.py path; no tests ran"
+    },
+    {
+      "command_issue": "interleaved directory/module selectors lost repo conftest fixture registration; 20 passed,1 skipped,14 setup errors; standalone scale suite passed14 with1skip"
+    }
+  ]
+}

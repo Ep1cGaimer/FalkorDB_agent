@@ -1,0 +1,14 @@
+[
+  {
+    "label": "Undo local-currency checkout (passes)",
+    "request": "Undo the local-currency checkout, but keep the accounting fix for orders without a shipping address."
+  },
+  {
+    "label": "Roll the whole order pipeline back (blocked)",
+    "request": "Put checkout, accounting and fraud-detection back on 3.1.0."
+  },
+  {
+    "label": "Roll back the recommendation ranking (passes)",
+    "request": "Roll back the recommendation ranking change."
+  }
+]

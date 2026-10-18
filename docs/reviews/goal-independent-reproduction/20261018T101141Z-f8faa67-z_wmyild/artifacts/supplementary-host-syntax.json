@@ -1,0 +1,5 @@
+{
+  "scope": "Static syntax-only supplementary check with host Python 3.14.7; runtime suite uses fresh 3.12",
+  "files": 102,
+  "errors": []
+}

@@ -1,0 +1,17 @@
+{
+  "name": "rw-physical-lines-fe6d971e8f",
+  "image": "falkordb/falkordb@sha256:107455e862a824e45e8e9f5a7fbfdf5e00a08b14e13eae2577c72fd9e3f59ba6",
+  "attempt": "fixed-001",
+  "host_port": "63418",
+  "command": [
+    "/tmp/rw-mcp-compat/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "tests/repo/test_physical_source_lines.py",
+    "--tb=short",
+    "--junitxml=artifacts/goal-physical-lines/fixed-001.xml"
+  ],
+  "exit_code": 0,
+  "cleanup_exit_code": 0
+}

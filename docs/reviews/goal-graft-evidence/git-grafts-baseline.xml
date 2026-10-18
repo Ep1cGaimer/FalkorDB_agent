@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="2" time="0.339" timestamp="2026-10-18T15:18:45.592002+05:30" hostname="Vinays-MacBook-Air.local"><testcase classname="tests.repo.test_git_grafts" name="test_local_grafts_cannot_rewrite_imported_ancestry[hide_all_parents]" time="0.121"><failure message="AssertionError: assert [('8a21d059fb...3679aaa', [])] == [('20715be190...49487ba671'])]&#10;  &#10;  At index 0 diff: ('8a21d059fb4338028c855c4087c77aecd3679aaa', []) != ('20715be190301ff762abb2f2fd6d24250e3bf303', [])&#10;  Right contains 2 more items, first extra item: ('8ee8424180a85258ffaff948a9798649487ba671', ['20715be190301ff762abb2f2fd6d24250e3bf303'])&#10;  Use -v to get more diff">tests/repo/test_git_grafts.py:24: in test_local_grafts_cannot_rewrite_imported_ancestry
+    assert [(c.sha, c.parents) for c in commits] == [(root, []), (middle, [root]), (tip, [middle])]
+E   AssertionError: assert [('8a21d059fb...3679aaa', [])] == [('20715be190...49487ba671'])]
+E     
+E     At index 0 diff: ('8a21d059fb4338028c855c4087c77aecd3679aaa', []) != ('20715be190301ff762abb2f2fd6d24250e3bf303', [])
+E     Right contains 2 more items, first extra item: ('8ee8424180a85258ffaff948a9798649487ba671', ['20715be190301ff762abb2f2fd6d24250e3bf303'])
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.repo.test_git_grafts" name="test_local_grafts_cannot_rewrite_imported_ancestry[skip_middle_commit]" time="0.097"><failure message="AssertionError: assert [('20715be190...250e3bf303'])] == [('20715be190...49487ba671'])]&#10;  &#10;  At index 1 diff: ('8a21d059fb4338028c855c4087c77aecd3679aaa', ['20715be190301ff762abb2f2fd6d24250e3bf303']) != ('8ee8424180a85258ffaff948a9798649487ba671', ['20715be190301ff762abb2f2fd6d24250e3bf303'])&#10;  Right contains one more item: ('8a21d059fb4338028c855c4087c77aecd3679aaa', ['8ee8424180a85258ffaff948a9798649487ba671'])&#10;  Use -v to get more diff">tests/repo/test_git_grafts.py:24: in test_local_grafts_cannot_rewrite_imported_ancestry
+    assert [(c.sha, c.parents) for c in commits] == [(root, []), (middle, [root]), (tip, [middle])]
+E   AssertionError: assert [('20715be190...250e3bf303'])] == [('20715be190...49487ba671'])]
+E     
+E     At index 1 diff: ('8a21d059fb4338028c855c4087c77aecd3679aaa', ['20715be190301ff762abb2f2fd6d24250e3bf303']) != ('8ee8424180a85258ffaff948a9798649487ba671', ['20715be190301ff762abb2f2fd6d24250e3bf303'])
+E     Right contains one more item: ('8a21d059fb4338028c855c4087c77aecd3679aaa', ['8ee8424180a85258ffaff948a9798649487ba671'])
+E     Use -v to get more diff</failure></testcase></testsuite></testsuites>

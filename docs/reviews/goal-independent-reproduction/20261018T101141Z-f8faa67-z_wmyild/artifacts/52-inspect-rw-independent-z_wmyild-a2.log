@@ -1,0 +1,218 @@
+[
+    {
+        "Id": "ae86c5e5e3adc2de67868ebdaa80a8af64f5e97e0ab757b6c1e9e33959ce90fb",
+        "Created": "2026-10-18T09:43:29.053908052Z",
+        "Path": "/var/lib/falkordb/bin/run.sh",
+        "Args": [],
+        "State": {
+            "Status": "running",
+            "Running": true,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 18253,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2026-10-18T09:43:29.08535751Z",
+            "FinishedAt": "0001-01-01T00:00:00Z"
+        },
+        "Image": "sha256:107455e862a824e45e8e9f5a7fbfdf5e00a08b14e13eae2577c72fd9e3f59ba6",
+        "ResolvConfPath": "/var/lib/docker/containers/ae86c5e5e3adc2de67868ebdaa80a8af64f5e97e0ab757b6c1e9e33959ce90fb/resolv.conf",
+        "HostnamePath": "/var/lib/docker/containers/ae86c5e5e3adc2de67868ebdaa80a8af64f5e97e0ab757b6c1e9e33959ce90fb/hostname",
+        "HostsPath": "/var/lib/docker/containers/ae86c5e5e3adc2de67868ebdaa80a8af64f5e97e0ab757b6c1e9e33959ce90fb/hosts",
+        "LogPath": "/var/lib/docker/containers/ae86c5e5e3adc2de67868ebdaa80a8af64f5e97e0ab757b6c1e9e33959ce90fb/ae86c5e5e3adc2de67868ebdaa80a8af64f5e97e0ab757b6c1e9e33959ce90fb-json.log",
+        "Name": "/rw-independent-z_wmyild-a2",
+        "RestartCount": 0,
+        "Driver": "overlayfs",
+        "Platform": "linux",
+        "MountLabel": "",
+        "ProcessLabel": "",
+        "AppArmorProfile": "",
+        "ExecIDs": null,
+        "HostConfig": {
+            "Binds": null,
+            "ContainerIDFile": "",
+            "LogConfig": {
+                "Type": "json-file",
+                "Config": {}
+            },
+            "NetworkMode": "bridge",
+            "PortBindings": {
+                "6379/tcp": [
+                    {
+                        "HostIp": "127.0.0.1",
+                        "HostPort": ""
+                    }
+                ]
+            },
+            "RestartPolicy": {
+                "Name": "no",
+                "MaximumRetryCount": 0
+            },
+            "AutoRemove": false,
+            "VolumeDriver": "",
+            "VolumesFrom": null,
+            "ConsoleSize": [
+                0,
+                0
+            ],
+            "CapAdd": null,
+            "CapDrop": null,
+            "CgroupnsMode": "private",
+            "Dns": null,
+            "DnsOptions": [],
+            "DnsSearch": [],
+            "ExtraHosts": null,
+            "GroupAdd": null,
+            "IpcMode": "private",
+            "Cgroup": "",
+            "Links": null,
+            "OomScoreAdj": 0,
+            "PidMode": "",
+            "Privileged": false,
+            "PublishAllPorts": false,
+            "ReadonlyRootfs": false,
+            "SecurityOpt": null,
+            "UTSMode": "",
+            "UsernsMode": "",
+            "ShmSize": 67108864,
+            "Runtime": "runc",
+            "Isolation": "",
+            "CpuShares": 0,
+            "Memory": 0,
+            "NanoCpus": 0,
+            "CgroupParent": "",
+            "BlkioWeight": 0,
+            "BlkioWeightDevice": [],
+            "BlkioDeviceReadBps": [],
+            "BlkioDeviceWriteBps": [],
+            "BlkioDeviceReadIOps": [],
+            "BlkioDeviceWriteIOps": [],
+            "CpuPeriod": 0,
+            "CpuQuota": 0,
+            "CpuRealtimePeriod": 0,
+            "CpuRealtimeRuntime": 0,
+            "CpusetCpus": "",
+            "CpusetMems": "",
+            "Devices": [],
+            "DeviceCgroupRules": null,
+            "DeviceRequests": null,
+            "MemoryReservation": 0,
+            "MemorySwap": 0,
+            "MemorySwappiness": null,
+            "OomKillDisable": null,
+            "PidsLimit": null,
+            "Ulimits": null,
+            "CpuCount": 0,
+            "CpuPercent": 0,
+            "IOMaximumIOps": 0,
+            "IOMaximumBandwidth": 0,
+            "MaskedPaths": [
+                "/proc/acpi",
+                "/proc/asound",
+                "/proc/interrupts",
+                "/proc/kcore",
+                "/proc/keys",
+                "/proc/latency_stats",
+                "/proc/sched_debug",
+                "/proc/scsi",
+                "/proc/timer_list",
+                "/proc/timer_stats",
+                "/sys/devices/virtual/powercap",
+                "/sys/firmware"
+            ],
+            "ReadonlyPaths": [
+                "/proc/bus",
+                "/proc/fs",
+                "/proc/irq",
+                "/proc/sys",
+                "/proc/sysrq-trigger"
+            ]
+        },
+        "Storage": {
+            "RootFS": {
+                "Snapshot": {
+                    "Name": "overlayfs"
+                }
+            }
+        },
+        "Mounts": [],
+        "Config": {
+            "Hostname": "ae86c5e5e3ad",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "ExposedPorts": {
+                "3000/tcp": {},
+                "6379/tcp": {}
+            },
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "FALKORDB_HOME=/var/lib/falkordb",
+                "FALKORDB_DATA_PATH=/var/lib/falkordb/data",
+                "FALKORDB_BIN_PATH=/var/lib/falkordb/bin",
+                "FALKORDB_IMPORT_PATH=/var/lib/falkordb/import",
+                "FALKORDB_TLS_PATH=/var/lib/falkordb/tls",
+                "ARCH=linux/amd64",
+                "TLS=0",
+                "BROWSER=1",
+                "FALKORDB_ARGS=MAX_QUEUED_QUERIES 25 TIMEOUT 1000 RESULTSET_SIZE 10000",
+                "FALKORDB_BROWSER_PATH=/var/lib/falkordb/browser"
+            ],
+            "Cmd": null,
+            "Image": "falkordb/falkordb@sha256:107455e862a824e45e8e9f5a7fbfdf5e00a08b14e13eae2577c72fd9e3f59ba6",
+            "Volumes": null,
+            "WorkingDir": "/var/lib/falkordb",
+            "Entrypoint": [
+                "/var/lib/falkordb/bin/run.sh"
+            ],
+            "Labels": {}
+        },
+        "NetworkSettings": {
+            "SandboxID": "2b688f9e63255564aa854afaf2ad4eb5b99acad3936ea5c0adcd5a99409c2122",
+            "SandboxKey": "/var/run/docker/netns/2b688f9e6325",
+            "Ports": {
+                "6379/tcp": [
+                    {
+                        "HostIp": "127.0.0.1",
+                        "HostPort": "56993"
+                    }
+                ]
+            },
+            "Networks": {
+                "bridge": {
+                    "IPAMConfig": null,
+                    "Links": null,
+                    "Aliases": null,
+                    "DriverOpts": null,
+                    "GwPriority": 0,
+                    "NetworkID": "f7801a0295e7e8a96e05b27d59fc545a39e88c3c0e769d6a201ba6977d159b4d",
+                    "EndpointID": "a4b11ca14edee3cc9d740cbf2d2520cef956aeef04886693b3483c4d44afda57",
+                    "Gateway": "172.17.0.1",
+                    "IPAddress": "172.17.0.3",
+                    "MacAddress": "8a:90:ab:7b:93:4f",
+                    "IPPrefixLen": 16,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "DNSNames": null
+                }
+            }
+        },
+        "ImageManifestDescriptor": {
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "digest": "sha256:6db0f8aace124e8e1b16a185e0e8aebf24e6551412a394f18cfa7946ef466d47",
+            "size": 3517,
+            "platform": {
+                "architecture": "arm64",
+                "os": "linux"
+            }
+        }
+    }
+]

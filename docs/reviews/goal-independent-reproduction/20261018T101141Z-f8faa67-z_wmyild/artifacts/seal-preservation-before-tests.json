@@ -1,0 +1,8 @@
+{
+  "at": "2026-10-18T09:56:08.088145+00:00",
+  "files_checked": 14,
+  "mismatches": [],
+  "operation": "Byte hashes only, no oracle propositions read for test reproduction",
+  "sealed_manifest_sha256": "d7d6b32f474d2491c31982587ee97b0ca4c46814d398463c2a691751b90ab1ef",
+  "source_or_test_edits_to_oracles": false
+}

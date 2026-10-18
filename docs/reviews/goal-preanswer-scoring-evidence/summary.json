@@ -1,0 +1,13 @@
+{
+  "classification": "Development preanswer scoring checkpoint, not full independent scorer or T2",
+  "passed": 69,
+  "red_new_failures": 6,
+  "historical_full_application_tests": 1244,
+  "acceptance_validated": false,
+  "application_source_mismatches": [],
+  "source_changes": [
+    "evals/confirmatory/investigation_runner.py",
+    "tests/test_confirmatory_investigation_runner.py"
+  ],
+  "heldout_runs": 0
+}

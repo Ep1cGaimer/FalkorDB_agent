@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="2" time="0.840" timestamp="2026-10-18T14:48:15.372268+05:30" hostname="Vinays-MacBook-Air.local"><testcase classname="tests.repo.test_lease_renewal" name="test_renewal_between_watch_and_exec_does_not_abort_owned_import" time="0.175"><failure message="RuntimeError: repository import lease lost; retry import">tests/repo/test_lease_renewal.py:35: in test_renewal_between_watch_and_exec_does_not_abort_owned_import
+    report = index_repository(cfg, name, db=db)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/rw/repo/index.py:144: in index_repository
+    return _index_repository(config, graph_name, db, interrupt_after=interrupt_after,
+src/rw/repo/index.py:206: in _index_repository
+    previous = graph.query("MATCH (r:Repository {name:$name}) RETURN r.config_hash",
+src/rw/repo/index.py:189: in query
+    raise RuntimeError("repository import lease lost; retry import")
+E   RuntimeError: repository import lease lost; retry import</failure></testcase><testcase classname="tests.repo.test_lease_renewal" name="test_owner_replaced_between_watch_and_exec_cannot_delete_symbols" time="0.377" /></testsuite></testsuites>

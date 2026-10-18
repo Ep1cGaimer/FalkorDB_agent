@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="0.232" timestamp="2026-10-18T14:11:22.062161+05:30" hostname="Vinays-MacBook-Air.local"><testcase classname="tests.repo.test_evidence_freshness" name="test_missing_repository_keeps_same_semantic_response_across_surfaces" time="0.116"><failure message="AssertionError: assert {'detail': 'r...t configured'} == {'repo': 'unc...n': None, ...}&#10;  &#10;  Left contains 1 more item:&#10;  {'detail': 'repository not configured'}&#10;  Right contains 12 more items:&#10;  {'answer': None,&#10;   'citations': [],&#10;   'disposition': None,...&#10;  &#10;  ...Full output truncated (11 lines hidden), use '-vv' to show">tests/repo/test_evidence_freshness.py:51: in test_missing_repository_keeps_same_semantic_response_across_surfaces
+    assert response.json() == expected
+E   AssertionError: assert {'detail': 'r...t configured'} == {'repo': 'unc...n': None, ...}
+E     
+E     Left contains 1 more item:
+E     {'detail': 'repository not configured'}
+E     Right contains 12 more items:
+E     {'answer': None,
+E      'citations': [],
+E      'disposition': None,...
+E     
+E     ...Full output truncated (11 lines hidden), use '-vv' to show</failure></testcase></testsuite></testsuites>

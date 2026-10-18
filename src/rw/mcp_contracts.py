@@ -156,6 +156,12 @@ class TranscriptList(ScopeLabels):
     next_cursor: Cursor | None
 
 
+class RepoInvestigateInput(Input):
+    repo: str = Field(min_length=1, max_length=64)
+    revision: str = Field(min_length=1, max_length=200)
+    question: str = Field(min_length=1, max_length=2000)
+
+
 INPUTS = {
     "rw_start_investigation": StartInput,
     "rw_get_investigation": GetInput,
@@ -163,4 +169,5 @@ INPUTS = {
     "rw_list_transcripts": ListInput,
     "rw_answer_clarification": AnswerInput,
     "rw_request_alternative": AlternativeInput,
+    "repo_investigate": RepoInvestigateInput,
 }

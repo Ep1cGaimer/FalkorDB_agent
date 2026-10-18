@@ -1,0 +1,74 @@
+{
+  "classification": "SCOPED_SECONDARY_DEVELOPMENT_AND_INDEPENDENT_SYNTHETIC_EVIDENCE_NOT_ACCEPTANCE",
+  "recorded_at": "2026-10-18T13:11:56.217430+00:00",
+  "acceptance_validated": false,
+  "source_manifest": "docs/reviews/goal-hackathon-delivery-evidence/implementation-manifest.json",
+  "source_files_checked": 198,
+  "source_mismatches": [],
+  "seeded_history": {
+    "seeds": 100,
+    "checks_passed": 10800,
+    "checks_total": 10800,
+    "citation_checks_passed": 5400,
+    "citation_checks_total": 5400,
+    "seconds": 96.623,
+    "independent_AI_author": "/root/history_oracle_check",
+    "full_T3_validated": false
+  },
+  "additional_history_matrix": {
+    "checks_passed": 101,
+    "checks_total": 105,
+    "raw_mismatches": [
+      {
+        "actual": "0f06caa9e58fca6c8ce9f0cacfe545c542e77471",
+        "expected": "t00-base",
+        "name": "introduced-first-tag:base",
+        "pass": false
+      },
+      {
+        "actual": "UNCERTAIN",
+        "expected": "ABSENT",
+        "name": "fix-status:feature",
+        "pass": false
+      },
+      {
+        "actual": "UNCERTAIN",
+        "expected": "ABSENT",
+        "name": "fix-status:mainchange",
+        "pass": false
+      },
+      {
+        "actual": "UNCERTAIN",
+        "expected": "ABSENT",
+        "name": "fix-status:merge-resolution",
+        "pass": false
+      }
+    ],
+    "zero_false_PRESENT": true,
+    "normalized_introduction_identity_replay": "14/14; original alias failure retained",
+    "limits": "Conservative UNCERTAIN vs ABSENT disagreements; sampled introduction; broader matrices/T2 remain pending"
+  },
+  "current_transports": {
+    "exact_semantic_matches": 27,
+    "total": 27,
+    "malformed_inputs_rejected": 2,
+    "outcome": "PASS",
+    "core_unchanged": true,
+    "owned_database_removed": true,
+    "generated_answers": false,
+    "full_T7_validated": false
+  },
+  "provider_003": {
+    "task": "DEV-ITS-SIGNATURE-001",
+    "planned_order": [
+      "graph",
+      "plaintext"
+    ],
+    "both_http_status": 429,
+    "accepted_answers": 0,
+    "automatic_retries": 0,
+    "usage_unknown": true,
+    "owned_container_removed": true
+  },
+  "goal_status": "Primary scoped demo ready before18:45 IST; full secondary remains IN_PROGRESS"
+}

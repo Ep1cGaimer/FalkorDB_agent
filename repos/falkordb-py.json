@@ -1,0 +1,11 @@
+{
+  "name": "falkordb-py",
+  "path": "../artifacts/repos/falkordb-py",
+  "tag_pattern": "^v\\d+\\.\\d+\\.\\d+$",
+  "languages": [
+    "python"
+  ],
+  "include": [
+    "falkordb/**"
+  ]
+}

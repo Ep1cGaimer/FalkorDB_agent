@@ -1,0 +1,19 @@
+{
+  "built_at": "2026-09-18T18:03:28Z",
+  "bundle_id": "otel-demo-3.1.0",
+  "flags": [],
+  "no_state_read": false,
+  "previous_version": null,
+  "routes": [
+    {
+      "contract": "orders-topic/OrderResult",
+      "entry": "read_order",
+      "name": "consume_orders",
+      "read_domain": "ALL_KEYS",
+      "reads_from": "orders"
+    }
+  ],
+  "service": "fraud-detection",
+  "version": "3.1.0",
+  "writes": []
+}

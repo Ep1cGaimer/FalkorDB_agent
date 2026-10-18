@@ -1,0 +1,13 @@
+{
+  "schema": "development-source-manifest/v1",
+  "classification": "development-only; no confirmatory answer generation",
+  "recorded_at": "2026-10-18T10:28:55.777431+00:00",
+  "files": {
+    "evals/confirmatory/corpus_export.py": "b82f62ddfe69c9c6e8d665256bcbbcc18c6ea16a9a47fb93e7a3392d20c95fb8",
+    "evals/confirmatory/plaintext_tools.py": "274d7d8cf4658e7c4a419865ee620d5bf783ad5e4bc3a895d18129e0f733bacf",
+    "evals/confirmatory/tool_budget.py": "ad68959b3feaf156b261550c94147bb2bfcac45ca12e51752fde0134243a5d02",
+    "tests/test_confirmatory_corpus.py": "dba285eacfca52757f5e400a90cf75626c728f834226876609bed53056c7f65b",
+    "tests/test_confirmatory_plaintext.py": "c21adc2b8ca652f8143d7f2f9a81142b1ffe62e166c6805df1f64cdd8c96b269",
+    "tests/test_confirmatory_tool_budget.py": "a462a3cd529b2cd8063723a280969e2147d539e50b293048938938904c913318"
+  }
+}

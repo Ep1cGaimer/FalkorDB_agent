@@ -1,0 +1,70 @@
+{
+  "schema": "goal-repair-run-summary/v1",
+  "recorded_at": "2026-10-18T08:26:54.803562+00:00",
+  "classification": "development regression, not T0-T11 acceptance validation",
+  "source_manifest": "implementation-manifest.json",
+  "source_manifest_sha256": "97f209309721f3e53772b3e0604b262efd7389f65285f5e690a195ef16b59e7b",
+  "command": "/tmp/rw-mcp-compat/bin/python -m pytest -q -m 'not live and not realrepo' --tb=short --junitxml=artifacts/goal-repair-tests.xml",
+  "outcomes": {
+    "passed": 1029,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 9,
+    "deselected": 6
+  },
+  "skips": [
+    {
+      "case": "tests.repo.test_e2_e4_protocol.test_citations_resolve_in_clone[requests]",
+      "reason": "clone artifacts/repos/requests absent"
+    },
+    {
+      "case": "tests.repo.test_e2_e4_protocol.test_citations_resolve_in_clone[itsdangerous]",
+      "reason": "clone artifacts/repos/itsdangerous absent"
+    },
+    {
+      "case": "tests.repo.test_e2_e4_protocol.test_e2_history_outputs[none]",
+      "reason": "no E2 outputs yet"
+    },
+    {
+      "case": "tests.repo.test_e2_e4_protocol.test_eval_outputs[none]",
+      "reason": "no E2/E4 outputs yet"
+    },
+    {
+      "case": "tests.repo.test_e3_protocol.test_scale_output_records_required_fields[None]",
+      "reason": "no artifacts/repo_scale/*.json output yet"
+    },
+    {
+      "case": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_scale]",
+      "reason": "no runs recorded under artifacts/repo_scale"
+    },
+    {
+      "case": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_onboarding]",
+      "reason": "no runs recorded under artifacts/repo_onboarding"
+    },
+    {
+      "case": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_benefit]",
+      "reason": "no runs recorded under artifacts/repo_benefit"
+    },
+    {
+      "case": "tests.repo.test_e5_reproducibility.test_run_record_is_reproducible[NOTSET]",
+      "reason": "got empty parameter set for (cat, path)"
+    }
+  ],
+  "fixture_oracle_cases": 10,
+  "seeded_history_cases": 100,
+  "javascript": {
+    "passed": 16,
+    "failed": 0
+  },
+  "deterministic_smoke": {
+    "passed_checks": 8,
+    "exit_code": 0,
+    "live_model_calls": 0
+  },
+  "persistence_reextraction_checkpoints": 12,
+  "limitations": [
+    "Required real-repository/live/evaluation gates remain unvalidated.",
+    "Statistics tests use synthetic score inputs.",
+    "Historical/overlapping subsets are not summed as distinct cases."
+  ]
+}

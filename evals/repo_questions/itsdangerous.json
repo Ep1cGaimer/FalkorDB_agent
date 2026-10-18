@@ -1,0 +1,258 @@
+{
+ "repo": "itsdangerous",
+ "upstream": "pallets/itsdangerous",
+ "clone": "artifacts/repos/itsdangerous",
+ "prepared": "2026-10-18",
+ "prepared_by": "independent test writer (hand-verified with git)",
+ "notes": "Held-out questions on the real clone, prepared by hand with read-only git commands (git show/ls-tree/log/tag --contains); no rw.repo output was consulted. Do not edit after any E2/E4 run: changes require a new evaluation retaining the originals.",
+ "questions": [
+  {
+   "id": "id-01",
+   "category": "dependencies",
+   "question": "At 2.2.0, trace Serializer.dumps to where the HMAC signature bytes are computed.",
+   "revision": "2.2.0",
+   "expected_answer": "Serializer.dumps calls self.dump_payload(obj) then self.make_signer(salt).sign(payload); Signer.sign calls self.get_signature(value); get_signature calls self.algorithm.get_signature(key, value); HMACAlgorithm.get_signature uses hmac.new(key, msg=value, digestmod=self.digest_method).",
+   "expected_citations": [
+    {
+     "path": "src/itsdangerous/serializer.py",
+     "start_line": 311,
+     "end_line": 317,
+     "revision": "2.2.0"
+    },
+    {
+     "path": "src/itsdangerous/serializer.py",
+     "start_line": 280,
+     "end_line": 280,
+     "revision": "2.2.0"
+    },
+    {
+     "path": "src/itsdangerous/signer.py",
+     "start_line": 222,
+     "end_line": 225,
+     "revision": "2.2.0"
+    },
+    {
+     "path": "src/itsdangerous/signer.py",
+     "start_line": 215,
+     "end_line": 220,
+     "revision": "2.2.0"
+    },
+    {
+     "path": "src/itsdangerous/signer.py",
+     "start_line": 62,
+     "end_line": 63,
+     "revision": "2.2.0"
+    }
+   ]
+  },
+  {
+   "id": "id-02",
+   "category": "distant_release",
+   "question": "How is the default digest method of Signer defined at 0.24 versus 2.2.0, and why did it change?",
+   "revision": "2.2.0",
+   "expected_answer": "0.24: Signer.default_digest_method = staticmethod(hashlib.sha1) in itsdangerous.py. 2.2.0: default_digest_method = staticmethod(_lazy_sha1), a wrapper that defers hashlib.sha1 access to runtime so FIPS builds without SHA-1 do not fail at import.",
+   "expected_citations": [
+    {
+     "path": "itsdangerous.py",
+     "start_line": 297,
+     "end_line": 297,
+     "revision": "0.24"
+    },
+    {
+     "path": "src/itsdangerous/signer.py",
+     "start_line": 120,
+     "end_line": 120,
+     "revision": "2.2.0"
+    },
+    {
+     "path": "src/itsdangerous/signer.py",
+     "start_line": 40,
+     "end_line": 45,
+     "revision": "2.2.0"
+    }
+   ],
+   "compare_revision": "0.24"
+  },
+  {
+   "id": "id-03",
+   "category": "rename_delete",
+   "question": "What happened to the single-module itsdangerous.py, and in which tag?",
+   "revision": "1.0.0",
+   "expected_answer": "Commit d4950c0 ('move to src directory') renamed itsdangerous.py to src/itsdangerous/__init__.py; first tag containing it is 1.0.0. 0.24 is the last tag with the top-level itsdangerous.py.",
+   "expected_citations": [
+    {
+     "path": "itsdangerous.py",
+     "start_line": 272,
+     "end_line": 272,
+     "revision": "0.24"
+    },
+    {
+     "path": "src/itsdangerous/__init__.py",
+     "start_line": 1,
+     "end_line": 1,
+     "revision": "1.0.0"
+    }
+   ],
+   "rename_commit": "d4950c0"
+  },
+  {
+   "id": "id-04",
+   "category": "rename_delete",
+   "question": "Which release first lacks src/itsdangerous/jws.py and why?",
+   "revision": "2.1.0",
+   "expected_answer": "2.1.0. Commit 506ca21 'remove deprecated code' deleted jws.py (JWS functionality; use a library such as Authlib) and the itsdangerous.json shim; 2.0.1 is the last tag with jws.py.",
+   "expected_citations": [
+    {
+     "path": "src/itsdangerous/jws.py",
+     "start_line": 1,
+     "end_line": 1,
+     "revision": "2.0.1"
+    },
+    {
+     "path": "CHANGES.rst",
+     "start_line": 43,
+     "end_line": 48,
+     "revision": "2.2.0"
+    }
+   ]
+  },
+  {
+   "id": "id-05",
+   "category": "changes_between",
+   "question": "Which source files under src/ changed between 2.0.1 and 2.1.0?",
+   "revision": "2.1.0",
+   "expected_answer": "__init__.py, _json.py, encoding.py, jws.py (deleted), serializer.py and url_safe.py; the bulk is jws.py removal (259 lines) and the _json shim reduction.",
+   "expected_citations": [
+    {
+     "path": "src/itsdangerous/__init__.py",
+     "start_line": 1,
+     "end_line": 1,
+     "revision": "2.1.0"
+    },
+    {
+     "path": "src/itsdangerous/_json.py",
+     "start_line": 1,
+     "end_line": 1,
+     "revision": "2.1.0"
+    },
+    {
+     "path": "src/itsdangerous/jws.py",
+     "start_line": 1,
+     "end_line": 1,
+     "revision": "2.0.1"
+    }
+   ],
+   "compare_revision": "2.0.1"
+  },
+  {
+   "id": "id-06",
+   "category": "fix_appeared",
+   "question": "Commit 3edfbbb handled OverflowError in timed unsign on 32-bit systems. Which tag first contains it and what does the handler catch?",
+   "revision": "2.1.2",
+   "expected_answer": "First tag 2.1.2. TimestampSigner.unsign catches (ValueError, OSError, OverflowError) and raises BadTimeSignature; in 2.1.1 it catches only (ValueError, OSError).",
+   "expected_citations": [
+    {
+     "path": "src/itsdangerous/timed.py",
+     "start_line": 129,
+     "end_line": 134,
+     "revision": "2.1.2"
+    },
+    {
+     "path": "src/itsdangerous/timed.py",
+     "start_line": 129,
+     "end_line": 129,
+     "revision": "2.1.1"
+    }
+   ],
+   "fix_commit": "3edfbbbc615be5090d452bbf8a13dfdd68436659"
+  },
+  {
+   "id": "id-07",
+   "category": "fix_appeared",
+   "question": "Commit 37f0997 ('catching year overflow ValueError') - which tag first contains it?",
+   "revision": "2.1.1",
+   "expected_answer": "2.1.1 (changelog: 'Handle date overflow in timed unsign. :pr:`296`').",
+   "expected_citations": [
+    {
+     "path": "src/itsdangerous/timed.py",
+     "start_line": 129,
+     "end_line": 129,
+     "revision": "2.1.1"
+    }
+   ],
+   "fix_commit": "37f0997"
+  },
+  {
+   "id": "id-08",
+   "category": "branches_merges",
+   "question": "Merge commit 64cd581 (PR #299): what are its parents and which tag first contains it?",
+   "revision": "2.1.2",
+   "expected_answer": "Parents faa28bc (first) and 3edfbbb (PR branch, the 32-bit OverflowError fix); first tag 2.1.2.",
+   "expected_citations": [
+    {
+     "path": "src/itsdangerous/timed.py",
+     "start_line": 129,
+     "end_line": 131,
+     "revision": "2.1.2"
+    }
+   ],
+   "merge_commit": "64cd581"
+  },
+  {
+   "id": "id-09",
+   "category": "distant_release",
+   "question": "How is __version__ provided at 2.2.0 compared with 0.24?",
+   "revision": "2.2.0",
+   "expected_answer": "2.2.0: a module __getattr__ in __init__.py emits a DeprecationWarning and returns importlib.metadata.version('itsdangerous'). At 0.24 itsdangerous.py defines no __version__ attribute.",
+   "expected_citations": [
+    {
+     "path": "src/itsdangerous/__init__.py",
+     "start_line": 24,
+     "end_line": 38,
+     "revision": "2.2.0"
+    }
+   ],
+   "compare_revision": "0.24"
+  },
+  {
+   "id": "id-10",
+   "category": "ambiguous",
+   "question": "At 2.2.0, what does `loads` do?",
+   "revision": "2.2.0",
+   "expected_answer": "Ambiguous: Serializer.loads (verify signature then load payload), TimedSerializer.loads (adds max_age), the _json helper loads, and the protocol stub in serializer.py. A correct answer lists candidates or asks.",
+   "expected_citations": [
+    {
+     "path": "src/itsdangerous/serializer.py",
+     "start_line": 330,
+     "end_line": 330,
+     "revision": "2.2.0"
+    },
+    {
+     "path": "src/itsdangerous/timed.py",
+     "start_line": 185,
+     "end_line": 185,
+     "revision": "2.2.0"
+    },
+    {
+     "path": "src/itsdangerous/_json.py",
+     "start_line": 11,
+     "end_line": 11,
+     "revision": "2.2.0"
+    }
+   ],
+   "acceptable": [
+    "asks for clarification",
+    "lists the candidates"
+   ]
+  },
+  {
+   "id": "id-11",
+   "category": "missing_evidence",
+   "question": "At 2.2.0, which class implements RSA/asymmetric signatures?",
+   "revision": "2.2.0",
+   "expected_answer": "No evidence: 2.2.0 has only HMACAlgorithm and NoneAlgorithm; no asymmetric signing. Correct answer reports absence.",
+   "expected_citations": [],
+   "expect_gap": true
+  }
+ ]
+}

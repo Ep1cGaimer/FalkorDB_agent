@@ -1,0 +1,22 @@
+{
+  "schema": "development-evidence-files/v1",
+  "files": {
+    "corpus-plaintext-smoke-001.json": "834ee33f62c678b6d73854d89e2a3d66d34f3020acd9e1b4db4721df414c7af9",
+    "corpus-requests-full-001-receipt.json": "850de807a2c79224b2c12f41cf1c509d77291300b66e794a9586c1d5788ec728",
+    "corpus-requests-full-002-receipt.json": "9d85cab415587ea5186ea364d9bd8cc7d6f6c60a75fd4f60005f2848a364a6cd",
+    "corpus-requests-full.spec.json": "09761a04843a598eeabf7ff5c3da6bb2ae863b75cf17ededfa7f7826fb755457",
+    "goal-baseline-and-scoring-001.xml": "9ed1bf6de9f9af5bc490789e5a2ab8db12684b541b24eb4514047c4cbfe32985",
+    "goal-baseline-review-fixed-001.xml": "94de5d715190e435e33e2fd6315da5ad078ba55a6c7c3902357f003fb80d7e81",
+    "goal-baseline-review-fixed-002.xml": "5297e58931d84eb176b3dff869c92031d6236aeb111f384240aa3697d3e76c47",
+    "goal-baseline-review-red-001.xml": "e51eb738443288ac2f2519831e8071e6e300683e2bb8ca87d697ee623bf793ef",
+    "goal-corpus-export-tests-001.xml": "e1a27a078bd3477ba8cab0d4e49ba88cecfae8cdcad4bb756cdb428013d855a0",
+    "goal-corpus-export-tests-002.xml": "09e8a4c0c67bc0e4b9aa99618c1d05f75178287944a1426cc2be0dde48a8055f",
+    "goal-corpus-tools-tests-001.xml": "943b0800ec910e65f15c1383eb2b6cb42d92227243ec7195afb611a59712d449",
+    "goal-corpus-tools-tests-002.xml": "3fedd2614f682c143054c4bf4fae80519f9e8cb72ba002832b907c4d5bd49470",
+    "implementation-manifest.json": "f2f111b2bd7f96cd3ceeb9a307af06388c45501af1958cc02db37f358036fe6a",
+    "requests-full-001.log": "bb28022ff27f1ff6952d99a13db1f1bfd4b29092b8ba6451fa54ee96ef6f51b1",
+    "requests-full-002.log": "2060a471f9c78534be8222507a9d6f07ace5404acfaa359a11fee3070fca2d1b",
+    "source-snapshot.tar.gz": "909d81d7f30947f4e1606d5d0874b1f89b79d5b97e7ca9efc6a3a70e2906a5e9"
+  },
+  "acceptance_validated": false
+}

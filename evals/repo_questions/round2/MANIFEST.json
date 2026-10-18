@@ -1,0 +1,22 @@
+{
+ "written_after_round1": true,
+ "statement": "These questions were written after round-1 (E2) results were seen (artifacts/repo_history_eval/20261018T005530Z.json; only failure categories were read) and are disjoint from all round-1 questions in evals/repo_questions/*.json. Round-1 files and evals/repo_benefit_threshold.json are retained unchanged per the amendment rule.",
+ "prepared": "2026-10-18",
+ "files": {
+  "requests.json": {
+   "sha256": "38ef6283e117660730d34f6f4921eeaedad6c0330d504a15735ba94f4306e6fa",
+   "questions": 10
+  },
+  "itsdangerous.json": {
+   "sha256": "a424556f6dc6003bcaecc2e6aa955aea181bf0fbc43fd4764ed9365c2df88ce8",
+   "questions": 10
+  },
+  "synthetic.json": {
+   "sha256": "4b49e15164ee0aa3eda78c77835b09e383198d63e759a04b2eeb1ab1f5831b02",
+   "questions": 10
+  },
+  "build_round2_synthetic.py": {
+   "sha256": "085444144aab621f67d23e92733498ccbe4c3abc299e21c1562c9b685977fbc5"
+  }
+ }
+}

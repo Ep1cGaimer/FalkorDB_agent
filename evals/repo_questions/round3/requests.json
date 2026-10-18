@@ -1,0 +1,230 @@
+{
+ "repo": "requests",
+ "upstream": "psf/requests",
+ "clone": "artifacts/repos/requests",
+ "prepared": "2026-10-18",
+ "prepared_by": "independent test writer, round 3 (hand-verified with git)",
+ "notes": "Round-3 held-out questions, written by hand with read-only git (git show/log/diff -M/tag --contains/merge-base --is-ancestor, plus ast parsing of `git show` output) AFTER round-2 results were seen (artifacts/repo_history_eval/20261018T050406Z.json; only failure categories were read); disjoint from every round-1 and round-2 question. No rw.repo output was consulted. Do not edit after any run. expected_facts follows the round-3 contract in tests/repo/test_s23_round3.py: changes facts list function/method qualnames only (classes under classes_*, deleted files under deleted_files, renames as {old,new,similarity}; symbols of a renamed file are matched by module-relative name; test files only in tests_changed, and only when indexed); constants carry is_plain_literal/evaluated; partially dotted names resolve on dotted-component suffixes; fix `state` is PRESENT when the fix commit is an ancestor and every non-blank added line is present. Names are matched as dotted suffixes of the full qualname.",
+ "required_revisions": [
+  "v2.32.0",
+  "v2.32.1",
+  "v2.32.2",
+  "v2.32.3",
+  "v2.32.4",
+  "v2.32.5",
+  "v2.33.0",
+  "v2.34.0"
+ ],
+ "questions": [
+  {
+   "id": "r3rq-01",
+   "category": "partial_dotted_name",
+   "question": "At v2.33.0, which exceptions does PreparedRequest.prepare_url raise?",
+   "revision": "v2.33.0",
+   "expected_answer": "InvalidURL and MissingSchema (src/requests/models.py lines 411-483).",
+   "expected_citations": [
+    {
+     "path": "src/requests/models.py",
+     "start_line": 411,
+     "end_line": 483,
+     "revision": "v2.33.0"
+    }
+   ],
+   "expected_facts": {
+    "symbol": "PreparedRequest.prepare_url",
+    "exceptions": [
+     "InvalidURL",
+     "MissingSchema"
+    ]
+   }
+  },
+  {
+   "id": "r3rq-02",
+   "category": "partial_dotted_name",
+   "question": "At v2.33.0, which exceptions does BaseAdapter.send raise?",
+   "revision": "v2.33.0",
+   "expected_answer": "NotImplementedError (src/requests/adapters.py lines 120-137); not HTTPAdapter.send.",
+   "expected_citations": [
+    {
+     "path": "src/requests/adapters.py",
+     "start_line": 120,
+     "end_line": 137,
+     "revision": "v2.33.0"
+    }
+   ],
+   "expected_facts": {
+    "symbol": "adapters.BaseAdapter.send",
+    "exceptions": [
+     "NotImplementedError"
+    ]
+   }
+  },
+  {
+   "id": "r3rq-03",
+   "category": "constant_plain_literal",
+   "question": "At v2.32.5, what is the value of utils.NETRC_FILES?",
+   "revision": "v2.32.5",
+   "expected_answer": "(\".netrc\", \"_netrc\") (src/requests/utils.py line 62), a plain literal.",
+   "expected_citations": [
+    {
+     "path": "src/requests/utils.py",
+     "start_line": 62,
+     "end_line": 62,
+     "revision": "v2.32.5"
+    }
+   ],
+   "expected_facts": {
+    "symbol": "requests.utils.NETRC_FILES",
+    "value": [
+     ".netrc",
+     "_netrc"
+    ],
+    "is_plain_literal": true,
+    "evaluated": true
+   }
+  },
+  {
+   "id": "r3rq-04",
+   "category": "constant_plain_literal",
+   "question": "At v2.33.0, what is the value of adapters.DEFAULT_RETRIES?",
+   "revision": "v2.33.0",
+   "expected_answer": "0 (src/requests/adapters.py line 73).",
+   "expected_citations": [
+    {
+     "path": "src/requests/adapters.py",
+     "start_line": 73,
+     "end_line": 73,
+     "revision": "v2.33.0"
+    }
+   ],
+   "expected_facts": {
+    "symbol": "requests.adapters.DEFAULT_RETRIES",
+    "value": 0,
+    "is_plain_literal": true,
+    "evaluated": true
+   }
+  },
+  {
+   "id": "r3rq-05",
+   "category": "constant_non_literal",
+   "question": "At v2.33.0, what is the value of models.REDIRECT_STATI?",
+   "revision": "v2.33.0",
+   "expected_answer": "A tuple of codes.* attributes (moved, found, other, temporary_redirect, permanent_redirect), src/requests/models.py lines 73-79; not a plain literal, not evaluated.",
+   "expected_citations": [
+    {
+     "path": "src/requests/models.py",
+     "start_line": 73,
+     "end_line": 79,
+     "revision": "v2.33.0"
+    }
+   ],
+   "expected_facts": {
+    "symbol": "requests.models.REDIRECT_STATI",
+    "is_plain_literal": false,
+    "evaluated": false
+   }
+  },
+  {
+   "id": "r3rq-06",
+   "category": "constant_non_literal",
+   "question": "At v2.32.5, what is the value of DEFAULT_CA_BUNDLE_PATH?",
+   "revision": "v2.32.5",
+   "expected_answer": "The call certs.where() (src/requests/utils.py line 64); not evaluated.",
+   "expected_citations": [
+    {
+     "path": "src/requests/utils.py",
+     "start_line": 64,
+     "end_line": 64,
+     "revision": "v2.32.5"
+    }
+   ],
+   "expected_facts": {
+    "symbol": "requests.utils.DEFAULT_CA_BUNDLE_PATH",
+    "expression": "certs.where()",
+    "is_plain_literal": false,
+    "evaluated": false
+   }
+  },
+  {
+   "id": "r3rq-07",
+   "category": "changes_non_adjacent",
+   "question": "What changed between v2.32.2 and v2.32.5?",
+   "revision": "v2.33.0",
+   "expected_answer": "HTTPAdapter.build_connection_pool_key_attributes added; cert_verify, get_connection_with_tls_context, _urllib3_request_context, Response.json, Session.request, get_netrc_auth and super_len modified; nothing removed, deleted or renamed. Citations only at v2.32.2 or v2.32.5 (not v2.32.3/v2.32.4/v2.33.0).",
+   "expected_citations": [
+    {
+     "path": "src/requests/adapters.py",
+     "start_line": 1,
+     "end_line": 696,
+     "revision": "v2.32.5"
+    }
+   ],
+   "expected_facts": {
+    "added": [
+     "HTTPAdapter.build_connection_pool_key_attributes"
+    ],
+    "removed": [],
+    "modified": [
+     "HTTPAdapter.cert_verify",
+     "HTTPAdapter.get_connection_with_tls_context",
+     "adapters._urllib3_request_context",
+     "Response.json",
+     "Session.request",
+     "utils.get_netrc_auth",
+     "utils.super_len"
+    ],
+    "classes_added": [],
+    "classes_removed": [],
+    "deleted_files": [],
+    "renamed": []
+   }
+  },
+  {
+   "id": "r3rq-08",
+   "category": "fix_present_ancestor",
+   "question": "Is fix 47914226 (Fix empty netrc entry usage, #7205) present at v2.34.0?",
+   "revision": "v2.34.0",
+   "expected_answer": "PRESENT: ancestor of v2.34.0 and its added line `if _netrc and any(_netrc):` is at src/requests/utils.py line 268 (the fix's test-file lines are outside the indexed scope; they are also present in git); first tag containing it is v2.33.0.",
+   "expected_citations": [
+    {
+     "path": "src/requests/utils.py",
+     "start_line": 268,
+     "end_line": 268,
+     "revision": "v2.34.0"
+    }
+   ],
+   "expected_facts": {
+    "fix_commit": "47914226c2968802f2cdee3f6f0f6e06e4472f64",
+    "state": "PRESENT",
+    "first_tag_containing": "v2.33.0"
+   }
+  },
+  {
+   "id": "r3rq-09",
+   "category": "fix_absent",
+   "question": "Is fix 47914226 (Fix empty netrc entry usage, #7205) present at v2.32.5?",
+   "revision": "v2.32.5",
+   "expected_answer": "ABSENT: not an ancestor and the line is not at v2.32.5; first tag containing it is v2.33.0.",
+   "expected_citations": [],
+   "expected_facts": {
+    "fix_commit": "47914226c2968802f2cdee3f6f0f6e06e4472f64",
+    "state": "ABSENT",
+    "first_tag_containing": "v2.33.0"
+   }
+  },
+  {
+   "id": "r3rq-10",
+   "category": "symbol_history",
+   "question": "At v2.33.0, when did HTTPAdapter._get_connection appear and disappear?",
+   "revision": "v2.33.0",
+   "expected_answer": "Present at v2.32.0 and v2.32.1 (src/requests/adapters.py line 377), gone from v2.32.2 (moved to get_connection_with_tls_context in aa1461b6); absent at v2.33.0.",
+   "expected_citations": [],
+   "expected_facts": {
+    "symbol": "HTTPAdapter._get_connection",
+    "first_present_revision": "v2.32.0",
+    "first_absent_revision": "v2.32.2",
+    "present_at_requested": false
+   }
+  }
+ ]
+}

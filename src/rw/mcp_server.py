@@ -1,4 +1,4 @@
-"""Six explicitly registered stdio tools. Human confirmation/actions remain in the console."""
+"""Seven explicitly registered stdio tools (six bridge tools + local read-only repo_investigate). Human confirmation/actions remain in the console."""
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
@@ -15,6 +15,7 @@ from pydantic import ValidationError
 
 from .mcp_client import BridgeClient, BridgeError
 from .mcp_contracts import INPUTS, InvestigationList, InvestigationResult, TranscriptList
+from .repo.contracts import RepoInvestigationResult
 
 
 _RAW_ARGUMENTS: ContextVar[dict | None] = ContextVar("rw_mcp_raw_arguments", default=None)
@@ -134,6 +135,16 @@ def create_mcp_server(*, client: BridgeClient | None = None) -> MCPServer:
         confirmation; approval never carries over. API restart loses state. Never automatically retry.
         """
         return await invoke("rw_request_alternative", dict(investigation_id=investigation_id, replay_path=replay_path))
+
+    @server.tool(name="repo_investigate", annotations=read)
+    async def repo_investigate_tool(repo: str, revision: str, question: str) -> RepoInvestigationResult:
+        """Deterministic code/history retrieval over an indexed repository (rw.repo.mcp.repo_investigate).
+
+        Returns source-backed findings with citations and explicit gaps; no compatibility disposition.
+        """
+        from rw.repo.mcp import repo_investigate
+        data = await anyio.to_thread.run_sync(repo_investigate, repo, revision, question)
+        return RepoInvestigationResult.model_validate(data)
 
     return server
 

@@ -1,0 +1,35 @@
+{
+  "schema": "confirmatory-model-candidate/v1",
+  "recorded_at": "2026-10-18T09:37:09.090330+00:00",
+  "status": "PROPOSED_NOT_FROZEN",
+  "provider": "Gemini Developer API",
+  "model": "models/gemini-3.8-flash",
+  "advertised_version": "3.0",
+  "metadata_sha256": "4b4e84e488249db1a9046bbf2fb4c430c79172ea30f4f7f9b54a1e8ea2203631",
+  "input_context_tokens": 1048576,
+  "output_context_tokens": 65536,
+  "tokenizer": "Provider models.countTokens; readiness call returned HTTP200 and14tokens",
+  "tokenizer_readiness": "tokenizer-readiness.draft-v1.json",
+  "references": [
+    "https://ai.google.dev/api/tokens",
+    "https://ai.google.dev/gemini-api/docs/pricing"
+  ],
+  "standard_tariff_usd_per_million": {
+    "input_until_2026_12_31": 0.75,
+    "output_including_thinking_until_2026_12_31": 3.75,
+    "input_from_2027_01_01": 1.5,
+    "output_including_thinking_from_2027_01_01": 7.5
+  },
+  "proposed_question_caps": {
+    "cumulative_prompt_tokens": 24000,
+    "cumulative_output_including_thinking_tokens": 4000
+  },
+  "tariff_upper_bound_for_120_questions_3_repeats_3_arms_usd": 35.64,
+  "calculation": "120*3*3*(24000*0.75+4000*3.75)/1000000",
+  "limitations": [
+    "Candidate only; no confirmatory generation, model choice or prompts frozen.",
+    "Provider advertises version3.0; does not expose a weights digest. Pin metadata hash and record response modelVersion; detect provider metadata changes.",
+    "Actual account tier, cache billing, countTokens tariff and provider billing totals are unverified; tariff projection is not measured expenditure.",
+    "Corpus-token calculation, exact prompt/tool overhead, output reserve, baselines, power analysis, blind scorers and independent final signature remain pending."
+  ]
+}

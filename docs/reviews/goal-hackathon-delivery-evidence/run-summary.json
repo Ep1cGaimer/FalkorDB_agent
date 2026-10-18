@@ -1,0 +1,54 @@
+{
+  "classification": "HACKATHON_PRIMARY_AND_SECONDARY_DEVELOPMENT_EVIDENCE_NOT_FULL_ACCEPTANCE",
+  "full_acceptance_validated": false,
+  "heldout_questions_run": 0,
+  "primary": {
+    "supported_deterministic_demo": "PASS",
+    "browser_rehearsals": 3,
+    "recorded_replay": "explicitly labeled",
+    "fixed_port_recovery": "PASS after preserved port reassignment failure",
+    "demo_url": "http://localhost:8127"
+  },
+  "full_qa": {
+    "passed": 1234,
+    "skipped": 6,
+    "live_excluded": 3,
+    "seconds": 247.92,
+    "source_files": 198,
+    "source_mismatches": []
+  },
+  "native_model_development": {
+    "native_decision_tests": 13,
+    "combined_continuation_regressions_passed": 82,
+    "accepted_end_to_end_answers": 0,
+    "latest_plaintext": "MODEL_INPUT_BUDGET_EXHAUSTED",
+    "latest_graph": "PROVIDER_HTTP_ERROR",
+    "usage": "Actual token metadata enforced; no hidden retries or provider fallback"
+  },
+  "ingestion_audit": {
+    "run": "run-004",
+    "status": "PASS in scoped synthetic Linux strace audit",
+    "positive_control_execution_write_network": true,
+    "unauthorized_execution_write_network": 0,
+    "prior_failed_harness_attempts_retained": 3,
+    "full_T8_validated": false
+  },
+  "unseen_onboarding": {
+    "repository": "Click",
+    "status": "COMPLETE",
+    "selected_roots": 5,
+    "commits": 2855,
+    "seconds": 41.140813851998246,
+    "core_changes_for_trial": 0,
+    "full_T1_validated": false
+  },
+  "limitations": [
+    "No signed frozen T0",
+    "No held-out answers/quality run",
+    "No T10 effect or confidence intervals",
+    "T3/T4/T5/T6/T7/T8/T9 complete matrices remain unvalidated",
+    "No independent current full bundle reproduction",
+    "No official event rules supplied; no submission or video claimed",
+    "Working changes remain uncommitted; handoff commit canceled"
+  ]
+}

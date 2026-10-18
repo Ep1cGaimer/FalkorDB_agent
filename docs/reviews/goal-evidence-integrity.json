@@ -1,0 +1,125 @@
+{
+  "schema": "goal-curated-evidence-integrity/v1",
+  "artifact_manifests": [
+    {
+      "manifest": "docs/reviews/goal-baseline-evidence/bundle-manifest.json",
+      "files": 16,
+      "mismatches": []
+    },
+    {
+      "manifest": "docs/reviews/goal-budget-evidence/bundle-manifest.json",
+      "files": 35,
+      "mismatches": []
+    },
+    {
+      "manifest": "docs/reviews/goal-citation-integrity-evidence/bundle-manifest.json",
+      "files": 58,
+      "mismatches": []
+    },
+    {
+      "manifest": "docs/reviews/goal-control-flags-evidence/bundle-manifest.json",
+      "files": 11,
+      "mismatches": []
+    },
+    {
+      "manifest": "docs/reviews/goal-corpus-token-evidence/bundle-manifest.json",
+      "files": 11,
+      "mismatches": []
+    },
+    {
+      "manifest": "docs/reviews/goal-current-qa-evidence/bundle-manifest.json",
+      "files": 22,
+      "mismatches": []
+    },
+    {
+      "manifest": "docs/reviews/goal-freshness-evidence/bundle-manifest.json",
+      "files": 23,
+      "mismatches": []
+    },
+    {
+      "manifest": "docs/reviews/goal-graft-evidence/bundle-manifest.json",
+      "files": 12,
+      "mismatches": []
+    },
+    {
+      "manifest": "docs/reviews/goal-graph-arm-evidence/bundle-manifest.json",
+      "files": 42,
+      "mismatches": []
+    },
+    {
+      "manifest": "docs/reviews/goal-model-runner-evidence/bundle-manifest.json",
+      "files": 18,
+      "mismatches": []
+    },
+    {
+      "manifest": "docs/reviews/goal-physical-lines-evidence/bundle-manifest.json",
+      "files": 13,
+      "mismatches": []
+    },
+    {
+      "manifest": "docs/reviews/goal-repair-evidence/bundle-manifest.json",
+      "files": 13,
+      "mismatches": []
+    },
+    {
+      "manifest": "docs/reviews/goal-hackathon-delivery-evidence/bundle-manifest-v2.json",
+      "files": 25,
+      "mismatches": []
+    },
+    {
+      "manifest": "docs/reviews/goal-hackathon-delivery-evidence/bundle-manifest-v3.json",
+      "files": 27,
+      "mismatches": []
+    },
+    {
+      "manifest": "docs/reviews/goal-hackathon-followup-evidence/bundle-manifest.json",
+      "files": 13,
+      "mismatches": []
+    },
+    {
+      "manifest": "docs/reviews/goal-source-budget-evidence/bundle-manifest.json",
+      "files": 31,
+      "mismatches": []
+    },
+    {
+      "manifest": "docs/reviews/goal-flash-lite-quality-evidence/bundle-manifest.json",
+      "files": 15,
+      "mismatches": []
+    },
+    {
+      "manifest": "docs/reviews/goal-citation-support-evidence/bundle-manifest.json",
+      "files": 22,
+      "mismatches": []
+    },
+    {
+      "manifest": "docs/reviews/goal-final-delivery-evidence/bundle-manifest.json",
+      "files": 12,
+      "mismatches": []
+    },
+    {
+      "manifest": "docs/reviews/goal-preanswer-scoring-evidence/bundle-manifest.json",
+      "files": 6,
+      "mismatches": []
+    }
+  ],
+  "current_source_manifest": "docs/reviews/goal-preanswer-scoring-evidence/implementation-manifest.json",
+  "current_source_files": 203,
+  "current_source_mismatches": [],
+  "ledger_missing_links": [],
+  "current_implementation_commit": null,
+  "current_working_tree_parent": "520e8fa",
+  "acceptance_statuses": [
+    "IN_PROGRESS"
+  ],
+  "acceptance_validated": false,
+  "independent_reproduction_handoff": {
+    "path": "docs/reviews/goal-independent-reproduction/20261018T101141Z-f8faa67-z_wmyild/HANDOFF.json",
+    "sha256": "015475a9cb845e1cb6c61f22a851b7e5c18df1983f9ea1a9073ad66b901a0a5d",
+    "files": 103,
+    "mismatches": []
+  },
+  "interpretation": "Byte/link integrity only;not independent correctness,scoring,scale,cost or advantage validation",
+  "errors": [],
+  "checked_at": "2026-10-18T15:09:26.084192+00:00",
+  "unresolved_run_ids": []
+}

@@ -1,0 +1,31 @@
+{
+ "files": {
+  "src/rw/__init__.py": "30e74c608b2f274d6b9f27e03fb4e9c28fc4c3f9e4082bc4b3d86d2ebacc7cf7",
+  "src/rw/api.py": "33bb5b3e41bb3e1ef7f9b2354cf563f1840b4f17f10957cc494153323ee9bb13",
+  "src/rw/api_contracts.py": "4fd9171fde58f7476e8f67b4bfb3b5faf5c09a6d4e612668a58dd64caf668326",
+  "src/rw/config.py": "e5c023f4b8d68deee35a47e7b55aa454e8f5a0d44682aadab0a6f64121ce597f",
+  "src/rw/contracts.py": "75667df152b68cec45346b72e2053f0409bccd21cc3838de95c4231e53277fb3",
+  "src/rw/graph.py": "9e9eba9332a595bab83a9f0918ce897896e325f8abf6ed43a10bd939bfeb0eb7",
+  "src/rw/grounding.py": "aa16787646b8462983357cc2e416b0af05289c8d33fbe06ff0cce113e1d79a5f",
+  "src/rw/mcp_client.py": "a8be192c551dee95eb3efd35aec9ab6e666d7654c7d1751608cfce147ed04064",
+  "src/rw/mcp_contracts.py": "a41ac9e59d7d37c5e4ef1794cfa955e480634c58c610cfbb9dd6e659e487509e",
+  "src/rw/mcp_server.py": "11b74292bd221b2412e8f991b97fe805bb9479f9bc181293fa0103a2be8a6adf",
+  "src/rw/pipeline.py": "fc1fc23c37f73c4e033d6357c1cdc9fc7f5efbf4c563498354eb08dc154ed870",
+  "src/rw/probes.py": "1b65d89de05fb4acec2c74b2eab58f5dab73cbd5d5314e9f0101c63a9be817ea",
+  "src/rw/repo/__init__.py": "f9e09ca871dcb32f08e23fba0d61d29b0f90d01000f4b76edcae6e2bbc525b6e",
+  "src/rw/repo/adapters/__init__.py": "976dc9030084982e7e247d88cae3bb44b7be83dc80631235c0b2f5afb7d163a0",
+  "src/rw/repo/adapters/python.py": "0fcb398058693e541b87cb71e3a559d3596471c5419fcb5af131d87d24eda785",
+  "src/rw/repo/config.py": "d8e6c312d84d5b75ed6ca40a148191e825e54d312859947770c6ec58993e4775",
+  "src/rw/repo/git.py": "19335eaf1a0161d15f1951958cb478911a2cca18081ca53666b670f3e09e36a9",
+  "src/rw/repo/index.py": "6826aeb0746a5ee55f46ab4421633ddaad70e39130c0d71bf726063ad1ee8106",
+  "src/rw/repo/investigate.py": "eff0cee64e670bd78af9f06a57f80d55e191f697f36a1c32044399b373ae1333",
+  "src/rw/repo/mcp.py": "cdc75a2012452c2c83c95a0bfdde45ee3a74dcfc82607112f920274725432675",
+  "src/rw/repo/model.py": "126038185e8263a23e6f086b01ff88c69f768689c05f1768e7b686ed3830dde8",
+  "src/rw/repo/query.py": "91f9894d069196e5e117391b272bc657f61d77654a8a59b2fbcfeca290cf0aea",
+  "src/rw/repo/runtime.py": "97a9f9cc4a204fe8d39d4995dfca01244bed90dd57e7647abb7647f8f4cf5c55",
+  "src/rw/simulation.py": "d72640bf598caa3081d9297d9fceef152d0b092d3cb28a7663ad70e041488ac7",
+  "src/rw/verification.py": "9fac2720c5924c27fc04a82cad37b5aef0f31b64dbe9b8ba23fb034eec23a36f"
+ },
+ "frozen_at": "2026-10-18",
+ "note": "re-frozen after S2/S3 round 2 (facts/answer, constant and raises routes, revision discipline); the S6 freeze is kept in core_manifest_after_s6.json and the S5 freeze in core_manifest_after_s5.json."
+}

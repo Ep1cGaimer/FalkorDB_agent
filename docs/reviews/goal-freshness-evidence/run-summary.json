@@ -1,0 +1,60 @@
+{
+  "schema": "goal-source-freshness-run/v1",
+  "captured_at": "2026-10-18T09:07:14.588338+00:00",
+  "classification": "development regression and actual transport diagnostics",
+  "acceptance_validated": false,
+  "base_commit": "d7cf693e26073c825f0b6a2bd741ce5d05752f72",
+  "source_manifest": "implementation-manifest.json",
+  "source_manifest_sha256": "b94c295cec2d3cc5f10a61a37689d49e80a87f06aa52ce44c447a7e1d725c39a",
+  "source_files": 163,
+  "source_mismatches_after_tests": [],
+  "python": {
+    "command": "RW_REALREPO=1 RW_REALREPO_SMOKE=1 /tmp/rw-mcp-compat/bin/python -m pytest -q -m 'not live' --tb=short --junitxml=artifacts/goal-freshness-tests.xml",
+    "passed": 1046,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 5,
+    "deselected": 3,
+    "seconds": 332.13,
+    "skipped_cases": [
+      {
+        "test": "tests.repo.test_e2_e4_protocol.test_e2_history_outputs[none]",
+        "reason": "no E2 outputs yet"
+      },
+      {
+        "test": "tests.repo.test_e2_e4_protocol.test_eval_outputs[none]",
+        "reason": "no E2/E4 outputs yet"
+      },
+      {
+        "test": "tests.repo.test_e3_protocol.test_scale_output_records_required_fields[None]",
+        "reason": "no artifacts/repo_scale/*.json output yet"
+      },
+      {
+        "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_scale]",
+        "reason": "no runs recorded under artifacts/repo_scale"
+      },
+      {
+        "test": "tests.repo.test_e5_reproducibility.test_category_has_runs_or_is_skipped[repo_benefit]",
+        "reason": "no runs recorded under artifacts/repo_benefit"
+      }
+    ]
+  },
+  "javascript": {
+    "command": "node --test tests/js/*.test.mjs",
+    "passed": 16,
+    "failed": 0
+  },
+  "smoke": {
+    "command": "/tmp/rw-mcp-compat/bin/python scripts/smoke.py",
+    "passed": 8,
+    "failed": 0,
+    "graph_cleanup": true
+  },
+  "probe_summary": "probe-summary.json",
+  "limitations": [
+    "No provider-generated or independently blind-scored held-out answers.",
+    "Onboarding times are diagnostics, not controlled scale measurements.",
+    "Independent confirmatory protocol remains DRAFT and incomplete.",
+    "All S/E/T gates remain IN_PROGRESS."
+  ]
+}

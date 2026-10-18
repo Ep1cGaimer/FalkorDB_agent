@@ -1,0 +1,109 @@
+{
+  "schema": "development-model-runner/v1",
+  "acceptance_validated": false,
+  "heldout_questions_run": 0,
+  "source_files": 182,
+  "source_capture_timing": "post-run; the live runs predate the final journal-setup metadata and response-envelope accounting follow-ups",
+  "deterministic_checks": {
+    "passed": 88,
+    "failed": 0,
+    "classification": "synthetic/provider mocks; not live accuracy"
+  },
+  "live_attempts": [
+    {
+      "attempt": "neutral-meter-001",
+      "status": "PASS",
+      "failure": null,
+      "answer_generated": true,
+      "usage": {
+        "budget_input_tokens": 30,
+        "budget_output_tokens": 67,
+        "calls": 1,
+        "cost_status": "UNMEASURED; token counts alone are not provider billing",
+        "elapsed_seconds": 3.3317815419868566,
+        "limits": {
+          "calls": 16,
+          "context_tokens": 1048576,
+          "input_reserve": 64,
+          "input_tokens": 4000,
+          "output_tokens": 1000,
+          "per_call_output": 1000,
+          "seconds": 60
+        },
+        "model": "models/gemini-3.8-flash",
+        "reported_input_tokens": 30,
+        "reported_output_including_thinking": 67,
+        "response_model_version": "gemini-3.8-flash",
+        "usage_unknown": false
+      },
+      "classification": "neutral transport smoke",
+      "heldout": false
+    },
+    {
+      "attempt": "requests-runner-001",
+      "status": "ERROR",
+      "failure": "PROVIDER_HTTP_ERROR",
+      "answer_generated": false,
+      "usage": {
+        "budget_input_tokens": 3798,
+        "budget_output_tokens": 1210,
+        "calls": 2,
+        "cost_status": "UNMEASURED; token counts alone are not provider billing",
+        "elapsed_seconds": 21.27274975000182,
+        "limits": {
+          "calls": 10,
+          "context_tokens": 1048576,
+          "input_reserve": 64,
+          "input_tokens": 24000,
+          "output_tokens": 4000,
+          "per_call_output": 1000,
+          "seconds": 120
+        },
+        "model": "models/gemini-3.8-flash",
+        "reported_input_tokens": 525,
+        "reported_output_including_thinking": 210,
+        "response_model_version": "gemini-3.8-flash",
+        "usage_unknown": true
+      },
+      "classification": "unscored Requests development diagnostic",
+      "heldout": false
+    },
+    {
+      "attempt": "requests-runner-002",
+      "status": "ERROR",
+      "failure": "PROVIDER_TIMEOUT",
+      "answer_generated": false,
+      "usage": {
+        "budget_input_tokens": 798,
+        "budget_output_tokens": 1000,
+        "calls": 1,
+        "cost_status": "UNMEASURED; token counts alone are not provider billing",
+        "elapsed_seconds": 120.00839862501016,
+        "limits": {
+          "calls": 16,
+          "context_tokens": 1048576,
+          "input_reserve": 64,
+          "input_tokens": 24000,
+          "output_tokens": 4000,
+          "per_call_output": 1000,
+          "seconds": 120
+        },
+        "model": "models/gemini-3.8-flash",
+        "reported_input_tokens": 0,
+        "reported_output_including_thinking": 0,
+        "response_model_version": null,
+        "usage_unknown": true
+      },
+      "classification": "unscored Requests development diagnostic",
+      "heldout": false
+    }
+  ],
+  "limitations": [
+    "No full successful live Requests investigation in this batch",
+    "No signed T0, paired comparison, blinded scoring, quality claim or savings claim",
+    "API timestamps/usage do not expose immutable backend weights",
+    "Deadlines cooperative;120.008s timeout is not a strict120s OS bound",
+    "No measured provider bill; failed requests have uncertain usage and retained reservations",
+    "No actual corpus token total or baseline parity/graph arm readiness"
+  ]
+}

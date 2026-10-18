@@ -1,0 +1,17 @@
+{
+  "name": "rw-physical-lines-0bef330b28",
+  "image": "falkordb/falkordb@sha256:107455e862a824e45e8e9f5a7fbfdf5e00a08b14e13eae2577c72fd9e3f59ba6",
+  "attempt": "generic-bases-red-001",
+  "host_port": "49947",
+  "command": [
+    "/tmp/rw-mcp-compat/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "tests/repo/test_parameterized_bases.py",
+    "--tb=short",
+    "--junitxml=artifacts/goal-physical-lines/generic-bases-red-001.xml"
+  ],
+  "exit_code": 1,
+  "cleanup_exit_code": 0
+}

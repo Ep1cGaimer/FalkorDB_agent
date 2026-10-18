@@ -1,0 +1,14 @@
+{
+  "name": "branchy-history",
+  "path": "../../artifacts/question_repos/branchy-history",
+  "revisions": [
+    "main",
+    "release-1.x",
+    "release-legacy",
+    "feature/report"
+  ],
+  "tag_pattern": "^v\\d+\\.\\d+\\.\\d+$",
+  "languages": [
+    "python"
+  ]
+}

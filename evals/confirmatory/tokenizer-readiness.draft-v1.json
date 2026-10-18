@@ -1,0 +1,30 @@
+{
+  "schema": "tokenizer-readiness/v1",
+  "recorded_at": "2026-10-18T09:36:15.020244+00:00",
+  "classification": "readiness count only; no generated answer or confirmatory corpus/task input",
+  "model": "models/gemini-3.8-flash",
+  "status_code": 200,
+  "request": {
+    "contents": [
+      {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Tokenizer readiness check: source evidence must identify repository and immutable revision."
+          }
+        ]
+      }
+    ]
+  },
+  "response": {
+    "totalTokens": 14,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 14
+      }
+    ]
+  },
+  "reference": "https://ai.google.dev/api/tokens",
+  "frozen_protocol": false
+}

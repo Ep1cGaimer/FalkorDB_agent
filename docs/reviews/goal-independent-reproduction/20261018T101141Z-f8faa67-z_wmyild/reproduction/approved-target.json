@@ -1,0 +1,9 @@
+{
+  "at": "2026-10-18T09:53:55.018164+00:00",
+  "authorized_to_start_tests": true,
+  "commit": "f8faa67f5b9c9d0d2682ecff7d10d3ac084cf242",
+  "manifest_path": "/Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent/docs/reviews/goal-graft-evidence/implementation-manifest.json",
+  "manifest_sha256": "bfd2477f3c93e2fe1f16bc6704dddd7e257d14d921b09d061355e76ef9eae08e",
+  "parent_repo": "/Users/vinay2047/.codex/worktrees/4f55/FalkorDB_agent",
+  "reason": "Parent-directed pre-test pin amendment: ignore repository-local Git graft overlays and refresh parent edges separately from reused file maps; initial812 setup preserved. No held-out input used."
+}

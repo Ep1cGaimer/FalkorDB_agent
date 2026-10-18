@@ -1,0 +1,36 @@
+{
+  "endpoint_isolation": {
+    "files": [
+      {
+        "line": 152,
+        "path": "tests/test_graph_integration.py"
+      },
+      {
+        "line": 498,
+        "path": "tests/test_verification.py"
+      }
+    ],
+    "hazard": "Two legacy test fixtures explicitly select host loopback port 6379 instead of RW environment; no host tests were launched",
+    "host_loopback_binding": {
+      "host": "127.0.0.1",
+      "port": 56993
+    },
+    "internal_namespace_endpoint": {
+      "host": "127.0.0.1",
+      "port": 6379
+    },
+    "owned_db_container": "rw-independent-z_wmyild-a2",
+    "owned_python_container": "rw-independent-z_wmyild-a2-python",
+    "solution": "Owned Python container shares only the owned FalkorDB container network namespace; 127.0.0.1:6379 is isolated from host services"
+  },
+  "protocol_exclusions": [
+    "No Click or confirmatory task execution",
+    "No sealed oracle/case mutation",
+    "No live model generation",
+    "No T11 live held-out replay/scoring/adjudication/demo reproduction"
+  ],
+  "recorded_at": "2026-10-18T09:45:32.802351+00:00",
+  "scope": "Supplementary metadata, not acceptance results",
+  "source_commit": "812ecf7e2153d7662f6523a80365b0622cf92ceb",
+  "tracked_source_files": 166
+}
