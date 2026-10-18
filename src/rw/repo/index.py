@@ -224,15 +224,19 @@ def _index_repository(config: RepoConfig, graph_name: str, db, *,
         done_commits = {r[0] for r in _read_all(
             graph, "MATCH (c:Commit) WHERE c.files_done = true RETURN c.sha ORDER BY c.sha")}
         todo = [c for c in commits if c.sha not in done_commits]
-
         _write(graph, "UNWIND $rows AS row MERGE (c:Commit {sha:row.sha}) "
                       "SET c.author_time=row.author_time, c.subject=row.subject, c.message=row.message, "
                       "c.repo=row.repo",
                [{"sha": c.sha, "author_time": c.author_time, "subject": c.subject,
-                 "message": c.message, "repo": config.name} for c in todo])
+                 "message": c.message, "repo": config.name} for c in commits])
+        # Refresh ancestry independently of file-map reuse. An older importer may
+        # have observed local grafts or an incomplete/shallow view of a known child.
+        # A current import must replace those parent facts, not MERGE stale edges.
+        _write(graph, "UNWIND $rows AS row MATCH (c:Commit {sha:row.sha})-[e:PARENT]->() DELETE e",
+               [{"sha": c.sha} for c in commits])
         _write(graph, "UNWIND $rows AS row MATCH (c:Commit {sha:row.c}), (p:Commit {sha:row.p}) "
                       "MERGE (c)-[e:PARENT {order:row.order}]->(p)",
-               [{"c": c.sha, "p": p, "order": i} for c in todo for i, p in enumerate(c.parents)])
+               [{"c": c.sha, "p": p, "order": i} for c in commits for i, p in enumerate(c.parents)])
         # Tags are mutable aliases, replaced as a set while the publication is unavailable.
         graph.query("MATCH (t:Tag) DETACH DELETE t")
         _write(graph, "UNWIND $rows AS row MERGE (t:Tag {name:row.name}) SET t.message=row.message "

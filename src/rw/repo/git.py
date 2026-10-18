@@ -62,7 +62,7 @@ class GitRepo:
         env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
         env.update(GIT_TERMINAL_PROMPT="0", GIT_OPTIONAL_LOCKS="0", GIT_CONFIG_NOSYSTEM="1",
                    GIT_CONFIG_GLOBAL=os.devnull, GIT_NO_REPLACE_OBJECTS="1", GIT_NO_LAZY_FETCH="1",
-                   GIT_PAGER="cat")
+                   GIT_GRAFT_FILE=os.devnull, GIT_PAGER="cat")
         return env
 
     def _command(self, *args: str) -> list[str]:
