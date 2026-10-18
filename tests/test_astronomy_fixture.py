@@ -2,7 +2,7 @@
 
 Codec tests run the real trusted harness on the stored bytes; the pipeline test needs FalkorDB on
 127.0.0.1:6379 like the other graph integration tests. Expected outcomes are written here from the
-fixture design (docs/plans/astronomy-shop-fixture.md), not read back from runtime output.
+fixture design (fixtures/astronomy-shop/DESIGN.md), not read back from runtime output.
 """
 
 import hashlib

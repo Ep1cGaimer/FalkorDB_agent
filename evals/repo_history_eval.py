@@ -1,4 +1,4 @@
-"""E2 history correctness (remquirements-v1.md E2): deterministic retrieval, no LLM.
+"""E2 history correctness (docs/repo/REQUIREMENTS.md E2): deterministic retrieval, no LLM.
 
 This development runner sends only the public question to investigation, then scores the
 returned result against the separate oracle. It never executes oracle retrieval plans. All three

@@ -1,6 +1,0 @@
-{
-  "id": "DEV-REQ-RUNNER-001",
-  "question": "At the selected revision, what is the signature and documented purpose of Session.request? Locate its definition, read its source/docstring and cite exact physical source lines. Keep runtime behaviour unverified.",
-  "repository": "requests-development",
-  "revision": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
-}

@@ -1,4 +1,4 @@
-"""E5 — reproducibility of recorded evidence runs (remquirements-v1.md E5; evals/REPRODUCIBILITY.md).
+"""E5 — reproducibility of recorded evidence runs (docs/repo/REQUIREMENTS.md E5; evals/REPRODUCIBILITY.md).
 
 Validates every run file under artifacts/repo_scale/*.json, artifacts/repo_onboarding/*.json and
 artifacts/repo_benefit/*.json (a category with no files is skipped). Failed/incomplete attempts live in

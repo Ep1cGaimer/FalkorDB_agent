@@ -224,10 +224,9 @@ compared automatically with captured/static implementation strings without DB
 calls. The read-only example's Python syntax passed, relative file links
 were checked locally, and
 `git diff --check` passed. This documentation pass
-does not constitute a fresh DB-backed smoke or clean-machine setup run. Historical
-runtime results are recorded separately in [demo status](demo/STATUS.md) and
-[fixture status](STATUS.md).
+does not constitute a fresh DB-backed smoke or clean-machine setup run. Current
+observed results are in [STATUS.md](STATUS.md).
 
 Schema details: [fixture architecture](ARCHITECTURE.md),
-[repository integration design](plans/repo-integration-v1.md).
+[repository evidence design](repo/DESIGN.md).
 Demo setup: [repository evidence demo](../README.md#repository-evidence-demo--linux--wsl).

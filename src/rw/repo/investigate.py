@@ -1,4 +1,4 @@
-"""Deterministic (no LLM) investigation over an indexed repository (remquirements-v1.md S5).
+"""Deterministic (no LLM) investigation over an indexed repository (docs/repo/REQUIREMENTS.md S5).
 
 A rule-based router maps a small set of question shapes onto rw.repo.query.RepoQuery and returns
 source-backed findings plus explicit gaps. Retrieval only: findings never carry a compatibility

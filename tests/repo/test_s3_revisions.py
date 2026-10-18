@@ -1,4 +1,4 @@
-"""S3 — correct revision handling (remquirements-v1.md S3; docs/plans/repo-integration-v1.md).
+"""S3 — correct revision handling (docs/repo/REQUIREMENTS.md S3; docs/repo/DESIGN.md).
 
 Needs FalkorDB at 127.0.0.1:6379. Uses `make_branchy_repo` (tests/repo/conftest.py, built by
 evals/repo_questions/build_branchy_history.py; history documented in that builder's docstring).

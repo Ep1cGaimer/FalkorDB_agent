@@ -1,6 +1,10 @@
 # Independent confirmatory package
 
-This package is **DRAFT, not frozen or validated**. It was independently authored
+This package is **DRAFT, not frozen or validated**, and belongs to the secondary
+repository-evidence workflow, not the rollback product. Some recorded paths and hashes
+(e.g. `docs/reviews/...`, `remquirements-v1.md`, `docs/plans/...`) name files that were removed from
+the tree on 2026-10-19 or moved to `docs/repo/`; they remain in Git history, so `create_plan_draft_v2.py`
+will not run on the current tree. It was independently authored
 and reviewed by a Codex AI evaluator from upstream source and Git only. No human
 review, generated product answers, or successful acceptance gates are asserted.
 

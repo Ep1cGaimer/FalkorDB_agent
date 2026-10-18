@@ -1,6 +1,0 @@
-{
-  "recorded_at": "2026-10-18T09:43:28.941131+00:00",
-  "scope": "reproduction driver only; no product source change",
-  "error": "invalid syntax. Perhaps you forgot a comma? (<unknown>, line 53)",
-  "product_tests_executed": false
-}

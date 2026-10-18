@@ -1,4 +1,4 @@
-"""S6 — preserve verification boundaries (remquirements-v1.md S6, E5; Status Rules).
+"""S6 — preserve verification boundaries (docs/repo/REQUIREMENTS.md S6, E5; Status Rules).
 
 Graph tests need FalkorDB at 127.0.0.1:6379 (unique graph names, deleted afterwards). Nothing realrepo.
 

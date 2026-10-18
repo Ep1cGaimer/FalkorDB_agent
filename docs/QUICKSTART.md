@@ -197,23 +197,25 @@ Never commit or paste that file. The provider chain comes from `RW_GROUNDING_MOD
 `groq:openai/gpt-oss-120b,groq:qwen/qwen3.8-27b`. `GEMINI_API_KEY` is optional and only used when a
 `gemini:` entry is selected.
 
-The selected free-tier profile is `groq:qwen/qwen3.8-27b` with a 1000-token completion cap. The
-author-reported historical comparison says three pairs completed and four transient HTTP 429
-responses recovered; raw artifacts are not committed. This profile reduces the workload but does
-not promise uninterrupted access. Groq applies limits at the organization level; some accounts separate input and output
-allowances, and the exact limits are shown on your [Groq Limits page](https://console.groq.com/docs/rate-limits).
-See the [issue #4 decision and browser check](ISSUE_4_QUOTA.md) for the chosen budget profile.
+Any other OpenAI-compatible chat-completions endpoint can be used through the `groq` transport by
+setting `RW_GROQ_API_URL` (local testing only); the published results in
+[results/RESULTS.md](results/RESULTS.md) used `gemini-3-flash` that way, on both sides of each
+comparison, with `RW_GROUNDING_MODEL=groq:gemini-3-flash`.
 
-The current client requires tool calls, caps completion tokens at 2048 by default, uses `medium`
-reasoning effort for GPT-OSS, and paces subsequent requests from reported rate-limit headers.
-Generated-call errors can be corrected within the same eight-turn budget. These changes do not
-increase the account's quota; see [the fix and verification report](ISSUE_3_FIX_REPORT.md).
+Groq's free tier is small (on `gpt-oss-120b` roughly 200k tokens/day; `qwen3.8-27b` allows about 7k
+input tokens/minute, too little for long grounding turns). Evaluations exhaust it quickly; quota
+errors are shown as a sanitized "provider quota" message, never as a verdict. Exact limits are on your
+[Groq Limits page](https://console.groq.com/docs/rate-limits).
 
-To collect the issue #3 comparison on one model (Linux/WSL):
+The client requires tool calls, caps completion tokens at 2048 by default
+(`RW_GROUNDING_MAX_COMPLETION_TOKENS`), uses `medium` reasoning effort for GPT-OSS, and paces
+requests from reported rate-limit headers. A rejected generated tool call gets a correction turn
+inside the same eight-turn budget.
+
+To collect a same-model product-vs-control comparison (Linux/WSL):
 
 ```bash
-RW_GROUNDING_MAX_COMPLETION_TOKENS=1000 \
-  .venv/bin/python evals/run_comparison.py --runs 3 --model groq:qwen/qwen3.8-27b
+.venv/bin/python evals/run_comparison.py --runs 3 --model groq:gemini-3-flash
 ```
 
 This makes live provider calls and saves the exact scorer output plus test evidence under a unique
@@ -270,4 +272,4 @@ from the exact file bytes (see CONTRACTS.md "Artifact hash inputs").
 - **`BOUNDED_PASS` = byte/shape readability** of modeled records only.
 - **UI screenshots are untracked** (`artifacts/screens/` is git-ignored), so visuals must be
   regenerated locally.
-- Live-model results are quota-limited and reported per run in STATUS.md, never generalized.
+- Live-model results are small samples on synthetic data, recorded in results/RESULTS.md, never generalized.

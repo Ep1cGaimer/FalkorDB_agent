@@ -1,4 +1,4 @@
-"""S2 — useful code and history evidence (docs/plans/repo-integration-v1.md, query.py contract).
+"""S2 — useful code and history evidence (docs/repo/DESIGN.md, query.py contract).
 
 Needs FalkorDB at 127.0.0.1:6379. Uses the `make_history_repo` fixture (tests/repo/conftest.py):
 tags v1.0.0 / v1.1.0 / v1.2.0 on main; line numbers of its files are documented there.

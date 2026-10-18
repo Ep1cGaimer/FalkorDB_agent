@@ -1,8 +1,0 @@
-{
-  "at": "2026-10-18T09:49:21.122551+00:00",
-  "driver_pid": 42853,
-  "signal": "SIGSTOP to owned host driver only; Docker apt child may finish independently",
-  "reason": "Parent requested hold before pytest pending new Git-graft hardening commit and manifest",
-  "pytest_started": false,
-  "resume_requires": "New pinned implementation commit and manifest attestation"
-}

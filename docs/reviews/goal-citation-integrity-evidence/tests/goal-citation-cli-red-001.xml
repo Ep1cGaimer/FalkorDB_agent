@@ -1,3 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="0.198" timestamp="2026-10-18T16:50:40.403257+05:30" hostname="Vinays-MacBook-Air.local"><testcase classname="tests.test_confirmatory_citation_guard" name="test_cli_rejects_wrong_repository_citation_after_real_retrieval" time="0.171"><failure message="assert (0 == 1)">tests/test_confirmatory_citation_guard.py:74: in test_cli_rejects_wrong_repository_citation_after_real_retrieval
-    assert code == 1 and result["status"] == "ERROR" and result["answer"] is None
-E   assert (0 == 1)</failure></testcase></testsuite></testsuites>

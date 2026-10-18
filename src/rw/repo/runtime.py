@@ -1,4 +1,4 @@
-"""Optional, pluggable runtime-check adapters for compatibility dispositions (remquirements-v1.md S6).
+"""Optional, pluggable runtime-check adapters for compatibility dispositions (docs/repo/REQUIREMENTS.md S6).
 
 None are built in. Ingestion and retrieval never call an adapter; only investigate(mode="compatibility")
 with an explicitly named adapter does. Status rules over the adapter's modeled obligations:

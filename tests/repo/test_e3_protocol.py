@@ -1,4 +1,4 @@
-"""E3 protocol (remquirements-v1.md E3): budgets are declared before measurement, and any measurement
+"""E3 protocol (docs/repo/REQUIREMENTS.md E3): budgets are declared before measurement, and any measurement
 output under artifacts/repo_scale/*.json records what E3 requires against a specific budgets file.
 
 Interface assumed:

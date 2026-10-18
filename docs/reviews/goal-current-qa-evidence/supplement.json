@@ -1,9 +1,0 @@
-{
-  "classification": "parent staged deterministic supplement",
-  "acceptance_validated": false,
-  "javascript_exit_code": 0,
-  "owned_smoke_host_port": "50759",
-  "smoke_exit_code": 0,
-  "cleanup_exit_code": 0,
-  "source_mismatches_after_supplement": []
-}
