@@ -1,8 +1,27 @@
-# RollbackWitness
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="src/rw/static/brand/wordmark-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="src/rw/static/brand/wordmark-light.svg">
+    <img src="src/rw/static/brand/wordmark-light.svg" width="432" height="84" alt="RollbackWitness">
+  </picture>
+</h1>
 
-**Rolling back code does not roll back the data it wrote.**
+<p align="center"><strong>Rolling back code does not roll back the data it wrote.</strong></p>
 
-A Graph Hacks 2026 project for the WeMakeDevs × FalkorDB “Context for AI Agents” hackathon. **Track: Agents That Act on Connected Data.**
+<p align="center">
+  A Graph Hacks 2026 project for the WeMakeDevs × FalkorDB “Context for AI Agents” hackathon.<br>
+  <strong>Track: Agents That Act on Connected Data.</strong>
+</p>
+
+<p align="center">
+  <a href="#quickstart">Quickstart</a> &nbsp;·&nbsp;
+  <a href="#how-it-works">How it works</a> &nbsp;·&nbsp;
+  <a href="#demo-and-results-18-oct-2026">Demo and results</a> &nbsp;·&nbsp;
+  <a href="docs/STATUS.md">Current status</a> &nbsp;·&nbsp;
+  <a href="docs/MCP.md">MCP tools</a>
+</p>
+
+---
 
 An on-call engineer asks for a behavioral rollback — *"Undo the basket rollout, but keep the receipt correction."* RollbackWitness turns that into an exact fleet of existing release artifacts (or asks a precise clarification), uses FalkorDB to find every reader that fleet will run and every retained record those readers can meet, runs the real readers on the real stored bytes, and returns one of:
 
@@ -14,11 +33,22 @@ Only a `BOUNDED_PASS` can be approved for an idempotent **local simulation**. No
 
 > The rollback workflow runs on **synthetic fixtures**: `fixtures/astronomy-shop` (the demo: four services modeled on the OpenTelemetry Astronomy Shop, Kafka `orders` topic) and `fixtures/shop` (the default for tests, the oracle and the controls: cart and checkout, two releases each, one cache, saved carts). The separate repository-evidence demo uses real pinned ItsDangerous source and an explicitly synthetic Git-revert example. Replayed runs are labeled as replays.
 
+<p align="center">
+  <img src="docs/images/rollback-workspace.png" width="1200" alt="RollbackWitness console on the synthetic Astronomy Shop fixture">
+  <br>
+  <sub>Rollback console · synthetic Astronomy Shop fixture</sub>
+</p>
+
+<details>
+<summary><strong>Project guide and implementation history</strong></summary>
+
 New to the codebase? Read the [project guide with examples and Mermaid diagrams](docs/PROJECT_GUIDE.md), then [docs/STATUS.md](docs/STATUS.md) for what currently works and what is open.
 
 The separate repository-evidence demo runs on port 8127. Its setup and graph
 model are documented below, with implementation details in the
 [query and algorithm reference](docs/GRAPH_QUERIES.md).
+
+</details>
 
 ## The thirty-second story
 
@@ -41,7 +71,7 @@ model are documented below, with implementation details in the
 
 ## Demo and results (18 Oct 2026)
 
-**Demo video:** see the submission link. **Demo scenario:** `fixtures/astronomy-shop`, a synthetic model of the OpenTelemetry Astronomy Shop. checkout 3.2.0 writes non-USD orders to the Kafka `orders` topic; accounting and fraud-detection 3.1.0 only read USD. Rolling all three back to 3.1.0 is **unsafe** (every build starts GREEN, but 32 of 80 reader checks fail on orders already in the topic). Rolling back only checkout is **safe** (80/80 pass). The agent is also usable from Claude Code through the MCP server (`scripts/serve_mcp.py`, see [docs/MCP.md](docs/MCP.md)).
+**Demo scenario:** `fixtures/astronomy-shop`, a synthetic model of the OpenTelemetry Astronomy Shop. checkout 3.2.0 writes non-USD orders to the Kafka `orders` topic; accounting and fraud-detection 3.1.0 only read USD. Rolling all three back to 3.1.0 is **unsafe** (every build starts GREEN, but 32 of 80 reader checks fail on orders already in the topic). Rolling back only checkout is **safe** (80/80 pass). The agent is also usable from Claude Code through the MCP server (`scripts/serve_mcp.py`, see [docs/MCP.md](docs/MCP.md)).
 
 Run it: `$env:RW_FIXTURE="astronomy-shop"; .venv\Scripts\python.exe scripts\serve.py`, then open http://127.0.0.1:8000.
 
@@ -54,6 +84,9 @@ Live results, same model (`gemini-3-flash`) on both sides, small samples on synt
 | Astronomy Shop, LLM given every file as plain text (6 cases × 3 runs) | 6/6 cases correct | 15/18; on an incomplete order inventory it said "safe" 2/3 times |
 | Request grounding (5 cases × 3 runs) | 13/15 matched the expected proposal/clarification | n/a |
 | SQL joins over the same raw facts (8 hand-derived cases) | 8/8 | 8/8 (a tie: the graph is not exclusive; it drives the agent and supplies the visible evidence path) |
+
+<details>
+<summary><strong>Graph data model and Cypher reference</strong></summary>
 
 ## Graph data model
 
@@ -170,6 +203,8 @@ These are implemented operations, not proposed schema or generated Cypher.
 The model does not supply arbitrary queries. A truncated result or absent
 relationship is not sufficient evidence of completeness or safety.
 
+</details>
+
 ## Quickstart
 
 Prerequisites: Git, Docker with Compose v2 and a running Docker daemon, and
@@ -236,7 +271,7 @@ Try it:
 .venv\Scripts\python.exe scripts\serve.py
 ```
 
-### Astronomy Shop demo (the scenario in the video)
+### Astronomy Shop demo
 
 ```powershell
 $env:RW_FIXTURE = "astronomy-shop"                                # sh: export RW_FIXTURE=astronomy-shop
@@ -257,6 +292,9 @@ $env:RW_FIXTURE = "astronomy-shop"
 
 The same flow is available to Claude Code through MCP (see [Local MCP tools](#local-mcp-tools)).
 To see the relationship-removal experiment: `.venv\Scripts\python.exe evals\ablation_relationships.py`.
+
+<details>
+<summary><strong>Second workflow: repository evidence demo — Linux / WSL</strong></summary>
 
 ### Second workflow: repository evidence demo — Linux / WSL
 
@@ -329,6 +367,8 @@ the Git bytes. Example: follow `URLSafeTimedSerializer → TimedSerializer →
 Serializer` at the pinned ItsDangerous revision. Python performs the bounded
 relationship walk over facts retrieved from FalkorDB; this is not a claim about
 runtime dispatch or behavioral compatibility.
+
+</details>
 
 ## Local MCP tools
 
