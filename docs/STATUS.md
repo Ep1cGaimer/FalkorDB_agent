@@ -1,7 +1,6 @@
 # Status
 
-Updated 2026-10-19, local `feat/demo-overhaul` after `8f0b0d8`, with uncommitted demo evidence guards.
-This page is the single current-state summary; older dated
+Updated 2026-10-19, `main` after the incident demo merge. This page is the single current-state summary; older dated
 logs, review notes and per-issue reports were removed from the tree and remain in Git history
 (last commit containing them: `25b5513`). Measured comparisons: [results/RESULTS.md](results/RESULTS.md).
 
@@ -13,7 +12,7 @@ logs, review notes and per-issue reports were removed from the tree and remain i
 | Demo fixture `fixtures/astronomy-shop` (4 services × 2 releases, 40 Kafka `orders` records) | Implemented ([design](../fixtures/astronomy-shop/DESIGN.md)) |
 | Recording fixture `fixtures/astronomy-incident` (12 services, orders/ledger/carts, 97 retained records) | Implemented; integration, relationship-removal and two fresh replay rehearsals pass ([design](../fixtures/astronomy-incident/DESIGN.md)) |
 | Branded UI kit, graph clusters, receipt inspector, lineage, comparisons | Integrated; exact-batch lineage and stale-comparison guards added. Existing explanatory module unchanged |
-| Four-minute demo preparation | [Narration](demo/DEMO_SCRIPT.md), [recording runbook](demo/RECORDING_RUNBOOK.md), dedicated launcher and live/replay preparation tool added; video not published |
+| Four-minute demo preparation | [Narration](demo/DEMO_SCRIPT.md), [recording runbook](demo/RECORDING_RUNBOOK.md), dedicated launcher (`scripts/serve_demo.py`) and live/replay preparation tool (`scripts/prepare_demo.py`); saved replays in `artifacts/demo/replays/` |
 | Test fixture `fixtures/shop` (cart/checkout, 2 saved carts) | Default for tests, the oracle and the controls |
 | Console UI (`:8000`), CLI (`scripts/investigate.py`), MCP bridge (`scripts/serve_mcp.py`) | Implemented |
 | Repository-evidence workflow (`src/rw/repo/`, `scripts/hackathon_demo.py`, `:8127`) | Secondary; deterministic (no LLM) source/Git-history retrieval. Spec: [repo/REQUIREMENTS.md](repo/REQUIREMENTS.md); its E1–E5/T0–T11 gates are not claimed |
@@ -46,17 +45,10 @@ The preceding table records the original Astronomy Shop checks. New incident che
 | Broad `pytest -q -m "not live"`, started before concurrent repairs | **1285 passed, 9 failed, 5 errors, 12 skipped, 3 deselected** in 1508.92s. Seven failures/five errors are existing Windows repository-workflow issues (symlink privilege or newline filenames). Two incident baseline failures loaded mixed pre/post-repair code; both pass in the subsequent 22-test incident run. This broad run is not final-source acceptance. |
 | Two fresh `prepare_demo.py --live` rehearsals | Both stopped at provider quota refusal (HTTP 413). No successful fresh live rehearsal claimed. Local evidence: `artifacts/demo-readiness/20261019T000057Z/`. |
 
-The demo is ready to record using the validated, visibly labeled replay path. The graph and real
-reader checks still run afresh. Live calls remain dependent on provider availability: two fresh
-attempts received HTTP 413 quota refusals, and two more received HTTP 401 authentication errors.
-No new live success is claimed. The earlier approval-review usage block was resolved after the
-user's reset; the local incident server now runs on port 8006 for review.
-
-Human simulation approval remains a separate operator action; the development assistant left the
-browser at the passing candidate. Approval/idempotency behavior is covered by the acceptance tests.
-No deployment or video publication was performed. The separately requested visual README update
-was merged on GitHub `main` in [PR #40](https://github.com/Ep1cGaimer/FalkorDB_agent/pull/40), after
-all required CI checks passed. The incident implementation remains in this local feature worktree.
+The demo runs from the validated, visibly labeled replay path; the graph queries and reader checks
+still run afresh. Live calls depend on provider availability: recent live rehearsals hit provider
+quota (HTTP 413) and authentication (HTTP 401) refusals, so no new live success is claimed.
+Simulation approval remains a human action, covered by the acceptance tests; nothing is deployed.
 
 ## Open work
 
