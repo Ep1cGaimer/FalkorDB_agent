@@ -54,7 +54,7 @@ def run(removed: list[str]) -> dict:
             changes.append(FleetEntry(service=service, release_id=release["release_id"], flags={}))
         plan, errors = session.plan_from_proposal(
             GroundingProposal(changes=changes, citations=[], rationale="ablation"),
-            "Put checkout, accounting and fraud-detection back on 3.1.0.", origin="fixture")
+            "Put " + ", ".join(s for s, _ in FLEET) + " back on 3.1.0.", origin="fixture")
         assert plan is not None and not errors, errors
         confirmation = ScopeConfirmation(plan_hash=plan.plan_hash(), confirmed_by="eval",
                                          confirmed_at=datetime.now(timezone.utc).isoformat(timespec="seconds"))
@@ -62,8 +62,9 @@ def run(removed: list[str]) -> dict:
         v = report["verification"]
         witnesses = sum(1 for ob in v["obligations"] if ob.get("witness_path"))
         failing = sorted({r["tuple"]["record_id"] for r in v["receipts"] if r["result"] == "FAIL"})
-        origins = G.record_origins(session.g, session.snapshot_id, failing)[0] if failing else []
-        return {"origins_traced": sum(1 for o in origins if o["hops"]), "edges_deleted": deleted, "nodes": nodes_after, "disposition": v["disposition"],
+        origins, log = G.record_origins(session.g, session.snapshot_id, failing) if failing else ([], {"complete": True})
+        return {"origins_traced": len({o["batch_id"] for o in origins if o["hops"] and o["lineage_complete"]}),
+                "lineage_complete": log["complete"], "edges_deleted": deleted, "nodes": nodes_after, "disposition": v["disposition"],
                 "obligations": len(v["obligations"]), "probes_run": len(v["receipts"]),
                 "failures_found": sum(r["result"] == "FAIL" for r in v["receipts"]),
                 "witness_paths": witnesses, "gap_kinds": sorted({g["kind"] for g in v["gaps"]}),

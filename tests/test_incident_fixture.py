@@ -301,8 +301,12 @@ def test_baseline_context_has_equal_information():
 def test_baseline_claim_check_against_receipts():
     from rw.baseline import claim_check
 
-    receipt = lambda service, rid, result: {"tuple": {"service": service, "record_id": rid}, "result": result}  # noqa: E731
-    verification = {"receipts": [receipt("a", "r1", "FAIL"), receipt("a", "r2", "FAIL"), receipt("b", "r3", "PASS")]}
+    from rw.contracts import h
+    def receipt(service, rid, result):
+        t = {"service": service, "record_id": rid}
+        return {"tuple": t, "obligation_hash": h(t), "result": result}
+    receipts = [receipt("a", "r1", "FAIL"), receipt("a", "r2", "FAIL"), receipt("b", "r3", "PASS")]
+    verification = {"receipts": receipts, "obligations": [{"tuple": r["tuple"], "obligation_hash": r["obligation_hash"]} for r in receipts]}
     check = claim_check({"failing": {"a": ["r1"], "b": ["r3", "r9"]}}, verification)
     assert {k: check[k] for k in ("confirmed", "missed", "claimed_but_passed", "unverifiable", "expected_failing")} == \
         {"confirmed": 1, "missed": 1, "claimed_but_passed": 1, "unverifiable": 1, "expected_failing": 2}

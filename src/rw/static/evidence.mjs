@@ -22,6 +22,8 @@ function queryItem(q, extra) {
   return el("li", { class: "query-item" }, el("div", { class: "row" }, el("strong", { class: "mono" }, q.name),
     el("span", { class: "tiny muted" }, `${q.rows} row${q.rows === 1 ? "" : "s"}`),
     q.truncated ? el("span", { class: "badge UNKNOWN" }, "truncated at cap") : null, extra),
+    q.complete === false ? el("p", { class: "small error-text" }, "Lineage incomplete: ",
+      q.gaps?.length ? q.gaps.map(g => `${g.batch_id}: ${g.reason}`).join("; ") : "query cap reached") : null,
     q.params && Object.keys(q.params).length ? el("p", { class: "tiny muted mono query-params" }, "params: ", json(q.params)) : null,
     q.cypher ? el("pre", { class: "code-block query-cypher" }, q.cypher) : null);
 }
@@ -93,7 +95,9 @@ export function witnessPanel(inv, attempt, selected, actions, s = {}) {
   })() : null;
   const callout = graph.callout ? el("div", { class: "root-callout", role: "note" }, icon("alert"), el("p", {}, graph.callout.text)) : null;
   const loadingNote = originsData === "loading" ? el("p", { class: "tiny muted" }, "Loading record lineage…") : null;
-  return panel("Why this is blocked — FalkorDB path", "The evidence subgraph the checker walked: plan, readers, stores, records and their writers.",
+  const title = v.disposition === "BLOCKED" ? "Why this is blocked — FalkorDB path"
+    : v.disposition === "BOUNDED_PASS" ? "Verified reads — FalkorDB path" : "Incomplete evidence — FalkorDB path";
+  return panel(title, "The evidence subgraph the checker walked: plan, readers, stores, records and their writers.",
     [el("div", { class: "map-scroll" }, el("div", { class: "tgraph-wrap" }, svg)), legend, callout, loadingNote, detail,
       el("button", { class: `map-record ${result}`, type: "button", onclick: () => actions.inspect(ob.obligation_hash),
         "aria-label": `Inspect ${t.record_id}, ${displayStatus(result)}` },

@@ -30,6 +30,7 @@ from .contracts import (
 from .verification import (
     REPO_ROOT,
     DuplicateReleaseId,
+    applicable_receipts,
     build_evidence,
     dispose,
     duplicate_release_evidence,
@@ -220,6 +221,12 @@ class Session:
                 startup[r["service"]] = {"release_id": r["release_id"], **startup_check(r["codec_path"])}
         return {
             "startup_checks": startup,
+            "no_state_read_services": sorted(e.service for e in plan.fleet
+                if not route_log["truncated"]
+                and (decl := declarations.get(e.release_id)) and decl["no_state_read"] and not decl["routes"]
+                and (rows := [r for r in route_rows if r["service"] == e.service])
+                and all(r["release_id"] == e.release_id and r.get("no_state_read") is True
+                        and r.get("codec_hash") == decl["codec_hash"] and not r.get("route_id") for r in rows)),
             "plan": plan.model_dump(mode="json"),
             "plan_id": plan_id,
             "plan_hash": plan.plan_hash(),
@@ -308,27 +315,36 @@ def failure_lineage(session: "Session", verification: dict) -> list[str]:
     Trusted code runs the fixed record_origins query on the failing record ids, so the origin of the
     data reaches the agent even when it does not call trace_data_origin itself.
     """
-    failing = {}  # (service, record_id) pairs that failed; the lineage query is per record
-    for r in verification["receipts"]:
+    failing = {}  # exact batch -> failing obligations
+    for r in applicable_receipts(verification):
         if r["result"] == ProbeResult.FAIL.value:
-            failing.setdefault(r["tuple"]["record_id"], set()).add(r["tuple"]["service"])
+            failing.setdefault(r["tuple"]["batch_id"], {})[r["obligation_hash"]] = r["tuple"]
     if not failing:
         return []
-    rows, log = G.record_origins(session.g, session.snapshot_id, sorted(failing))
+    records = sorted({t["record_id"] for reads in failing.values() for t in reads.values()})
+    rows, log = G.record_origins(session.g, session.snapshot_id, records, batch_ids=sorted(failing))
     if not rows:
-        return []
+        return ["Lineage is unresolved; no complete origin path was established."]
     label = lambda row: f"{row['origin_service']} {row['origin_version']}" if row["origin_service"] else "an UNKNOWN writer"  # noqa: E731
     derived: dict[tuple, int] = {}
     origins: dict[str, int] = {}
+    by_batch: dict[str, list[dict]] = {}
     for row in rows:
-        reads = len(failing.get(row["record_id"], ()))
+        by_batch.setdefault(row["batch_id"], []).append(row)
+    for batch, paths in by_batch.items():
+        roots = {(r["origin_batch_id"], r["origin_release_id"]) for r in paths}
+        if len(roots) != 1 or not all(r["lineage_complete"] for r in paths):
+            continue
+        row = paths[0]
+        reads = len(failing.get(batch, ()))
         origins[label(row)] = origins.get(label(row), 0) + reads
         if row["hops"]:
             key = (row["store_id"], row["origin_store_id"], label(row))
             derived[key] = derived.get(key, 0) + 1
     lines = [f"Lineage (DERIVED_FROM): {n} failing record(s) in {store} were derived from records in {origin_store} "
              f"first written by {writer}." for (store, origin_store, writer), n in sorted(derived.items())]
-    lines.append("Origin of the data behind every failing read: " + "; ".join(
+    complete = log["complete"] and set(by_batch) == set(failing) and sum(origins.values()) == sum(map(len, failing.values()))
+    lines.append(("Origin of the data behind every failing read: " if complete else "Established origin paths (lineage incomplete or ambiguous): ") + "; ".join(
         f"{writer} ({n} read(s))" for writer, n in sorted(origins.items(), key=lambda kv: -kv[1])) + "."
                  + (" (lineage query truncated)" if log["truncated"] else ""))
     lines.append("Retained records stay in their stores after any change: a release listed above as failing "
@@ -349,7 +365,7 @@ def alternative_context(session: "Session", report: dict) -> str:
         lines = text.splitlines()
         lines[-1:-1] = lineage
         text = "\n".join(lines)
-    failed = {r["tuple"]["release_id"] for r in v["receipts"] if r["result"] == ProbeResult.FAIL.value}
+    failed = {r["tuple"]["release_id"] for r in applicable_receipts(v) if r["result"] == ProbeResult.FAIL.value}
     services = sorted({ob["tuple"]["service"] for ob in v["obligations"] if ob["tuple"]["release_id"] in failed})
     if not services:
         return text
@@ -381,6 +397,8 @@ def ablate(session: "Session", fleet: list, removed: list[str]) -> dict[str, Any
     copy = Session(snapshot=session.snapshot, graph_name=f"rw_ablation_{uuid.uuid4().hex[:8]}",
                    fixture_root=session.fixture_root)
     try:
+        if copy.manifest_hash != session.manifest_hash:
+            raise ValueError("snapshot changed since the original session; cannot compare relationship removal")
         deleted = 0
         for edge in removed:  # names come from the fixed allowlist above, never from the request
             deleted += int(copy.g.query(f"MATCH ()-[e:{edge}]->() DELETE e").relationships_deleted)
@@ -394,14 +412,17 @@ def ablate(session: "Session", fleet: list, removed: list[str]) -> dict[str, Any
         confirmation = ScopeConfirmation(plan_hash=plan.plan_hash(), confirmed_by="relationship-removal check",
                                          confirmed_at=_now())
         v = copy.verify(plan, confirmation)["verification"]
-        failing = sorted({r["tuple"]["record_id"] for r in v["receipts"] if r["result"] == ProbeResult.FAIL.value})
-        origin_rows, _ = G.record_origins(copy.g, copy.snapshot_id, failing) if failing else ([], {})
+        receipts = applicable_receipts(v)
+        failing = sorted({r["tuple"]["record_id"] for r in receipts if r["result"] == ProbeResult.FAIL.value})
+        batches = sorted({r["tuple"]["batch_id"] for r in receipts if r["result"] == ProbeResult.FAIL.value})
+        origin_rows, origin_log = G.record_origins(copy.g, copy.snapshot_id, failing, batch_ids=batches) if failing else ([], {"complete": True})
         return {"removed": removed, "edges_deleted": deleted, "disposition": v["disposition"],
                 "obligations": len(v["obligations"]), "probes_run": len(v["receipts"]),
-                "failures_found": sum(r["result"] == ProbeResult.FAIL.value for r in v["receipts"]),
+                "failures_found": len({r["obligation_hash"] for r in receipts if r["result"] == ProbeResult.FAIL.value}),
                 "witness_paths": sum(1 for ob in v["obligations"] if ob.get("witness_path")),
                 "gap_kinds": sorted({g["kind"] for g in v["gaps"]}), "gaps": len(v["gaps"]),
-                "origins_found": sum(1 for row in origin_rows if row["hops"])}
+                "origins_found": len({row["batch_id"] for row in origin_rows if row["hops"] and row["lineage_complete"]}),
+                "lineage_complete": origin_log["complete"]}
     finally:
         copy.g.delete()
 

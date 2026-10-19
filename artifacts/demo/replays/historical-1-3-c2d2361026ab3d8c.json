@@ -1,0 +1,731 @@
+{
+  "request_text": "Japanese shoppers are seeing wrong totals since 3.2.0. Roll back accounting and fraud-detection to 3.1.0, their currency conversion is the suspect. Leave checkout alone.\n\nAgent asked: Rolling back accounting and fraud-detection to 3.1.0 fails because checkout 3.2.0 produces local-currency orders that 3.1.0 builds cannot consume. To make this rollback succeed, checkout must also be rolled back to 3.1.0, but you requested to leave checkout alone. Should we roll back checkout as well, or how would you like to proceed?\nOperator answered: Yes, turn off localCurrencyCheckout on checkout and keep everything else on 3.2.0.",
+  "alternative_context": "Plan plan:56c951804ba23fb0 disposition: BLOCKED.\nBlocked fleet (an alternative must differ from it): accounting release:accounting:e4e42706d8829205; ad release:ad:771428242fd02ef7; cart release:cart:bff5b298d2b62bae; checkout release:checkout:060413b8c3d569ba flags {'localCurrencyCheckout': True}; currency release:currency:e93a7b22ffd1b1f5; email release:email:b8db8feb14c32f06; fraud-detection release:fraud-detection:d6d0d119913a0755; frontend release:frontend:1a36540020b5f4cd; payment release:payment:686c3b5f79cbeddd; quote release:quote:1c3c8fdbc39afc80; recommendation release:recommendation:ef5d3c0effd169b1; shipping release:shipping:280b8c6efd3a2b5f\nEvery failing reader, grouped (each listed release fails on these retained records and must not run in the alternative):\n* reader accounting 3.1.0 (consume_orders) fails on 16 record(s) in store:orders, format OrderResult/local-currency, written by checkout 3.2.0 (release:checkout:060413b8c3d569ba); e.g. orders-0@1048, orders-0@1049, orders-0@1050\n* reader accounting 3.1.0 (reconcile_ledger) fails on 16 record(s) in store:ledger, format ledger/v2, written by accounting 3.2.0 (release:accounting:0a4f9646b4310512); e.g. ledger-1022, ledger-1023, ledger-1024\n* reader fraud-detection 3.1.0 (consume_orders) fails on 16 record(s) in store:orders, format OrderResult/local-currency, written by checkout 3.2.0 (release:checkout:060413b8c3d569ba); e.g. orders-0@1048, orders-0@1049, orders-0@1050\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-0@1048 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in JPY; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-0@1049 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in JPY; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-0@1050 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in EUR; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-0@1051 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in EUR; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-0@1052 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in GBP; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-0@1053 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in EUR; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-1@1065 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in CAD; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-1@1066 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in EUR; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-1@1067 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in EUR; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-1@1068 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in GBP; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-1@1069 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in GBP; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-2@1082 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in CAD; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-2@1083 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in EUR; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-2@1084 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in CAD; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-2@1085 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in EUR; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-2@1086 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in EUR; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:reconcile_ledger on record ledger-1022 format ledger/v2 written by release:accounting:0a4f9646b4310512: FAIL (UnsupportedLedgerRowError: Ledger row layout 'ledger/v2' has columns ['fx_rate_per_usd_hundredths', 'original_amount'] this build does not map; cannot reconcile.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:reconcile_ledger on record ledger-1023 format ledger/v2 written by release:accounting:0a4f9646b4310512: FAIL (UnsupportedLedgerRowError: Ledger row layout 'ledger/v2' has columns ['fx_rate_per_usd_hundredths', 'original_amount'] this build does not map; cannot reconcile.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:reconcile_ledger on record ledger-1024 format ledger/v2 written by release:accounting:0a4f9646b4310512: FAIL (UnsupportedLedgerRowError: Ledger row layout 'ledger/v2' has columns ['fx_rate_per_usd_hundredths', 'original_amount'] this build does not map; cannot reconcile.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:reconcile_ledger on record ledger-1025 format ledger/v2 written by release:accounting:0a4f9646b4310512: FAIL (UnsupportedLedgerRowError: Ledger row layout 'ledger/v2' has columns ['fx_rate_per_usd_hundredths', 'original_amount'] this build does not map; cannot reconcile.)\n... and 28 more\ntrace_data_origin can follow the failing records' lineage to their origin writer.\nLineage (DERIVED_FROM): 16 failing record(s) in store:ledger were derived from records in store:orders first written by checkout 3.2.0.\nOrigin of the data behind every failing read: checkout 3.2.0 (48 read(s)).\nRetained records stay in their stores after any change: a release listed above as failing fails on them whatever the flags, so the alternative must not run it.\nServices whose reader failed, and the release each runs today (it already reads these records): accounting release:accounting:0a4f9646b4310512 (version 3.2.0); fraud-detection release:fraud-detection:a5541cd9cddf284f (version 3.2.0)\nPASS: 89 obligations",
+  "model": "groq:gemini-3-flash",
+  "provider": "groq",
+  "abandoned_attempts": [],
+  "events": [
+    {
+      "type": "model",
+      "turn": 0,
+      "response": {
+        "id": "chatcmpl-o9rup",
+        "object": "chat.completion",
+        "created": 1792367086,
+        "model": "gemini-3-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "tool_calls": [
+                {
+                  "index": 0,
+                  "id": "sig:EmcKZQFpFH0Twa25u7X/a9bgG30+cReh25WGJpXgoQBMLygtYJ3zpSIKfdo+UXNASkKzQfYSgZr+T1U5DDLaYl6lFy3Vyl27uZQZS9K+edgeq4/Jm4vwepv090qT5VXSzcDZER06b0em:call_7251057",
+                  "type": "function",
+                  "function": {
+                    "name": "release_history",
+                    "arguments": "{\"service\":\"accounting\"}"
+                  }
+                }
+              ]
+            },
+            "finish_reason": "tool_calls"
+          }
+        ]
+      }
+    },
+    {
+      "type": "tool",
+      "name": "release_history",
+      "args": {
+        "service": "accounting"
+      },
+      "rows": [
+        {
+          "release_id": "release:accounting:0a4f9646b4310512",
+          "service": "accounting",
+          "version": "3.2.0",
+          "depth": 0,
+          "built_at": "2026-10-13T09:00:00Z",
+          "bundle_id": "otel-demo-3.2.0",
+          "declared_flags": [],
+          "previous_release_id": "release:accounting:e4e42706d8829205",
+          "excerpts": [
+            {
+              "excerpt_id": "excerpt:0a4f9646b4310512:CHANGELOG.md:5-5",
+              "kind": "changelog",
+              "path": "CHANGELOG.md",
+              "span": "5-5",
+              "text": "- Handles orders in any supported currency (EUR, GBP, CAD, JPY, USD) and books them converted to USD.",
+              "content_hash": "sha256:7c1469b597df7220bfdebf32a9c735a35b316d7cf6632a0c0bb7101c63d32c5e"
+            },
+            {
+              "excerpt_id": "excerpt:0a4f9646b4310512:CHANGELOG.md:6-6",
+              "kind": "changelog",
+              "path": "CHANGELOG.md",
+              "span": "6-6",
+              "text": "- Fix: orders without a shipping address (digital goods) are now recorded in the ledger. 3.1.0 failed on the missing address, logged OrderParsingFailed and skipped the order.",
+              "content_hash": "sha256:45d86a823d13b9f860eabca8d5de343a191c5d837a159f538c97f971d1a2e398"
+            },
+            {
+              "excerpt_id": "excerpt:0a4f9646b4310512:CHANGELOG.md:7-7",
+              "kind": "changelog",
+              "path": "CHANGELOG.md",
+              "span": "7-7",
+              "text": "- Orders charged in another currency are booked with their original amount and exchange rate. These ledger rows use a new layout, ledger/v2 (two extra columns); USD orders keep ledger/v1.",
+              "content_hash": "sha256:a78b3da0c11c05176868f6df1bd4e1ae1501148872f352300f4404f7901390d7"
+            },
+            {
+              "excerpt_id": "excerpt:0a4f9646b4310512:CHANGELOG.md:8-8",
+              "kind": "changelog",
+              "path": "CHANGELOG.md",
+              "span": "8-8",
+              "text": "- Ledger reconcile reads both ledger/v1 and ledger/v2 rows.",
+              "content_hash": "sha256:c57b545fc4bcc5d74e2c471db8471f816d749162b0084ef27ca457f804c0bfd3"
+            },
+            {
+              "excerpt_id": "excerpt:0a4f9646b4310512:CHANGELOG.md:9-9",
+              "kind": "changelog",
+              "path": "CHANGELOG.md",
+              "span": "9-9",
+              "text": "- Shipped in release train otel-demo-3.2.0.",
+              "content_hash": "sha256:83b815eb7066188814c2e3623e356725fc54f1703019298f6f47c33b6bd70db7"
+            },
+            {
+              "excerpt_id": "excerpt:0a4f9646b4310512:codec.py:121-124",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "121-124",
+              "text": "def order_currencies(order: dict) -> list[str]:\n    \"\"\"Currency codes used by the order's shipping cost and item prices.\"\"\"\n    costs = [order[\"shipping_cost\"]] + [item[\"cost\"] for item in order[\"items\"]]\n    return sorted({cost[\"currency_code\"] for cost in costs if cost and cost[\"currency_code\"]})",
+              "content_hash": "sha256:819ebf1d9f5fe8a3b791ccd369b30e250e55dda31d5ae79b37bdd42ae630cb81"
+            },
+            {
+              "excerpt_id": "excerpt:0a4f9646b4310512:codec.py:127-132",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "127-132",
+              "text": "def to_usd_nanos(money: dict) -> int:\n    \"\"\"Convert an amount in any supported currency to US dollar nanos.\"\"\"\n    code = money[\"currency_code\"]\n    if code not in RATES_PER_USD:\n        raise UnsupportedCurrencyError(f\"Order is priced in {code}; no exchange rate is known.\")\n    return (money[\"units\"] * 1_000_000_000 + money[\"nanos\"]) * 100 // RATES_PER_USD[code]",
+              "content_hash": "sha256:398f8bc947fcc9c7b5ae5196b23eb97f36fb8290f3cb2b05f51536151ecac306"
+            },
+            {
+              "excerpt_id": "excerpt:0a4f9646b4310512:codec.py:135-141",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "135-141",
+              "text": "def read_order(data: bytes) -> dict:\n    \"\"\"Consume one `orders` message (var order = OrderResult.Parser.ParseFrom(message.Value);); amounts in any supported currency are converted to USD.\"\"\"\n    order = _Wire.order_result(data)\n    codes = order_currencies(order)\n    total = sum(to_usd_nanos(item[\"cost\"]) * item[\"quantity\"] for item in order[\"items\"])\n    return {\"format\": FORMAT_USD if codes in ([], [\"USD\"]) else FORMAT_LOCAL, \"order_id\": order[\"order_id\"],\n            \"item_count\": len(order[\"items\"]), \"total_usd_nanos\": total}",
+              "content_hash": "sha256:b2b07038c2a6364b44bcc048260ba330d1c50aec6b067a4889c1c32849a5231d"
+            },
+            {
+              "excerpt_id": "excerpt:0a4f9646b4310512:codec.py:144-148",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "144-148",
+              "text": "def record_order(order: dict) -> dict:\n    \"\"\"Ledger rows for an order; an order without a shipping address gets an empty shipping row.\"\"\"\n    address = order.get(\"shipping_address\") or {}\n    return {\"order_id\": order[\"order_id\"], \"items\": len(order[\"items\"]),\n            \"city\": address.get(\"city\", \"\"), \"country\": address.get(\"country\", \"\")}",
+              "content_hash": "sha256:52dfde1cac5404e0f22a028ff1a6ad24ae7aff35859362950700373460b879a7"
+            },
+            {
+              "excerpt_id": "excerpt:0a4f9646b4310512:codec.py:160-173",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "160-173",
+              "text": "def write_ledger_row(order: dict) -> bytes:\n    \"\"\"Book one consumed order; an order charged in another currency keeps its original amount and rate (ledger/v2).\"\"\"\n    codes = order_currencies(order)\n    row = record_order(order)\n    row[\"amount_usd_nanos\"] = sum(to_usd_nanos(item[\"cost\"]) * item[\"quantity\"] for item in order[\"items\"])\n    if codes in ([], [\"USD\"]):\n        row[\"fmt\"] = LEDGER_V1\n    else:\n        code = codes[0]\n        row[\"fmt\"] = LEDGER_V2\n        row[\"original_amount\"] = {\"currency_code\": code, \"nanos\": sum(\n            (item[\"cost\"][\"units\"] * 1_000_000_000 + item[\"cost\"][\"nanos\"]) * item[\"quantity\"] for item in order[\"items\"])}\n        row[\"fx_rate_per_usd_hundredths\"] = RATES_PER_USD[code]\n    return json.dumps(row, sort_keys=True, separators=(\",\", \":\")).encode(\"utf-8\")",
+              "content_hash": "sha256:9dcc184a697af16eb82916c2ddecaf2e0ad24a1e9a2842f986a5d927f4ff10e5"
+            },
+            {
+              "excerpt_id": "excerpt:0a4f9646b4310512:codec.py:176-182",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "176-182",
+              "text": "def read_ledger_row(data: bytes) -> dict:\n    \"\"\"Reconcile before booking: load one existing `accounting.ledger` row (ledger/v1 or ledger/v2).\"\"\"\n    row = json.loads(data)\n    layouts = {LEDGER_V1: LEDGER_V1_COLUMNS, LEDGER_V2: LEDGER_V2_COLUMNS}\n    if layouts.get(row.get(\"fmt\")) != set(row):\n        raise UnsupportedLedgerRowError(f\"Ledger row layout {row.get('fmt')!r} is not one this build maps; cannot reconcile.\")\n    return {\"format\": row[\"fmt\"], \"order_id\": row[\"order_id\"], \"amount_usd_nanos\": row[\"amount_usd_nanos\"]}",
+              "content_hash": "sha256:adcb21f136f3eb94eec543f4e02d334a0915eb1cbdf698c9463dbec23a8355fc"
+            },
+            {
+              "excerpt_id": "excerpt:0a4f9646b4310512:codec.py:185-186",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "185-186",
+              "text": "def health(data: bytes = b\"\") -> dict:  # startup check; reads no retained state\n    return {\"status\": \"ok\", \"service\": \"accounting\", \"version\": \"3.2.0\"}",
+              "content_hash": "sha256:28f4a0acb306a8befa07bd2d124d8b5579ccd511c689bb36234c53153e53ef1c"
+            }
+          ]
+        },
+        {
+          "release_id": "release:accounting:e4e42706d8829205",
+          "service": "accounting",
+          "version": "3.1.0",
+          "depth": 1,
+          "built_at": "2026-09-18T18:03:28Z",
+          "bundle_id": "otel-demo-3.1.0",
+          "declared_flags": [],
+          "previous_release_id": null,
+          "excerpts": [
+            {
+              "excerpt_id": "excerpt:e4e42706d8829205:CHANGELOG.md:5-5",
+              "kind": "changelog",
+              "path": "CHANGELOG.md",
+              "span": "5-5",
+              "text": "- Consumes `orders` and parses each value with `OrderResult.Parser.ParseFrom(message.Value)`.",
+              "content_hash": "sha256:577a376f7d7d6f2251f1bdaa02ce839e1f79bad808c9788ea422ff8f82139da1"
+            },
+            {
+              "excerpt_id": "excerpt:e4e42706d8829205:CHANGELOG.md:6-6",
+              "kind": "changelog",
+              "path": "CHANGELOG.md",
+              "span": "6-6",
+              "text": "- Books every amount as US dollars; an order in another currency is rejected (logged as OrderParsingFailed) and not recorded in the ledger.",
+              "content_hash": "sha256:e1d3cefafa9552f2a8ac0cce2e6d808041d3be915855a8bcb342411913c6c6eb"
+            },
+            {
+              "excerpt_id": "excerpt:e4e42706d8829205:CHANGELOG.md:7-7",
+              "kind": "changelog",
+              "path": "CHANGELOG.md",
+              "span": "7-7",
+              "text": "- Writes order, orderitem and shipping rows to Postgres schema `accounting`.",
+              "content_hash": "sha256:ffe30a3f3ac8ae8755f4c657cb59c36c8167cdf7089bc90717a787db872b105d"
+            },
+            {
+              "excerpt_id": "excerpt:e4e42706d8829205:CHANGELOG.md:8-8",
+              "kind": "changelog",
+              "path": "CHANGELOG.md",
+              "span": "8-8",
+              "text": "- Before booking an order, reconciles against the existing `ledger` rows (reads every row) so a re-delivered order is not booked twice. Knows only the ledger/v1 row layout.",
+              "content_hash": "sha256:6b659fc369cdf7e00d14834850380f16014b88348383c9e056368df703f8481f"
+            },
+            {
+              "excerpt_id": "excerpt:e4e42706d8829205:codec.py:119-122",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "119-122",
+              "text": "def order_currencies(order: dict) -> list[str]:\n    \"\"\"Currency codes used by the order's shipping cost and item prices.\"\"\"\n    costs = [order[\"shipping_cost\"]] + [item[\"cost\"] for item in order[\"items\"]]\n    return sorted({cost[\"currency_code\"] for cost in costs if cost and cost[\"currency_code\"]})",
+              "content_hash": "sha256:819ebf1d9f5fe8a3b791ccd369b30e250e55dda31d5ae79b37bdd42ae630cb81"
+            },
+            {
+              "excerpt_id": "excerpt:e4e42706d8829205:codec.py:125-131",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "125-131",
+              "text": "def read_order(data: bytes) -> dict:\n    \"\"\"Consume one `orders` message (var order = OrderResult.Parser.ParseFrom(message.Value);) and handle its amounts as US dollars.\"\"\"\n    order = _Wire.order_result(data)\n    for code in order_currencies(order):\n        if code not in SUPPORTED_CURRENCIES:\n            raise UnsupportedCurrencyError(f\"Order is priced in {code}; this build only handles USD.\")\n    return {\"format\": FORMAT_USD, \"order_id\": order[\"order_id\"], \"item_count\": len(order[\"items\"])}",
+              "content_hash": "sha256:7f34b9d2072c3b65397e4339105e8e23b27b435e0956a712960b4aad859ffe1a"
+            },
+            {
+              "excerpt_id": "excerpt:e4e42706d8829205:codec.py:134-138",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "134-138",
+              "text": "def record_order(order: dict) -> dict:\n    \"\"\"Ledger rows for an order; reads order.ShippingAddress directly, so a missing address raises.\"\"\"\n    address = order[\"shipping_address\"]\n    return {\"order_id\": order[\"order_id\"], \"items\": len(order[\"items\"]),\n            \"city\": address[\"city\"], \"country\": address[\"country\"]}",
+              "content_hash": "sha256:d3b294ee6cd4cb56024a8512f4fb3343d4334a07432ee3227d4f993f23b1f616"
+            },
+            {
+              "excerpt_id": "excerpt:e4e42706d8829205:codec.py:149-155",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "149-155",
+              "text": "def write_ledger_row(order: dict) -> bytes:\n    \"\"\"Book one consumed (USD) order as an `accounting.ledger` row; a missing address raises (order skipped).\"\"\"\n    row = record_order(order)\n    row[\"fmt\"] = LEDGER_V1\n    row[\"amount_usd_nanos\"] = sum((item[\"cost\"][\"units\"] * 1_000_000_000 + item[\"cost\"][\"nanos\"]) * item[\"quantity\"]\n                                  for item in order[\"items\"])\n    return json.dumps(row, sort_keys=True, separators=(\",\", \":\")).encode(\"utf-8\")",
+              "content_hash": "sha256:79e61c6da8abc3cd96f2007790315a807039349f4db1b49cd29c371a1d2c8ee5"
+            },
+            {
+              "excerpt_id": "excerpt:e4e42706d8829205:codec.py:158-165",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "158-165",
+              "text": "def read_ledger_row(data: bytes) -> dict:\n    \"\"\"Reconcile before booking: load one existing `accounting.ledger` row so a re-delivered order is not booked twice.\"\"\"\n    row = json.loads(data)\n    if row.get(\"fmt\") != LEDGER_V1 or set(row) != LEDGER_V1_COLUMNS:\n        extra = sorted(set(row) - LEDGER_V1_COLUMNS)\n        raise UnsupportedLedgerRowError(\n            f\"Ledger row layout {row.get('fmt')!r} has columns {extra} this build does not map; cannot reconcile.\")\n    return {\"format\": LEDGER_V1, \"order_id\": row[\"order_id\"], \"amount_usd_nanos\": row[\"amount_usd_nanos\"]}",
+              "content_hash": "sha256:f07e8785f30fb02f35a8006f8c4ffd58285da0c933d5aa286fbba98b937888c2"
+            },
+            {
+              "excerpt_id": "excerpt:e4e42706d8829205:codec.py:168-169",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "168-169",
+              "text": "def health(data: bytes = b\"\") -> dict:  # startup check; reads no retained state\n    return {\"status\": \"ok\", \"service\": \"accounting\", \"version\": \"3.1.0\"}",
+              "content_hash": "sha256:1315068cadbfdd82f070cfb17277b843dafb5ae480009946b5732f89474f2e33"
+            }
+          ]
+        }
+      ],
+      "log": {
+        "name": "release_history",
+        "params": {
+          "snapshot_id": "snapshot:snap-001",
+          "service": "accounting",
+          "max_depth": 5,
+          "limit": 201
+        },
+        "rows": 2,
+        "truncated": false
+      }
+    },
+    {
+      "type": "model",
+      "turn": 1,
+      "response": {
+        "id": "chatcmpl-sgr4u",
+        "object": "chat.completion",
+        "created": 1792367088,
+        "model": "gemini-3-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "tool_calls": [
+                {
+                  "index": 0,
+                  "id": "sig:EmcKZQFpFH0T1IYnnxb2O8k4m2GB1qkPkh3Mny0QHJn175q2BeFV4HiGKROINRGYwOfAhdsqF23VKPRX34f0osyx53CmcOFUHt1U4MLaoBBCENhK/dPFMYake1PDWyFEnVEVviXaTK4+:call_4874098",
+                  "type": "function",
+                  "function": {
+                    "name": "release_history",
+                    "arguments": "{\"service\":\"fraud-detection\"}"
+                  }
+                }
+              ]
+            },
+            "finish_reason": "tool_calls"
+          }
+        ]
+      }
+    },
+    {
+      "type": "tool",
+      "name": "release_history",
+      "args": {
+        "service": "fraud-detection"
+      },
+      "rows": [
+        {
+          "release_id": "release:fraud-detection:a5541cd9cddf284f",
+          "service": "fraud-detection",
+          "version": "3.2.0",
+          "depth": 0,
+          "built_at": "2026-10-13T09:00:00Z",
+          "bundle_id": "otel-demo-3.2.0",
+          "declared_flags": [],
+          "previous_release_id": "release:fraud-detection:d6d0d119913a0755",
+          "excerpts": [
+            {
+              "excerpt_id": "excerpt:a5541cd9cddf284f:CHANGELOG.md:5-5",
+              "kind": "changelog",
+              "path": "CHANGELOG.md",
+              "span": "5-5",
+              "text": "- Converts order amounts in any supported currency to USD before applying fraud limits.",
+              "content_hash": "sha256:4ec2d4d1037c4dc6821d3bcabde81f8ed44cfd1914093481d607b59addca910b"
+            },
+            {
+              "excerpt_id": "excerpt:a5541cd9cddf284f:CHANGELOG.md:6-6",
+              "kind": "changelog",
+              "path": "CHANGELOG.md",
+              "span": "6-6",
+              "text": "- Shipped in release train otel-demo-3.2.0.",
+              "content_hash": "sha256:83b815eb7066188814c2e3623e356725fc54f1703019298f6f47c33b6bd70db7"
+            },
+            {
+              "excerpt_id": "excerpt:a5541cd9cddf284f:codec.py:119-122",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "119-122",
+              "text": "def order_currencies(order: dict) -> list[str]:\n    \"\"\"Currency codes used by the order's shipping cost and item prices.\"\"\"\n    costs = [order[\"shipping_cost\"]] + [item[\"cost\"] for item in order[\"items\"]]\n    return sorted({cost[\"currency_code\"] for cost in costs if cost and cost[\"currency_code\"]})",
+              "content_hash": "sha256:819ebf1d9f5fe8a3b791ccd369b30e250e55dda31d5ae79b37bdd42ae630cb81"
+            },
+            {
+              "excerpt_id": "excerpt:a5541cd9cddf284f:codec.py:125-130",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "125-130",
+              "text": "def to_usd_nanos(money: dict) -> int:\n    \"\"\"Convert an amount in any supported currency to US dollar nanos.\"\"\"\n    code = money[\"currency_code\"]\n    if code not in RATES_PER_USD:\n        raise UnsupportedCurrencyError(f\"Order is priced in {code}; no exchange rate is known.\")\n    return (money[\"units\"] * 1_000_000_000 + money[\"nanos\"]) * 100 // RATES_PER_USD[code]",
+              "content_hash": "sha256:398f8bc947fcc9c7b5ae5196b23eb97f36fb8290f3cb2b05f51536151ecac306"
+            },
+            {
+              "excerpt_id": "excerpt:a5541cd9cddf284f:codec.py:133-139",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "133-139",
+              "text": "def read_order(data: bytes) -> dict:\n    \"\"\"Consume one `orders` message (val orders = OrderResult.parseFrom(record.value())); amounts in any supported currency are converted to USD.\"\"\"\n    order = _Wire.order_result(data)\n    codes = order_currencies(order)\n    total = sum(to_usd_nanos(item[\"cost\"]) * item[\"quantity\"] for item in order[\"items\"])\n    return {\"format\": FORMAT_USD if codes in ([], [\"USD\"]) else FORMAT_LOCAL, \"order_id\": order[\"order_id\"],\n            \"item_count\": len(order[\"items\"]), \"total_usd_nanos\": total}",
+              "content_hash": "sha256:f3c71b18063c8b9caa48642fa56147c623f37d6f86dcaedbc1561d38cd2214be"
+            },
+            {
+              "excerpt_id": "excerpt:a5541cd9cddf284f:codec.py:142-143",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "142-143",
+              "text": "def health(data: bytes = b\"\") -> dict:  # startup check; reads no retained state\n    return {\"status\": \"ok\", \"service\": \"fraud-detection\", \"version\": \"3.2.0\"}",
+              "content_hash": "sha256:365947f9a08d2fd2a7268207d7ff83c844840609e5e1c897706752a3c81d125e"
+            }
+          ]
+        },
+        {
+          "release_id": "release:fraud-detection:d6d0d119913a0755",
+          "service": "fraud-detection",
+          "version": "3.1.0",
+          "depth": 1,
+          "built_at": "2026-09-18T18:03:28Z",
+          "bundle_id": "otel-demo-3.1.0",
+          "declared_flags": [],
+          "previous_release_id": null,
+          "excerpts": [
+            {
+              "excerpt_id": "excerpt:d6d0d119913a0755:CHANGELOG.md:5-5",
+              "kind": "changelog",
+              "path": "CHANGELOG.md",
+              "span": "5-5",
+              "text": "- Consumes `orders` with `auto.offset.reset = earliest` and parses each record with `OrderResult.parseFrom(record.value())`.",
+              "content_hash": "sha256:c6fc4e63cb548fe97cafa8fe7148f7ee148963d652ee3517840decfbe5d40534"
+            },
+            {
+              "excerpt_id": "excerpt:d6d0d119913a0755:CHANGELOG.md:6-6",
+              "kind": "changelog",
+              "path": "CHANGELOG.md",
+              "span": "6-6",
+              "text": "- Fraud limits are in US dollars; an order in another currency throws and stops the poll loop.",
+              "content_hash": "sha256:8ab5f1da7a5e180b91471a5defbb4a9a64c8af1e1b5ea8f663dbb91f27725a9e"
+            },
+            {
+              "excerpt_id": "excerpt:d6d0d119913a0755:codec.py:117-120",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "117-120",
+              "text": "def order_currencies(order: dict) -> list[str]:\n    \"\"\"Currency codes used by the order's shipping cost and item prices.\"\"\"\n    costs = [order[\"shipping_cost\"]] + [item[\"cost\"] for item in order[\"items\"]]\n    return sorted({cost[\"currency_code\"] for cost in costs if cost and cost[\"currency_code\"]})",
+              "content_hash": "sha256:819ebf1d9f5fe8a3b791ccd369b30e250e55dda31d5ae79b37bdd42ae630cb81"
+            },
+            {
+              "excerpt_id": "excerpt:d6d0d119913a0755:codec.py:123-129",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "123-129",
+              "text": "def read_order(data: bytes) -> dict:\n    \"\"\"Consume one `orders` message (val orders = OrderResult.parseFrom(record.value())) and handle its amounts as US dollars.\"\"\"\n    order = _Wire.order_result(data)\n    for code in order_currencies(order):\n        if code not in SUPPORTED_CURRENCIES:\n            raise UnsupportedCurrencyError(f\"Order is priced in {code}; this build only handles USD.\")\n    return {\"format\": FORMAT_USD, \"order_id\": order[\"order_id\"], \"item_count\": len(order[\"items\"])}",
+              "content_hash": "sha256:d7bc1867d217ba6cfd98dc7e5d5c2d7d72b6504ced0c317761451a22b019590c"
+            },
+            {
+              "excerpt_id": "excerpt:d6d0d119913a0755:codec.py:132-133",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "132-133",
+              "text": "def health(data: bytes = b\"\") -> dict:  # startup check; reads no retained state\n    return {\"status\": \"ok\", \"service\": \"fraud-detection\", \"version\": \"3.1.0\"}",
+              "content_hash": "sha256:6139d987c6db0e49bf35a017251d0298853d929f1e66ab2a3276063c8e7cf873"
+            }
+          ]
+        }
+      ],
+      "log": {
+        "name": "release_history",
+        "params": {
+          "snapshot_id": "snapshot:snap-001",
+          "service": "fraud-detection",
+          "max_depth": 5,
+          "limit": 201
+        },
+        "rows": 2,
+        "truncated": false
+      }
+    },
+    {
+      "type": "model",
+      "turn": 2,
+      "response": {
+        "id": "chatcmpl-3jgavu",
+        "object": "chat.completion",
+        "created": 1792367090,
+        "model": "gemini-3-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "tool_calls": [
+                {
+                  "index": 0,
+                  "id": "sig:EmcKZQFpFH0TmL69ftqKgxl2OF78VzzIt7KTxQFhFlCE0Kc0q4a3uv1LCYOf8n1aJn5V5/hws6TCMBV/AQ+wG5hPMyx/iqHtjEV3mtb0dtyOG6/P2LrGiL1maMkaL/HO2hK7+rOdfaah:call_1213847",
+                  "type": "function",
+                  "function": {
+                    "name": "release_history",
+                    "arguments": "{\"service\":\"checkout\"}"
+                  }
+                }
+              ]
+            },
+            "finish_reason": "tool_calls"
+          }
+        ]
+      }
+    },
+    {
+      "type": "tool",
+      "name": "release_history",
+      "args": {
+        "service": "checkout"
+      },
+      "rows": [
+        {
+          "release_id": "release:checkout:060413b8c3d569ba",
+          "service": "checkout",
+          "version": "3.2.0",
+          "depth": 0,
+          "built_at": "2026-10-13T09:00:00Z",
+          "bundle_id": "otel-demo-3.2.0",
+          "declared_flags": [
+            {
+              "default": true,
+              "name": "localCurrencyCheckout"
+            }
+          ],
+          "previous_release_id": "release:checkout:058d748d9c193f09",
+          "excerpts": [
+            {
+              "excerpt_id": "excerpt:060413b8c3d569ba:CHANGELOG.md:5-5",
+              "kind": "changelog",
+              "path": "CHANGELOG.md",
+              "span": "5-5",
+              "text": "- Local-currency checkout: orders are now charged in the shopper's selected currency (EUR, GBP, CAD, JPY or USD) and written to `orders` with those amounts; behind flag localCurrencyCheckout (default on).",
+              "content_hash": "sha256:822f80c44ed5b0d0d6956fa7da0015156acd3266ab82e33abeff9fc7df3bb2fc"
+            },
+            {
+              "excerpt_id": "excerpt:060413b8c3d569ba:CHANGELOG.md:6-6",
+              "kind": "changelog",
+              "path": "CHANGELOG.md",
+              "span": "6-6",
+              "text": "- Turning localCurrencyCheckout off prices new orders in USD again, exactly as 3.1.0 did. Orders already written in other currencies stay in the topic.",
+              "content_hash": "sha256:d1d50333fe2f5233fa474f4574832c491f4fb05d71cf94d79c1d48f916ed44ab"
+            },
+            {
+              "excerpt_id": "excerpt:060413b8c3d569ba:CHANGELOG.md:7-7",
+              "kind": "changelog",
+              "path": "CHANGELOG.md",
+              "span": "7-7",
+              "text": "- Consumers must be on 3.2.0 or later to handle non-USD orders.",
+              "content_hash": "sha256:c8c83834e8cf314e2937d6acc5c99da80006027ba81ad178d2209cda2f7b9203"
+            },
+            {
+              "excerpt_id": "excerpt:060413b8c3d569ba:CHANGELOG.md:8-8",
+              "kind": "changelog",
+              "path": "CHANGELOG.md",
+              "span": "8-8",
+              "text": "- Shipped in release train otel-demo-3.2.0 together with accounting 3.2.0, fraud-detection 3.2.0 and recommendation 3.2.0; the other services were rebuilt without functional change.",
+              "content_hash": "sha256:9413c32e7b869956c065100fe70d13ba827b21b5f039368b28da1b3e31502435"
+            },
+            {
+              "excerpt_id": "excerpt:060413b8c3d569ba:codec.py:62-65",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "62-65",
+              "text": "def convert(money: dict, currency: str) -> dict:\n    \"\"\"Price a USD amount in the shopper's currency (upstream currency service Convert).\"\"\"\n    nanos = (money[\"units\"] * 1_000_000_000 + money[\"nanos\"]) * RATES_PER_USD[currency] // 100\n    return {\"currency_code\": currency, \"units\": nanos // 1_000_000_000, \"nanos\": nanos % 1_000_000_000}",
+              "content_hash": "sha256:367f0660778b94a46ce44d26038fa45be75ef73f98687538643552c9779736f8"
+            },
+            {
+              "excerpt_id": "excerpt:060413b8c3d569ba:codec.py:68-73",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "68-73",
+              "text": "def write_order(order: dict, flags: dict) -> bytes:\n    \"\"\"Produce to `orders`: priced in the shopper's currency if localCurrencyCheckout, else in USD as 3.1.0 did.\"\"\"\n    currency = order.get(\"user_currency\", \"USD\") if flags.get(\"localCurrencyCheckout\", True) else \"USD\"\n    priced = dict(order, shipping_cost=convert(order[\"shipping_cost\"], currency),\n                  items=[dict(item, cost=convert(item[\"cost\"], currency)) for item in order[\"items\"]])\n    return _Encode.order_result(priced)",
+              "content_hash": "sha256:8b45de51d861533832828f73f26a644480b447bdd3e555596776dae058ff8997"
+            },
+            {
+              "excerpt_id": "excerpt:060413b8c3d569ba:codec.py:76-77",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "76-77",
+              "text": "def health(data: bytes = b\"\") -> dict:  # startup check; reads no retained state\n    return {\"status\": \"ok\", \"service\": \"checkout\", \"version\": \"3.2.0\"}",
+              "content_hash": "sha256:4f7279986504a0fcbdb867460f9d70d7211647df2512601eca97979708c56a15"
+            }
+          ]
+        },
+        {
+          "release_id": "release:checkout:058d748d9c193f09",
+          "service": "checkout",
+          "version": "3.1.0",
+          "depth": 1,
+          "built_at": "2026-09-18T18:03:28Z",
+          "bundle_id": "otel-demo-3.1.0",
+          "declared_flags": [],
+          "previous_release_id": null,
+          "excerpts": [
+            {
+              "excerpt_id": "excerpt:058d748d9c193f09:CHANGELOG.md:5-5",
+              "kind": "changelog",
+              "path": "CHANGELOG.md",
+              "span": "5-5",
+              "text": "- Publishes every placed order to Kafka topic `orders` as protobuf `OrderResult` bytes from `proto.Marshal(result)` (upstream `sendToPostProcessor`).",
+              "content_hash": "sha256:6632b9e6e72bbab916b00de6ea2a218966792f6b1b3f2082373834f86ef6b4b9"
+            },
+            {
+              "excerpt_id": "excerpt:058d748d9c193f09:CHANGELOG.md:6-6",
+              "kind": "changelog",
+              "path": "CHANGELOG.md",
+              "span": "6-6",
+              "text": "- Every price and shipping cost in the order is in USD.",
+              "content_hash": "sha256:a4c72cdd11fed0a77c818b6c3cae7bbcb831a113be9a4047227a7c14774fbf06"
+            },
+            {
+              "excerpt_id": "excerpt:058d748d9c193f09:CHANGELOG.md:7-7",
+              "kind": "changelog",
+              "path": "CHANGELOG.md",
+              "span": "7-7",
+              "text": "- accounting and fraud-detection consume `orders`.",
+              "content_hash": "sha256:1e8e2e5f3a3d98d71a14d14e1aa2372ff8e90f7693e5ad587a4eeb3632156add"
+            },
+            {
+              "excerpt_id": "excerpt:058d748d9c193f09:codec.py:59-61",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "59-61",
+              "text": "def write_order(order: dict, flags: dict) -> bytes:\n    \"\"\"Produce to `orders`: the proto.Marshal(result) bytes, every amount in USD.\"\"\"\n    return _Encode.order_result(order)",
+              "content_hash": "sha256:acc9b2707411d79287f2179b3cb35a9a80234bfb8d5740194e9536c8ec07e99f"
+            },
+            {
+              "excerpt_id": "excerpt:058d748d9c193f09:codec.py:64-65",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "64-65",
+              "text": "def health(data: bytes = b\"\") -> dict:  # startup check; reads no retained state\n    return {\"status\": \"ok\", \"service\": \"checkout\", \"version\": \"3.1.0\"}",
+              "content_hash": "sha256:c4a48db0ee3418da8d9194fa442d07abd404b5b05db4dd010011a4c0c7259f82"
+            }
+          ]
+        }
+      ],
+      "log": {
+        "name": "release_history",
+        "params": {
+          "snapshot_id": "snapshot:snap-001",
+          "service": "checkout",
+          "max_depth": 5,
+          "limit": 201
+        },
+        "rows": 2,
+        "truncated": false
+      }
+    },
+    {
+      "type": "model",
+      "turn": 3,
+      "response": {
+        "id": "chatcmpl-64nuas",
+        "object": "chat.completion",
+        "created": 1792367092,
+        "model": "gemini-3-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "tool_calls": [
+                {
+                  "index": 0,
+                  "id": "sig:EmcKZQFpFH0TWnD8/jNOVPoAPahQXvz2M0QPS9G28tmo2xaSWm7S8r3V34Dtp9g73QE0JKi2uJDmmsjxN6kJUZA3pMsdWlKVfigGtaPaE8RuT3/9AgQwTALae24FgUFDTPk3FYw/Ah7v:call_6320379",
+                  "type": "function",
+                  "function": {
+                    "name": "propose_fleet",
+                    "arguments": "{\"changes\":[{\"release_id\":\"release:checkout:060413b8c3d569ba\",\"flags\":[{\"name\":\"localCurrencyCheckout\",\"enabled\":false}],\"service\":\"checkout\"}],\"rationale\":\"As requested by the operator, turn off localCurrencyCheckout on checkout and keep everything else on 3.2.0, satisfying the currency requirement without needing to roll back consumers.\",\"citations\":[{\"excerpt_id\":\"excerpt:060413b8c3d569ba:CHANGELOG.md:6-6\",\"quote\":\"- Turning localCurrencyCheckout off prices new orders in USD again, exactly as 3.1.0 did. Orders already written in other currencies stay in the topic.\"}]}"
+                  }
+                }
+              ]
+            },
+            "finish_reason": "tool_calls"
+          }
+        ]
+      }
+    },
+    {
+      "type": "terminal",
+      "name": "propose_fleet",
+      "args": {
+        "changes": [
+          {
+            "release_id": "release:checkout:060413b8c3d569ba",
+            "flags": [
+              {
+                "name": "localCurrencyCheckout",
+                "enabled": false
+              }
+            ],
+            "service": "checkout"
+          }
+        ],
+        "rationale": "As requested by the operator, turn off localCurrencyCheckout on checkout and keep everything else on 3.2.0, satisfying the currency requirement without needing to roll back consumers.",
+        "citations": [
+          {
+            "excerpt_id": "excerpt:060413b8c3d569ba:CHANGELOG.md:6-6",
+            "quote": "- Turning localCurrencyCheckout off prices new orders in USD again, exactly as 3.1.0 did. Orders already written in other currencies stay in the topic."
+          }
+        ]
+      }
+    }
+  ],
+  "transport_settings": {
+    "max_completion_tokens": 2048
+  },
+  "transport_trace": [
+    {
+      "status": 200,
+      "rate_limits": {},
+      "usage": {}
+    },
+    {
+      "status": 200,
+      "rate_limits": {},
+      "usage": {}
+    },
+    {
+      "status": 200,
+      "rate_limits": {},
+      "usage": {}
+    },
+    {
+      "status": 200,
+      "rate_limits": {},
+      "usage": {}
+    }
+  ],
+  "result": {
+    "request_text": "Japanese shoppers are seeing wrong totals since 3.2.0. Roll back accounting and fraud-detection to 3.1.0, their currency conversion is the suspect. Leave checkout alone.\n\nAgent asked: Rolling back accounting and fraud-detection to 3.1.0 fails because checkout 3.2.0 produces local-currency orders that 3.1.0 builds cannot consume. To make this rollback succeed, checkout must also be rolled back to 3.1.0, but you requested to leave checkout alone. Should we roll back checkout as well, or how would you like to proceed?\nOperator answered: Yes, turn off localCurrencyCheckout on checkout and keep everything else on 3.2.0.",
+    "result": {
+      "kind": "PROPOSAL",
+      "changes": [
+        {
+          "service": "checkout",
+          "release_id": "release:checkout:060413b8c3d569ba",
+          "flags": {
+            "localCurrencyCheckout": false
+          },
+          "changed": false
+        }
+      ],
+      "citations": [
+        {
+          "excerpt_id": "excerpt:060413b8c3d569ba:CHANGELOG.md:6-6",
+          "content_hash": "sha256:d1d50333fe2f5233fa474f4574832c491f4fb05d71cf94d79c1d48f916ed44ab",
+          "quote": "- Turning localCurrencyCheckout off prices new orders in USD again, exactly as 3.1.0 did. Orders already written in other currencies stay in the topic."
+        }
+      ],
+      "rationale": "As requested by the operator, turn off localCurrencyCheckout on checkout and keep everything else on 3.2.0, satisfying the currency requirement without needing to roll back consumers."
+    },
+    "model": "groq:gemini-3-flash",
+    "live": true,
+    "tool_calls": [
+      {
+        "name": "release_history",
+        "args": {
+          "service": "accounting"
+        },
+        "rows": 2
+      },
+      {
+        "name": "release_history",
+        "args": {
+          "service": "fraud-detection"
+        },
+        "rows": 2
+      },
+      {
+        "name": "release_history",
+        "args": {
+          "service": "checkout"
+        },
+        "rows": 2
+      }
+    ],
+    "validation_errors": []
+  },
+  "saved_at": "20261018T234452071842Z"
+}

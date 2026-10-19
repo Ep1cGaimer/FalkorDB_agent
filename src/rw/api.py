@@ -745,12 +745,17 @@ def create_app(*, session_factory: Callable | None = None,
     def plan_origins(identifier: str, plan_hash: str):
         """Lineage of the plan's failing records: DERIVED_FROM to each root record and its writer."""
         from . import graph
+        from .verification import applicable_receipts
         inv = get_investigation(identifier)
         with inv.lock:
             report = verified_attempt(inv, plan_hash).report
-            failing = sorted({r["tuple"]["record_id"] for r in report["verification"]["receipts"]
-                              if r["result"] == "FAIL"})
-            rows, log = graph.record_origins(inv.session.g, inv.session.snapshot_id, failing) if failing else ([], None)
+            verification = revalidated(inv, VerificationResult.model_validate(report["verification"]))
+            failures = [r for r in applicable_receipts(report["verification"]) if r["result"] == "FAIL"]
+            failing = sorted({r["tuple"]["record_id"] for r in failures})
+            batches = sorted({r["tuple"]["batch_id"] for r in failures})
+            rows, log = (graph.record_origins(inv.session.g, inv.session.snapshot_id, failing,
+                                             batch_ids=batches) if failing else ([], None))
+            revalidated(inv, verification)
         if log is not None:
             log = {**log, "cypher": graph.QUERY_TEXT.get("record_origins")}
         return {"origins": rows, "query": log}
@@ -762,25 +767,37 @@ def create_app(*, session_factory: Callable | None = None,
         inv = get_investigation(identifier)
         with inv.lock:
             attempt = verified_attempt(inv, plan_hash)
+            model = attempt.grounding.model
+            if (not attempt.grounding.live or not isinstance(model, str)
+                    or not model.startswith("groq:")):
+                raise SimulationRefused("the plain-agent baseline needs the same live OpenAI-compatible (groq:) model")
             verification = deepcopy(attempt.report["verification"])
+            stored_verification = revalidated(inv, VerificationResult.model_validate(verification))
             versions = {}
             for entry in attempt.plan.fleet:
                 rows, _ = graph.releases_for_service(inv.session.g, entry.service)
                 versions.update({r["release_id"]: r["version"] for r in rows})
             fleet = [{"service": e.service, "version": versions.get(e.release_id, e.release_id), "flags": dict(e.flags)}
                      for e in attempt.plan.fleet]
-            used = attempt.grounding.model if attempt.grounding else ""
             fixture_root, snapshot = inv.session.fixture_root, inv.session.snapshot
-        candidates = [used] if used.startswith("groq:") else []
-        candidates += [m for m in grounding.configured_models() if m.startswith("groq:")]
-        if not candidates:
-            raise SimulationRefused("the plain-agent baseline needs an OpenAI-compatible (groq:) model")
-        model = candidates[0]
+            try:
+                context = baseline.plaintext_context(fixture_root, snapshot)
+            except (OSError, ValueError) as exc:
+                raise EvidenceDrift(["baseline context is unavailable"]) from exc
+            revalidated(inv, stored_verification)
         try:
-            answer = baseline.ask(grounding.make_transport(model),
-                                  baseline.plaintext_context(fixture_root, snapshot), fleet)
+            answer = baseline.ask(grounding.make_transport(model), context, fleet)
         except grounding.GroundingError as exc:
             raise HTTPException(502, f"baseline model call failed: {grounding.provider_error_details(exc)}") from None
+        with inv.lock:
+            revalidated(inv, stored_verification)
+            try:
+                fresh_context = baseline.plaintext_context(fixture_root, snapshot)
+            except (OSError, ValueError) as exc:
+                raise EvidenceDrift(["baseline context is unavailable"]) from exc
+            revalidated(inv, stored_verification)
+            if fresh_context != context:
+                raise EvidenceDrift(["baseline plaintext context changed during the model call"])
         check = baseline.claim_check(answer, verification)
         return {"model": model, "live": True, "disposition": answer["disposition"], "reason": answer["reason"],
                 "claimed_failing": check.pop("claimed_failing"), "check": check, "raw": answer["raw"],
@@ -797,9 +814,16 @@ def create_app(*, session_factory: Callable | None = None,
         inv = get_investigation(identifier)
         with inv.lock:
             attempt = verified_attempt(inv, plan_hash)
+            verification = revalidated(inv, VerificationResult.model_validate(attempt.report["verification"]))
             fleet = [e.model_dump(mode="json") for e in attempt.plan.fleet]
             session = inv.session
-        return ablate(session, fleet, sorted(set(removed)))
+        try:
+            result = ablate(session, fleet, sorted(set(removed)))
+        except ValueError as exc:
+            raise EvidenceDrift(["relationship-removal inputs no longer match the original investigation"]) from exc
+        with inv.lock:
+            revalidated(inv, verification)
+        return result
 
     @app.post("/api/investigations/{identifier}/answer", response_model=InvestigationView, responses=ERROR_RESPONSES, response_model_exclude_unset=True)
     def answer_clarification(identifier: str, body: AnswerRequest):
@@ -931,6 +955,13 @@ def create_app(*, session_factory: Callable | None = None,
 
     # Windows registry associations can otherwise serve ES modules as text/plain.
     mimetypes.add_type("text/javascript", ".mjs")
+    @app.middleware("http")
+    async def revalidate_workspace_assets(request, call_next):
+        response = await call_next(request)
+        if request.url.path == "/" or request.url.path.startswith("/static/"):
+            response.headers["Cache-Control"] = "no-cache"
+        return response
+
     app.mount("/static", StaticFiles(directory=Path(__file__).resolve().parent / "static"), name="static")
     return app
 

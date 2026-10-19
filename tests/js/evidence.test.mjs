@@ -39,14 +39,14 @@ test("summary preserves unresolved checks and does not infer a plan disposition"
   assert.equal(preferredCheck({ obligations: [], receipts: [], gaps: [] }), null);
 });
 
-test("alternative replay choices are exact-request proposals that have not been used", () => {
+test("alternative replay choices include exact-request proposals and clarifications that have not been used", () => {
   const transcripts = [
     { replay_path: "used", request_text: "R", outcome: "proposal" },
     { replay_path: "next", request_text: "R", outcome: "proposal" },
     { replay_path: "question", request_text: "R", outcome: "question" },
     { replay_path: "unrelated", request_text: "other request", outcome: "proposal" },
   ];
-  assert.deepEqual(replayCandidates(transcripts, "R", ["used"]).map(t => t.replay_path), ["next"]);
+  assert.deepEqual(replayCandidates(transcripts, "R", ["used"]).map(t => t.replay_path), ["next", "question"]);
 });
 
 test("saved-data tile never shows a pass over evidence gaps, but failures still dominate", () => {

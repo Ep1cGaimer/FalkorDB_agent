@@ -128,6 +128,7 @@ class VerificationView(VerificationResult):
 
 class ReportView(View):
     startup_checks: dict[str, StartupResult]
+    no_state_read_services: list[str] = Field(default_factory=list)
     plan: ReportPlanView
     plan_id: Annotated[str, Field(pattern=r"^plan:[0-9a-f]{16}$")]
     plan_hash: HashString

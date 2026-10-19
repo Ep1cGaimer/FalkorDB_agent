@@ -502,6 +502,8 @@ def _collect_snapshot(fixture_root: Path, snapshot_name: str, known_releases: di
                         "payload_hash": payload_hash,
                         "payload_path": repo_rel(fixture_root / payload_path) if payload_path else None,
                         "format_id": record.get("format"),
+                        "lineage_valid": True,
+                        "lineage_parents_json": "[]",
                     }
                 )
             )
@@ -516,8 +518,10 @@ def _collect_snapshot(fixture_root: Path, snapshot_name: str, known_releases: di
     # that is absent or names more than one batch is reported, never guessed or silently dropped.
     derived_from: list[dict[str, Any]] = []
     lineage_gaps: list[dict[str, Any]] = []
+    batch_props = {b["id"]: b for b in batches}
     for batch_id, sources in derived_refs:
         if not isinstance(sources, list) or not all(isinstance(s, str) for s in sources):
+            batch_props[batch_id]["lineage_valid"] = False
             lineage_gaps.append({"batch_id": batch_id, "source": None, "reason": "derived_from is not a list of record ids"})
             continue
         for source in sources:
@@ -525,9 +529,12 @@ def _collect_snapshot(fixture_root: Path, snapshot_name: str, known_releases: di
             if len(candidates) == 1:
                 derived_from.append({"from_id": batch_id, "to_id": candidates[0]})
             else:
+                batch_props[batch_id]["lineage_valid"] = False
                 lineage_gaps.append({"batch_id": batch_id, "source": source,
                                      "reason": "source record not in snapshot" if not candidates
                                      else "source record id names more than one batch"})
+        batch_props[batch_id]["lineage_parents_json"] = json.dumps(sorted({
+            e["to_id"] for e in derived_from if e["from_id"] == batch_id}))
 
     return {
         "snapshot_row": snapshot_row,
@@ -853,35 +860,90 @@ LIMIT $limit
 ORIGIN_HOP_CAP = 4  # max DERIVED_FROM hops a record_origins walk follows
 
 
-def record_origins(graph: Any, snapshot_id: str, record_ids: list[str], cap: int = QUERY_CAP):
-    """Where retained records came from: follow DERIVED_FROM to each record's root source and its writer.
+def record_origins(graph: Any, snapshot_id: str, record_ids: list[str], cap: int = QUERY_CAP,
+                   *, batch_ids: list[str] | None = None):
+    """Bounded provenance paths, with explicit completeness separate from compatibility.
 
-    One row per (record, root source). A record with no lineage is its own root (``hops`` 0). A
-    root without a WRITTEN_BY edge has null writer fields, which is unknown provenance, not absence.
+    Inspect every path prefix and its declared parents. A missing edge, invalid declaration,
+    cycle or depth/row cap must never turn a derived record into an apparent root.
     """
     query = f"""
-MATCH (b:Batch {{snapshot_id: $snapshot_id}}) WHERE b.record_id IN $record_ids
+MATCH (b:Batch {{snapshot_id: $snapshot_id}})
+WHERE b.record_id IN $record_ids AND ($all_batches OR b.id IN $batch_ids)
 MATCH path = (b)-[:DERIVED_FROM*0..{ORIGIN_HOP_CAP}]->(src:Batch)
-WHERE NOT (src)-[:DERIVED_FROM]->(:Batch)
+OPTIONAL MATCH (src)-[:DERIVED_FROM]->(parent:Batch)
 OPTIONAL MATCH (b)-[:WRITTEN_BY]->(bw:Release)
 OPTIONAL MATCH (src)-[:WRITTEN_BY]->(w:Release)
-RETURN b.record_id AS record_id, b.store_id AS store_id, bw.id AS writer_release_id,
+RETURN b.id AS batch_id, b.record_id AS record_id, b.store_id AS store_id, bw.id AS writer_release_id,
        [n IN nodes(path) | n.record_id] AS chain, src.record_id AS origin_record,
        src.store_id AS origin_store_id, w.id AS origin_release_id, w.service AS origin_service,
-       w.version AS origin_version, length(path) AS hops
-ORDER BY record_id, origin_record
+       w.version AS origin_version, length(path) AS hops, src.id AS origin_batch_id,
+       [n IN nodes(path) | n.id] AS chain_batches,
+       [n IN nodes(path) | n.snapshot_id] AS chain_snapshots,
+       src.lineage_valid AS lineage_valid, src.lineage_parents_json AS parents_json, parent.id AS parent_id
+ORDER BY batch_id, hops, origin_batch_id, parent_id
 LIMIT $limit
 """
-    return _read(
+    raw, log = _read(
         graph,
         "record_origins",
         query,
-        {"snapshot_id": snapshot_id, "record_ids": sorted(set(record_ids))},
-        ("record_id", "store_id", "writer_release_id", "chain", "origin_record", "origin_store_id",
-         "origin_release_id", "origin_service", "origin_version", "hops"),
+        {"snapshot_id": snapshot_id, "record_ids": sorted(set(record_ids)),
+         "all_batches": batch_ids is None, "batch_ids": sorted(set(batch_ids or []))},
+        ("batch_id", "record_id", "store_id", "writer_release_id", "chain", "origin_record", "origin_store_id",
+         "origin_release_id", "origin_service", "origin_version", "hops", "origin_batch_id",
+         "chain_batches", "chain_snapshots", "lineage_valid", "parents_json", "parent_id"),
         cap,
-        conv={"chain": _as_plain_list},
+        conv={k: _as_plain_list for k in ("chain", "chain_batches", "chain_snapshots")},
     )
+    gaps: set[tuple[str, str, str]] = set()
+    groups: dict[tuple[str, str], list[dict]] = {}
+    for row in raw:
+        groups.setdefault((row["batch_id"], row["origin_batch_id"]), []).append(row)
+    roots = []
+    for (batch, node), paths in groups.items():
+        row = paths[0]
+        try:
+            expected = json.loads(row["parents_json"])
+            valid = row["lineage_valid"] is True and isinstance(expected, list)
+        except (ValueError, TypeError):
+            expected, valid = [], False
+        actual = {p["parent_id"] for p in paths if p["parent_id"]}
+        if not valid:
+            gaps.add((batch, node, "lineage declaration is unresolved"))
+        if set(expected) != actual:
+            gaps.add((batch, node, "declared lineage edges are missing or unexpected"))
+        for path in paths:
+            chain = path["chain_batches"]
+            if len(set(chain)) != len(chain):
+                gaps.add((batch, node, "lineage cycle"))
+            if any(s != snapshot_id for s in path["chain_snapshots"]):
+                gaps.add((batch, node, "lineage leaves the bound snapshot"))
+            if path["hops"] == ORIGIN_HOP_CAP and actual:
+                gaps.add((batch, node, "lineage depth cap reached"))
+        if valid and not expected and not actual:
+            # Multiple paths to one root remain paths; consumers count unique batches, not rows.
+            seen = set()
+            for path in paths:
+                key = (tuple(path["chain_batches"]), path["origin_release_id"])
+                if key in seen:
+                    continue
+                seen.add(key)
+                roots.append({k: v for k, v in path.items()
+                              if k not in ("chain_snapshots", "lineage_valid", "parents_json", "parent_id")})
+    seen_batches = {r["batch_id"] for r in raw}
+    if batch_ids is not None:
+        for missing in set(batch_ids) - seen_batches:
+            gaps.add((missing, missing, "requested batch is absent"))
+    else:
+        for missing in set(record_ids) - {r["record_id"] for r in raw}:
+            gaps.add((missing, missing, "requested record is absent"))
+    bad = {batch for batch, _, _ in gaps}
+    for row in roots:
+        row["lineage_complete"] = row["batch_id"] not in bad and not log["truncated"]
+    log.update(raw_rows=log["rows"], rows=len(roots), complete=not gaps and not log["truncated"],
+               gaps=[{"batch_id": b, "at": n, "reason": reason} for b, n, reason in sorted(gaps)])
+    return roots, log
 
 
 def plan_reader_routes(graph: Any, plan_id: str, cap: int = QUERY_CAP):

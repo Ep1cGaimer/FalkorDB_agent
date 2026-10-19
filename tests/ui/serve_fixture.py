@@ -40,7 +40,8 @@ def main():
 
     with TemporaryDirectory(prefix="rw-ui-ledger-") as temporary:
         app = create_app(session_factory=lambda snapshot="snap-001": Session(snapshot=snapshot, graph_name=graph_name, reimport=False),
-                         ground_function=ground, db_path=Path(temporary) / "sim.sqlite")
+                         ground_function=ground, db_path=Path(temporary) / "sim.sqlite",
+                         transcript_dir=Path(temporary) / "replays")
         try:
             uvicorn.run(app, host="127.0.0.1", port=8002, log_level="warning")
         finally:

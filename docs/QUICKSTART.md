@@ -223,6 +223,16 @@ This makes live provider calls and saves the exact scorer output plus test evide
 
 ## 7. Console
 
+For the incident recording demo (twelve services, three stores and retained order-to-ledger lineage):
+
+```powershell
+.venv/Scripts/python.exe scripts/serve_demo.py
+```
+
+This selects `astronomy-incident` and a fixture-specific replay directory. See the
+[four-minute script](demo/DEMO_SCRIPT.md) and [recording runbook](demo/RECORDING_RUNBOOK.md).
+The general launcher below continues to use `RW_FIXTURE` (or the `shop` default).
+
 ```sh
 .venv/bin/python scripts/serve.py
 ```

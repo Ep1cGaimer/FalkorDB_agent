@@ -107,18 +107,23 @@ function requestPanel(s, a) {
 }
 
 function fleetPanel(s, a, attempt) {
-  const rows = attempt.plan.fleet.map(f => el("tr", {},
+  const row = f => el("tr", {},
     el("td", {}, el("span", { class: "table-primary" }, f.service)),
     el("td", {}, el("div", { class: "version-diff" }, el("span", { class: "old" }, f.current_version || "?"), icon("chevron"),
       el("span", {}, f.proposed_version || "?")),
       Object.entries(f.flags).map(([key, value]) => flagChip(a, f.service, key, value))),
-    el("td", {}, badge(f.changed ? "change" : null, f.changed ? "Change" : "Keep"))));
-  const table = el("div", { class: "table-scroll" }, el("table", {},
-    el("thead", {}, el("tr", {}, ...["Service", "Version", ""].map(x => el("th", {}, x)))), el("tbody", {}, rows)));
+    el("td", {}, badge(f.changed ? "change" : null, f.changed ? "Change" : "Keep")));
+  const primary = attempt.plan.fleet.filter(f => f.changed || Object.keys(f.flags).length);
+  const other = attempt.plan.fleet.filter(f => !primary.includes(f));
+  const table = entries => el("div", { class: "table-scroll" }, el("table", {},
+    el("thead", {}, el("tr", {}, ...["Service", "Version", ""].map(x => el("th", {}, x)))),
+    el("tbody", {}, entries.map(row))));
   const rationale = !attempt.report && attempt.grounding.result.rationale
     ? el("p", { class: "fleet-rationale" }, attempt.grounding.result.rationale) : null;
-  return panel("Proposed changes", "Installed version → proposed version. Feature settings can change without installing an older version.", [table, rationale,
-    el("p", { class: "small subtle", style: "overflow-wrap:anywhere" }, "Exact plan hash: ", attempt.plan_hash),
+  return panel("Proposed changes", "Installed version → proposed version. Feature settings can change without installing an older version.", [
+    table(primary.length ? primary : other),
+    primary.length && other.length ? el("div", { class: "fleet-kept" }, details(`${other.length} unchanged services`, table(other))) : null, rationale,
+    el("p", { class: "small subtle fleet-binding", style: "overflow-wrap:anywhere" }, "Exact plan hash: ", attempt.plan_hash),
     el("div", { class: "panel-footer" }, button("Cited sources", () => a.openOverlay("sources"), { variant: "link", symbol: "file" }),
       !attempt.report ? button("Confirm & run checks", () => a.confirm(attempt),
         { id: "confirm-button", "data-action": "confirm", disabled: !!s.busy, symbol: "shield" }) : null)], explainButton(a, "versions"));
@@ -151,13 +156,20 @@ function verdictPanel(s, a, attempt) {
         el("p", { class: "small check-question" }, "Can it read the retained records?"),
         el("p", { class: "small" }, failed ? `${failed.obligation.tuple.record_id} · ${failed.obligation.tuple.format_id}` : `${serviceChecks.length} records checked`))) : null,
     d === "BOUNDED_PASS" ? el("p", { class: "verdict-note" }, PASS_SCOPE) : null,
+    el("div", { class: "check-totals", "aria-label": "Reader check totals" },
+      el("span", {}, el("strong", {}, String(counts.total)), " checks"),
+      el("span", { class: "FAIL" }, el("strong", {}, String(counts.failed)), " failed"),
+      el("span", { class: "PASS" }, el("strong", {}, String(counts.passed)), " passed"),
+      counts.unresolved ? el("span", { class: "UNKNOWN" }, el("strong", {}, String(counts.unresolved)), " unresolved") : null),
     baselineSection(s, a, attempt, counts));
 }
 
 function baselineSection(s, a, attempt, counts) {
   const key = `${s.inv.id}|${attempt.plan_hash}`, b = s.baseline?.[key];
+  const supported = attempt.grounding?.live === true && attempt.grounding?.model?.startsWith("groq:");
   const ask = button("Ask a plain agent (no graph)", () => a.askBaseline(attempt.plan_hash),
-    { id: "baseline-button", variant: "secondary", disabled: b === "loading" || !!s.busy });
+    { id: "baseline-button", variant: "secondary", disabled: !supported || b === "loading" || !!s.busy,
+      title: supported ? "" : "Requires an investigation from the same live compatible model." });
   if (!b) return el("div", { class: "baseline-box" }, ask);
   if (b === "loading") return el("div", { class: "baseline-box" }, el("div", { class: "row" }, el("span", { class: "spinner" }),
     el("span", { class: "small" }, "Asking a plain model with the same files (10-40 s)…")));
@@ -166,7 +178,9 @@ function baselineSection(s, a, attempt, counts) {
   const num = (k, v) => el("div", { class: "cmp-row" }, el("span", {}, k), el("strong", {}, String(v ?? "unknown")));
   return el("div", { class: "baseline-box" }, ask, el("div", { class: "cmp-grid", "aria-label": "RollbackWitness compared with a plain agent" },
     el("div", { class: "cmp-card" }, el("h3", {}, "RollbackWitness"), badge(disposition(attempt)),
-      num("Reads checked", counts.total), num("FAIL with receipts", counts.failed), num("Probes run", counts.total), num("Evidence path", "yes")),
+      num("Reads checked", counts.total), num("FAIL with receipts", counts.failed),
+      num("Probes run", checks(attempt.report.verification).filter(r => r.receipt && !["MISSING", "INAPPLICABLE"].includes(r.result)).length),
+      num("Evidence path", counts.total ? "yes" : "none")),
     el("div", { class: "cmp-card" }, el("h3", {}, "Plain agent"), badge(b.disposition, b.disposition),
       num("Claimed failing", b.claimed_failing?.length), num("Confirmed", c.confirmed), num("Missed", c.missed),
       num("Claimed but passed", c.claimed_but_passed), num("Probes run", c.probes_run ?? 0), num("Evidence path", "none"))),

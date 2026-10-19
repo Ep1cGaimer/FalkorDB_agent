@@ -72,3 +72,52 @@ In another run the agent asked a clarifying question instead, offering the same 
 SQL joins over the same raw facts reproduce the same obligation sets in 8 of 8 hand-derived cases —
 a tie. The graph's contribution is that the connected query drives what the agent checks and is the
 inspectable evidence path, not that no other database could compute it.
+
+## 7. Incident fixture verification (19 Oct 2026)
+
+`fixtures/astronomy-incident` is a separate synthetic fixture; the preceding Astronomy Shop
+measurements remain unchanged. It contains twelve services, 40 orders, 37 ledger rows and
+20 saved carts. These observations were checked by the real FalkorDB/reader integration suite
+(`tests/test_incident_fixture.py`, 22 passed), not by a live model benchmark.
+
+| Condition checked | Disposition | Obligations | FAIL receipts | Complete derived origins |
+|---|---|---|---|---|
+| accounting + fraud-detection 3.1.0 | BLOCKED | 137 | 48 | 16 ledger rows trace to checkout-written orders |
+| Same fleet, `DERIVED_FROM` removed on disposable copy | BLOCKED | 137 | 48 | 0; declared lineage is incomplete |
+| Same fleet, `EXECUTES_ROUTE`, `READS_FROM`, `IN_STORE` removed on disposable copy | NEEDS_EVIDENCE | 0 | 0 | No failing reads can be derived |
+| Current 3.2.0 readers; checkout `localCurrencyCheckout: false` | BOUNDED_PASS | 137 | 0 | Not needed for compatibility disposition |
+
+The failing reads are 16 local-currency orders × two old consumers, plus 16 `ledger/v2` rows ×
+one old accounting reader. The 16 ledger lineage paths each follow one `DERIVED_FROM` edge.
+The original graph survives relationship-removal checks unchanged. Lineage is explanatory:
+the receipts determine compatibility, and unknown or incomplete provenance never establishes
+a common origin. Disabling the flag stops new local-currency writes; it does not repair old data
+or prove the arithmetic incident resolved.
+
+The UI's plain-text comparison uses one call to the actual same live model, with fixture facts
+as text and no reader probes. It has different tools and budget from the agent/checker loop;
+it is illustrative, not a causal benchmark of graph contribution. Replay and unsupported model
+origins are refused for that same-live-model action. No new plain-text comparison score is
+claimed here. Two new live rehearsals stopped with provider HTTP 413 quota refusals.
+
+The expanded incident ablation was then executed on 19 Oct with all 485 nodes retained:
+
+| Removed relationships | Checks | Failures | Derived rows traced | Disposition | Evidence gaps |
+|---|---|---|---|---|---|
+| None | 137 | 48 | 16 | BLOCKED | 0 |
+| `EXECUTES_ROUTE` | 0 | 0 | 0 | NEEDS_EVIDENCE | 147 |
+| `READS_FROM` | 0 | 0 | 0 | NEEDS_EVIDENCE | 147 |
+| `IN_STORE` | 0 | 0 | 0 | NEEDS_EVIDENCE | 234 |
+| `WRITTEN_BY` | 137 | 48 | 16 paths, writers unknown | BLOCKED | 97 |
+| `DERIVED_FROM` | 137 | 48 | 0 | BLOCKED | 0 compatibility gaps; lineage incomplete |
+| All four reader/store/provenance edge types | 0 | 0 | 0 | NEEDS_EVIDENCE | 147 |
+
+The final row removes `EXECUTES_ROUTE`, `READS_FROM`, `IN_STORE` and `WRITTEN_BY`; lineage is
+removed separately. Writer removal retains topological source paths, but cannot establish their
+origin writer. Lineage completeness is tracked separately from compatibility gaps. Raw:
+[`raw/ablation_relationships_incident.json`](raw/ablation_relationships_incident.json).
+
+Two fresh replays of genuine saved conversations each reproduced BLOCKED → CLARIFICATION →
+BOUNDED_PASS with new reader probes (137/48, then 137/0) and unchanged plan hashes. This verifies
+the replay path; it is not a new live model result. Current readiness and actual checks:
+[STATUS.md](../STATUS.md), [recording runbook](../demo/RECORDING_RUNBOOK.md).

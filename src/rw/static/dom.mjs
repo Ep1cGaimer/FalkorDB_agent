@@ -90,6 +90,7 @@ const panelSymbols = new Map([
   ["Running services", "release"], ["What should the rollback do?", "rollback"],
   ["Proposed changes", "release"], ["Saved-data compatibility", "reader"],
   ["Evidence still needed", "evidence-path"], ["Why this is blocked — FalkorDB path", "evidence-path"],
+  ["Verified reads — FalkorDB path", "evidence-path"], ["Incomplete evidence — FalkorDB path", "evidence-path"],
   ["Local simulation", "approval"], ["Ready to simulate", "approval"], ["Simulation complete", "receipt"],
   ["Next step", "rollback"], ["Compare candidates", "release"],
 ]);

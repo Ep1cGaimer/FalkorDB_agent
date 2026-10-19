@@ -32,21 +32,27 @@ export function buildGraph(report, origins, options = {}) {
   const records = new Map();
   for (const r of rows) {
     const t = r.obligation.tuple, key = `${t.store_id}|${t.batch_id}`;
-    const rec = records.get(key) || { key, record_id: t.record_id, store_id: t.store_id, format_id: t.format_id,
+    const rec = records.get(key) || { key, batch_id: t.batch_id, record_id: t.record_id, store_id: t.store_id, format_id: t.format_id,
       writer: r.obligation.writer_release_id || null, results: [], hashes: [], failHashes: [] };
     rec.results.push(r.result); rec.hashes.push(r.obligation.obligation_hash);
     if (r.result === "FAIL") rec.failHashes.push(r.obligation.obligation_hash);
     records.set(key, rec);
   }
   for (const rec of records.values()) rec.outcome = aggregate(rec.results);
-  const storeOfRecord = new Map([...records.values()].map(r => [r.record_id, bare(r.store_id, "store")]));
-
   const serviceHasReads = new Set(rows.map(r => r.obligation.tuple.service));
-  const statelessServices = [...new Set(fleet.map(f => f.service))].filter(x => !serviceHasReads.has(x)).sort();
+  const noStateRead = new Set(report?.no_state_read_services || []);
+  const withoutReads = [...new Set(fleet.map(f => f.service))].filter(x => !serviceHasReads.has(x)).sort();
+  const statelessServices = withoutReads.filter(x => noStateRead.has(x));
+  const unresolvedServices = withoutReads.filter(x => !noStateRead.has(x));
   if (statelessServices.length) {
     addNode("stateless", 1, { type: "stateless", title: `${plural(statelessServices.length, "service")} read`, subtitle: "no retained state",
       tooltip: statelessServices.join(", "), services: statelessServices });
     addEdge(planId, "stateless", "HAS_DEPLOYMENT", null);
+  }
+  if (unresolvedServices.length) {
+    addNode("unresolved-services", 1, { type: "unresolved", title: plural(unresolvedServices.length, "service"),
+      subtitle: "reads unresolved", outcome: "UNKNOWN", tooltip: unresolvedServices.join(", "), services: unresolvedServices });
+    addEdge(planId, "unresolved-services", "HAS_DEPLOYMENT", "UNKNOWN");
   }
 
   for (const r of rows) {
@@ -78,37 +84,58 @@ export function buildGraph(report, origins, options = {}) {
     addEdge(c.id, writerId(c.writer), "WRITTEN_BY", c.outcome);
   }
 
-  // Lineage: only failing records with a chain longer than 0 add the origin column.
-  const byRecord = new Map((origins?.origins || []).map(o => [o.record_id, o]));
-  const derived = [];
+  // Match immutable batches, never display record ids, which can repeat across stores/snapshots.
+  // Keep all roots; converging paths to the same root do not add another retained record.
+  const byBatch = new Map();
+  for (const o of origins?.origins || []) {
+    if (!o.batch_id) continue;
+    const roots = byBatch.get(o.batch_id) || new Map();
+    const key = `${o.origin_batch_id}|${o.origin_release_id}`;
+    const previous = roots.get(key);
+    roots.set(key, previous ? { ...o, hops: Math.max(previous.hops, o.hops),
+      lineage_complete: previous.lineage_complete === true && o.lineage_complete === true } : o);
+    byBatch.set(o.batch_id, roots);
+  }
+  const derived = new Map();
   for (const c of clusters.values()) {
     const groups = new Map();
     for (const rec of c.records) {
-      const o = byRecord.get(rec.record_id);
-      if (rec.outcome !== "FAIL" || !o || !(o.hops > 0) || !o.origin_release_id) continue;
-      derived.push({ rec, o });
-      groups.set(o.origin_release_id, [...(groups.get(o.origin_release_id) || []), o]);
+      if (rec.outcome !== "FAIL") continue;
+      for (const o of byBatch.get(rec.batch_id)?.values() || []) {
+        if (!(o.hops > 0) || !o.origin_batch_id) continue;
+        derived.set(rec.batch_id, rec);
+        const oid = o.origin_release_id ? `origin:${o.origin_release_id}` : `origin:unknown:${o.origin_batch_id}`;
+        const group = groups.get(oid) || { sample: o, batches: new Set() };
+        group.batches.add(rec.batch_id); groups.set(oid, group);
+      }
     }
-    for (const [rid, list] of groups) {
-      const sample = list[0], oid = `origin:${rid}`;
-      addNode(oid, 7, { type: "origin", title: `${sample.origin_service || label(rid)}${sample.origin_version ? ` ${sample.origin_version}` : ""}`,
+    for (const [oid, { sample, batches }] of groups) {
+      const rid = sample.origin_release_id;
+      addNode(oid, 7, { type: "origin", title: rid ? `${sample.origin_service || label(rid)}${sample.origin_version ? ` ${sample.origin_version}` : ""}` : "Unknown writer",
         subtitle: "origin writer", service: sample.origin_service, release_id: rid });
-      addEdge(c.id, oid, "DERIVED_FROM", "DERIVED", { label: "derived from", count: list.length });
+      addEdge(c.id, oid, "DERIVED_FROM", "DERIVED", { label: "derived from", count: batches.size });
     }
   }
 
   let callout = null;
-  const origin = new Set(derived.map(d => d.o.origin_release_id));
-  if (derived.length && origin.size === 1) {
-    const o = derived[0].o;
+  const failingRecords = [...records.values()].filter(r => r.outcome === "FAIL");
+  const rootsFor = rec => [...(byBatch.get(rec.batch_id)?.values() || [])];
+  const complete = origins?.query?.complete === true && !origins.query.truncated && !origins.query.gaps?.length
+    && failingRecords.every(rec => rootsFor(rec).length && rootsFor(rec).every(o => o.lineage_complete === true
+      && o.origin_batch_id && o.origin_release_id && o.origin_service && o.origin_store_id));
+  const allRoots = failingRecords.flatMap(rootsFor);
+  const origin = new Set(allRoots.map(o => o.origin_release_id));
+  if (derived.size && complete && origin.size === 1) {
+    const derivedRoots = [...derived.values()].flatMap(rootsFor).filter(o => o.hops > 0);
+    const o = derivedRoots[0];
     if (!changed.has(o.origin_service)) {
-      const stores = [...new Set(derived.map(d => bare(d.rec.store_id, "store")))].sort();
-      const hops = Math.max(...derived.map(d => d.o.hops));
-      const originStore = storeOfRecord.get(o.origin_record) || /^[A-Za-z][\w]*?(?=-\d)/.exec(o.origin_record || "")?.[0] || "records";
+      const stores = [...new Set([...derived.values()].map(rec => bare(rec.store_id, "store")))].sort();
+      const hops = Math.max(...derivedRoots.map(root => root.hops));
+      const originStore = [...new Set(derivedRoots.map(root => bare(root.origin_store_id, "store")))].sort().join("/");
       const who = `${o.origin_service}${o.origin_version ? ` ${o.origin_version}` : ""}`;
-      callout = { count: derived.length, stores, origin_service: o.origin_service, origin_version: o.origin_version, hops,
+      callout = { count: derived.size, stores, origin_service: o.origin_service, origin_version: o.origin_version, hops,
         origin_release_id: o.origin_release_id, origin_store: originStore,
-        text: `These ${derived.length} ${stores.join("/")} rows were produced from ${originStore} written by ${who} — ${plural(hops, "hop")} away.` };
+        text: `These ${derived.size} ${stores.join("/")} rows were produced from ${originStore} written by ${who} — ${plural(hops, "hop")} away.` };
     }
   }
 
@@ -121,7 +148,7 @@ export function buildGraph(report, origins, options = {}) {
     if (column === 5) return { name, column, count, extra: `${plural(records.size, "record")}` };
     return { name, column, count };
   }).filter(c => c.column <= 6 || c.count > 0);
-  return { nodes: [...nodes.values()], edges: edgeList, columns, callout, clusters: [...clusters.values()], records, statelessServices };
+  return { nodes: [...nodes.values()], edges: edgeList, columns, callout, clusters: [...clusters.values()], records, statelessServices, unresolvedServices };
 }
 
 // Barycenter sweeps: each node moves toward the mean normalized position of its neighbours in the
@@ -227,7 +254,9 @@ export function renderGraph(graph, { filter = null, faded = [], onCluster } = {}
         "aria-label": `${n.title}, ${n.subtitle}, ${n.failCount} failing. Select to filter checks.` } : {}) });
     g.append(s("title", {}, n.tooltip || [n.title, n.subtitle, n.byLine].filter(Boolean).join(" · ")));
     g.append(s("rect", { width: q.w, height: q.h, rx: 7 }));
-    g.append(s("text", { class: "tg-title", x: 8, y: 17 }, fit(n.title, 19)));
+    g.append(s("text", { class: "tg-title", x: 8, y: 17,
+      textLength: String(n.title).length > 19 ? 108 : null,
+      lengthAdjust: String(n.title).length > 19 ? "spacingAndGlyphs" : null }, fit(n.title, 26)));
     g.append(s("text", { class: "tg-sub", x: 8, y: 30 }, fit(n.subtitle, 24)));
     if (isCluster) {
       g.append(s("text", { class: "tg-sub", x: 8, y: 42 }, fit(n.byLine, 24)));

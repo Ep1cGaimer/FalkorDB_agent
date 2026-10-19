@@ -321,7 +321,9 @@ const actions = {
     if (mode === "live") state.form.request = state.liveRequest;
     else {
       const first = state.transcripts.filter(t => !t.request_text.includes("\n\nAgent asked:"));
-      const t = first.find(t => t.replay_path === state.form.replay) || first[0];
+      const t = first.find(t => t.replay_path === state.form.replay)
+        || first.find(t => t.request_text === state.form.request && t.outcome === "proposal")
+        || first.find(t => t.outcome === "proposal") || first[0];
       if (t) { state.form.replay = t.replay_path; state.form.request = t.request_text; }
     }
     state.error = null; render();

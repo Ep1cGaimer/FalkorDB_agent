@@ -142,12 +142,20 @@ def ask(transport: Callable[[dict], dict], context: str, fleet: list[dict]) -> d
 
 def claim_check(answer: dict, verification: dict) -> dict:
     """Compare the baseline's claimed failing reads with this plan's own receipts, keyed by (service, record)."""
-    receipts = verification.get("receipts", [])
-    failed = {(r["tuple"]["service"], r["tuple"]["record_id"]) for r in receipts if r["result"] == "FAIL"}
-    passed = {(r["tuple"]["service"], r["tuple"]["record_id"]) for r in receipts if r["result"] == "PASS"} - failed
+    from .verification import applicable_receipts
+
+    receipts = applicable_receipts(verification)
+    by_claim: dict[tuple, set[str]] = {}
+    for ob in verification.get("obligations", []):
+        t = ob["tuple"]
+        by_claim.setdefault((t["service"], t["record_id"]), set()).add(ob["obligation_hash"])
+    failed_hashes = {r["obligation_hash"] for r in receipts if r["result"] == "FAIL"}
+    passed_hashes = {r["obligation_hash"] for r in receipts if r["result"] == "PASS"} - failed_hashes
+    failed = {key for key, ids in by_claim.items() if len(ids) == 1 and ids <= failed_hashes}
+    passed = {key for key, ids in by_claim.items() if len(ids) == 1 and ids <= passed_hashes}
     claimed = {(service, rid) for service, ids in (answer.get("failing") or {}).items()
                if isinstance(ids, list) for rid in ids if isinstance(rid, str)}
-    return {"confirmed": len(claimed & failed), "missed": len(failed - claimed),
+    return {"confirmed": len(claimed & failed), "missed": len(failed_hashes) - len(claimed & failed),
             "claimed_but_passed": len(claimed & passed), "unverifiable": len(claimed - failed - passed),
-            "expected_failing": len(failed), "probes_run": 0,
+            "expected_failing": len(failed_hashes), "probes_run": 0,
             "claimed_failing": [{"service": s, "record_id": r} for s, r in sorted(claimed)]}

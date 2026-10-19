@@ -145,6 +145,15 @@ th:last-child, td:last-child { padding-right: 23px; }
 .startup-item .label { font-size: 11px; color: var(--subtle); }
 .startup-item .small { font-size: 10px; color: var(--muted); margin-top: 7px; }
 .verdict-note { border-top: 1px solid var(--line); margin-top: 19px; padding-top: 14px; color: var(--muted); font-size: 10px; line-height: 1.8; }
+.check-totals { display: flex; flex-wrap: wrap; gap: 10px 24px; margin: 18px 0 0; padding-top: 15px; border-top: 1px solid var(--line); color: var(--subtle); font-size: 12px; font-variant-numeric: tabular-nums; }
+.check-totals strong { font-size: 18px; font-weight: 600; margin-right: 3px; }
+.check-totals .FAIL { color: var(--red); }
+.check-totals .PASS { color: var(--green); }
+.fleet-kept { padding: 0 20px 8px; border-top: 1px solid var(--line); }
+.fleet-kept .disclosure { margin: 0; border: 0; }
+.fleet-kept .disclosure > summary { padding: 13px 0; }
+.fleet-kept .table-scroll { margin: 0 -20px; }
+.fleet-binding { padding: 10px 22px; font-size: 10px; }
 .quote { border-left: 2px solid #dce8f9; padding: 0 0 0 14px; margin-bottom: 20px; }
 .quote p { font-size: 12px; line-height: 1.9; color: var(--subtle); }
 .quote footer { color: var(--muted); font-size: 10px; margin-top: 7px; }

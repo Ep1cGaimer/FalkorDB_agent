@@ -49,9 +49,13 @@ address were skipped by its bug — and 16 `ledger/v2` by accounting 3.2.0), eac
 2. The 16 failing ledger rows were written by accounting 3.2.0, but `DERIVED_FROM` traces each to a
    local-currency order written by checkout 3.2.0 — the service the operator said to leave alone. All
    48 failures share that root writer.
-3. The agent traces the origin (`trace_data_origin`), finds checkout's declared flag, and proposes
-   keeping every service on 3.2.0 with `localCurrencyCheckout` off, saying it departs from the
-   literal request. Rechecked: BOUNDED_PASS. A human confirms scope and approves the local simulation.
+3. Trusted code queries the failing records' origins and includes that evidence in the alternative
+   context; the agent can also call `trace_data_origin` explicitly. In the saved demo conversations,
+   the agent asks about changing the service the operator excluded. The operator answers with the
+   declared flag-off strategy and requires the newer readers to stay. After that answer,
+   it can propose keeping every service on 3.2.0 with `localCurrencyCheckout` off. Rechecked:
+   BOUNDED_PASS. A human confirms scope and may approve the local simulation. Turning off the flag
+   stops new local-currency writes; it neither repairs retained bytes nor proves the totals correct.
 
 Lineage is evidence for the agent and the explanation. The disposition still comes only from probe
 receipts. Readers are stdlib Python models of each release's decode step, not the upstream binaries.
