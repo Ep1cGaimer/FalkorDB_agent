@@ -1,0 +1,484 @@
+{
+  "request_text": "Japanese shoppers are seeing wrong totals since 3.2.0. Roll back accounting and fraud-detection to 3.1.0, their currency conversion is the suspect. Leave checkout alone.\n\nAgent asked: Rolling back accounting and fraud-detection to 3.1.0 while leaving checkout alone (at 3.2.0 with localCurrencyCheckout enabled) causes accounting and fraud-detection 3.1.0 to fail with UnsupportedCurrencyError on non-USD orders written to store:orders by checkout 3.2.0. To succeed, checkout must also be changed (rolled back to 3.1.0 or localCurrencyCheckout disabled), but you requested to leave checkout alone. Should we change checkout (e.g. disable localCurrencyCheckout or roll back checkout to 3.1.0), or is there another approach?\nOperator answered: Yes, turn off localCurrencyCheckout on checkout and keep everything else on 3.2.0.",
+  "alternative_context": "Plan plan:56c951804ba23fb0 disposition: BLOCKED.\nBlocked fleet (an alternative must differ from it): accounting release:accounting:e4e42706d8829205; ad release:ad:771428242fd02ef7; cart release:cart:bff5b298d2b62bae; checkout release:checkout:060413b8c3d569ba flags {'localCurrencyCheckout': True}; currency release:currency:e93a7b22ffd1b1f5; email release:email:b8db8feb14c32f06; fraud-detection release:fraud-detection:d6d0d119913a0755; frontend release:frontend:1a36540020b5f4cd; payment release:payment:686c3b5f79cbeddd; quote release:quote:1c3c8fdbc39afc80; recommendation release:recommendation:ef5d3c0effd169b1; shipping release:shipping:280b8c6efd3a2b5f\nEvery failing reader, grouped (each listed release fails on these retained records and must not run in the alternative):\n* reader accounting 3.1.0 (consume_orders) fails on 16 record(s) in store:orders, format OrderResult/local-currency, written by checkout 3.2.0 (release:checkout:060413b8c3d569ba); e.g. orders-0@1048, orders-0@1049, orders-0@1050\n* reader accounting 3.1.0 (reconcile_ledger) fails on 16 record(s) in store:ledger, format ledger/v2, written by accounting 3.2.0 (release:accounting:0a4f9646b4310512); e.g. ledger-1022, ledger-1023, ledger-1024\n* reader fraud-detection 3.1.0 (consume_orders) fails on 16 record(s) in store:orders, format OrderResult/local-currency, written by checkout 3.2.0 (release:checkout:060413b8c3d569ba); e.g. orders-0@1048, orders-0@1049, orders-0@1050\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-0@1048 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in JPY; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-0@1049 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in JPY; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-0@1050 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in EUR; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-0@1051 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in EUR; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-0@1052 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in GBP; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-0@1053 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in EUR; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-1@1065 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in CAD; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-1@1066 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in EUR; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-1@1067 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in EUR; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-1@1068 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in GBP; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-1@1069 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in GBP; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-2@1082 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in CAD; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-2@1083 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in EUR; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-2@1084 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in CAD; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-2@1085 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in EUR; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:consume_orders on record orders-2@1086 format OrderResult/local-currency written by release:checkout:060413b8c3d569ba: FAIL (UnsupportedCurrencyError: Order is priced in EUR; this build only handles USD.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:reconcile_ledger on record ledger-1022 format ledger/v2 written by release:accounting:0a4f9646b4310512: FAIL (UnsupportedLedgerRowError: Ledger row layout 'ledger/v2' has columns ['fx_rate_per_usd_hundredths', 'original_amount'] this build does not map; cannot reconcile.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:reconcile_ledger on record ledger-1023 format ledger/v2 written by release:accounting:0a4f9646b4310512: FAIL (UnsupportedLedgerRowError: Ledger row layout 'ledger/v2' has columns ['fx_rate_per_usd_hundredths', 'original_amount'] this build does not map; cannot reconcile.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:reconcile_ledger on record ledger-1024 format ledger/v2 written by release:accounting:0a4f9646b4310512: FAIL (UnsupportedLedgerRowError: Ledger row layout 'ledger/v2' has columns ['fx_rate_per_usd_hundredths', 'original_amount'] this build does not map; cannot reconcile.)\n- FAIL reader release:accounting:e4e42706d8829205 route route:release:accounting:e4e42706d8829205:reconcile_ledger on record ledger-1025 format ledger/v2 written by release:accounting:0a4f9646b4310512: FAIL (UnsupportedLedgerRowError: Ledger row layout 'ledger/v2' has columns ['fx_rate_per_usd_hundredths', 'original_amount'] this build does not map; cannot reconcile.)\n... and 28 more\ntrace_data_origin can follow the failing records' lineage to their origin writer.\nServices whose reader failed, and the release each runs today (it already reads these records): accounting release:accounting:0a4f9646b4310512 (version 3.2.0); fraud-detection release:fraud-detection:a5541cd9cddf284f (version 3.2.0)\nPASS: 89 obligations",
+  "model": "groq:gemini-3-flash",
+  "provider": "groq",
+  "abandoned_attempts": [],
+  "events": [
+    {
+      "type": "model",
+      "turn": 0,
+      "response": {
+        "id": "chatcmpl-xfxclc",
+        "object": "chat.completion",
+        "created": 1792366906,
+        "model": "gemini-3-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": "The user wants us to turn off `localCurrencyCheckout` on checkout and keep everything else on 3.2.0 (or whatever is needed), but wait, let's look at the current fleet and release history to find the right release IDs and flags.\nLet's call `current_fleet` and `release_history` for accounting, fraud-detection, checkout, etc. Or just `current_fleet`.",
+              "tool_calls": [
+                {
+                  "index": 0,
+                  "id": "sig:EooECocEAWkUfRMXE1xw/iIchd58Tt/ApUGHGYOV/WlCBxv29TMbDVE9USosz15jj2N+xAzYuFNjpGzObZ9/HicH5/CLBHO+sOlv3X0ckfcLFbUc4z+X5olMh7avCEdCOBoex9roaTMPgtQemjE5eCbiu50SWx+syR6Glu0hv1Q19R1yi3NfITzNPurBrVIUdCewcp8+GhTY6mdeCSUSj8IWiVsdQ++J6ZIqjUCdn5FIz4qSC5b/ue6wWQM1P4RACjEBIuafRcdzMP/BBfwoW31sG1pEQaz/9PNtus0v2v9m7f3bVISQXQRO9IF4cGCLR2NakqrsVEpqgbAYgy54O+tVOMbJgYyXuQ+thXNOh2kLgrONTsiO9+FatW9kuVQJGN3UpdThyZqLrTjvkqabKtcc+OakG0p5WhOAqPgYzjKnlrCgmfjGw9EAy6F5w6RWa5flSAfSVQoKkYO79nbHHFJpxcJxCagsHW/2Bi/kLyc6rCKZNgN9PAKxD2xsi+BckDUo8ar3srJQtj+cEg3TUJj5rZ+8kGqqVzOowMsIwBnLbU4+lSS+Hn5R1pHWAjg/9wV1E6yrQkKzIrH1ecfICp6SyOJNP9loRkB02gs/8f9PTrqJ0QmEt+oGECoy730+h8+G7OxzNfJMvFlobpH337m0uZRWys52p4um2fUAHsmqTaRtRI7F/oYjOqtr:call_2589716",
+                  "type": "function",
+                  "function": {
+                    "name": "current_fleet",
+                    "arguments": "{\"_placeholder\":true}"
+                  }
+                }
+              ]
+            },
+            "finish_reason": "tool_calls"
+          }
+        ]
+      }
+    },
+    {
+      "type": "tool",
+      "name": "current_fleet",
+      "args": {
+        "_placeholder": true
+      },
+      "rows": [
+        {
+          "service": "accounting",
+          "deployment_id": "deployment:snapshot:snap-001:accounting",
+          "release_id": "release:accounting:0a4f9646b4310512",
+          "version": "3.2.0",
+          "flags": {},
+          "declared_flags": [],
+          "bundle_id": "otel-demo-3.2.0",
+          "built_at": "2026-10-13T09:00:00Z"
+        },
+        {
+          "service": "ad",
+          "deployment_id": "deployment:snapshot:snap-001:ad",
+          "release_id": "release:ad:771428242fd02ef7",
+          "version": "3.2.0",
+          "flags": {},
+          "declared_flags": [],
+          "bundle_id": "otel-demo-3.2.0",
+          "built_at": "2026-10-13T09:00:00Z"
+        },
+        {
+          "service": "cart",
+          "deployment_id": "deployment:snapshot:snap-001:cart",
+          "release_id": "release:cart:bff5b298d2b62bae",
+          "version": "3.2.0",
+          "flags": {},
+          "declared_flags": [],
+          "bundle_id": "otel-demo-3.2.0",
+          "built_at": "2026-10-13T09:00:00Z"
+        },
+        {
+          "service": "checkout",
+          "deployment_id": "deployment:snapshot:snap-001:checkout",
+          "release_id": "release:checkout:060413b8c3d569ba",
+          "version": "3.2.0",
+          "flags": {
+            "localCurrencyCheckout": true
+          },
+          "declared_flags": [
+            {
+              "default": true,
+              "name": "localCurrencyCheckout"
+            }
+          ],
+          "bundle_id": "otel-demo-3.2.0",
+          "built_at": "2026-10-13T09:00:00Z"
+        },
+        {
+          "service": "currency",
+          "deployment_id": "deployment:snapshot:snap-001:currency",
+          "release_id": "release:currency:e93a7b22ffd1b1f5",
+          "version": "3.2.0",
+          "flags": {},
+          "declared_flags": [],
+          "bundle_id": "otel-demo-3.2.0",
+          "built_at": "2026-10-13T09:00:00Z"
+        },
+        {
+          "service": "email",
+          "deployment_id": "deployment:snapshot:snap-001:email",
+          "release_id": "release:email:b8db8feb14c32f06",
+          "version": "3.2.0",
+          "flags": {},
+          "declared_flags": [],
+          "bundle_id": "otel-demo-3.2.0",
+          "built_at": "2026-10-13T09:00:00Z"
+        },
+        {
+          "service": "fraud-detection",
+          "deployment_id": "deployment:snapshot:snap-001:fraud-detection",
+          "release_id": "release:fraud-detection:a5541cd9cddf284f",
+          "version": "3.2.0",
+          "flags": {},
+          "declared_flags": [],
+          "bundle_id": "otel-demo-3.2.0",
+          "built_at": "2026-10-13T09:00:00Z"
+        },
+        {
+          "service": "frontend",
+          "deployment_id": "deployment:snapshot:snap-001:frontend",
+          "release_id": "release:frontend:1a36540020b5f4cd",
+          "version": "3.2.0",
+          "flags": {},
+          "declared_flags": [],
+          "bundle_id": "otel-demo-3.2.0",
+          "built_at": "2026-10-13T09:00:00Z"
+        },
+        {
+          "service": "payment",
+          "deployment_id": "deployment:snapshot:snap-001:payment",
+          "release_id": "release:payment:686c3b5f79cbeddd",
+          "version": "3.2.0",
+          "flags": {},
+          "declared_flags": [],
+          "bundle_id": "otel-demo-3.2.0",
+          "built_at": "2026-10-13T09:00:00Z"
+        },
+        {
+          "service": "quote",
+          "deployment_id": "deployment:snapshot:snap-001:quote",
+          "release_id": "release:quote:1c3c8fdbc39afc80",
+          "version": "3.2.0",
+          "flags": {},
+          "declared_flags": [],
+          "bundle_id": "otel-demo-3.2.0",
+          "built_at": "2026-10-13T09:00:00Z"
+        },
+        {
+          "service": "recommendation",
+          "deployment_id": "deployment:snapshot:snap-001:recommendation",
+          "release_id": "release:recommendation:ef5d3c0effd169b1",
+          "version": "3.2.0",
+          "flags": {},
+          "declared_flags": [],
+          "bundle_id": "otel-demo-3.2.0",
+          "built_at": "2026-10-13T09:00:00Z"
+        },
+        {
+          "service": "shipping",
+          "deployment_id": "deployment:snapshot:snap-001:shipping",
+          "release_id": "release:shipping:280b8c6efd3a2b5f",
+          "version": "3.2.0",
+          "flags": {},
+          "declared_flags": [],
+          "bundle_id": "otel-demo-3.2.0",
+          "built_at": "2026-10-13T09:00:00Z"
+        }
+      ],
+      "log": {
+        "name": "current_fleet",
+        "params": {
+          "snapshot_id": "snapshot:snap-001",
+          "limit": 201
+        },
+        "rows": 12,
+        "truncated": false
+      }
+    },
+    {
+      "type": "model",
+      "turn": 1,
+      "response": {
+        "id": "chatcmpl-3cpy7w",
+        "object": "chat.completion",
+        "created": 1792366909,
+        "model": "gemini-3-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": "Wait, the user's initial request was:\n\"Rollback request: Japanese shoppers are seeing wrong totals since 3.2.0. Roll back accounting and fraud-detection to 3.1.0, their currency conversion is the suspect. Leave checkout alone.\"\nThen the agent asked about incompatibility (accounting and fraud-detection 3.1.0 failing on records written by checkout 3.2.0 with `localCurrencyCheckout: True`).\nThen the operator answered:\n\"Yes, turn off localCurrencyCheckout on checkout and keep everything else on 3.2.0.\"\nWait! The operator answered: \"Yes, turn off localCurrencyCheckout on checkout and keep everything else on 3.2.0.\"\nSo we should keep accounting and fraud-detection on 3.2.0 (since \"keep everything else on 3.2.0\", and accounting/fraud-detection were requested to be rolled back in the original prompt, but the operator said \"Yes, turn off localCurrencyCheckout on checkout and keep everything else on 3.2.0\"), OR wait, let's check what release history says for checkout, accounting, fraud-detection. Let's look at `release_history` for checkout, accounting, fraud-detection to get excerpts and citations.",
+              "tool_calls": [
+                {
+                  "index": 0,
+                  "id": "sig:EvsKCvgKAWkUfRMfXPeqJv9egza8GrnbbqUHfSF/mUd6CEGuEzmhBZZ5hHMjkIeGlfUgm9qjYWMmzzlSywabJQXQgyXTY88h+6s8qovZmtDJMZjrggnq0DUV13coY25KVzGDqkfY95H6ZxAr20zo8R4qTdkl+jS1E6Fd7pFFTHJlBoHP5BO9rxJQbfnLygYVPhKapqIFjQlvMuSn6tfe/gUjvPVOLXWG9Amw0DpyYI3R9g683VLR3cyBWiiXw7BlGEP8QjzuJZclqzQbL2D8Nl6YvNx/ZN/FgUbzrKGBVvQ4LM4nlyZ4o1q94eYxOn2ULdPosoh3eykx3r75kiOvRGpXUnT3ASrno1fM/pvYXJlMNH56WyqdT5xFFK7CBmds5hYyeC3TYqD8aQnAUbKOT5fy+PdxPzSHl5cYgDo3TAEhwHRhtJT6TZbuRjVZ3TYw3tv+edp+xmot/zPhv//9q9vuDTUsPoNgL73/F4yLWPy9ZuAMkvne6VbJFyi59Xlw60Pnw2WzIyq/0K1mt5WhXHuMcFzDYV0ncPcyW0xCM6ygrlrY+XoC9PNyoip/jgsru4NUhvqtoH0JaueVAOzJd6EEwlwmOYxY/in02EqJuVSIit8Xrn7W0WWwatvt/OfNA21gzuSiHoQaogMTsTgB2OTUhF8lYOEUQNB9dJpxLC+CWMMvqPs8fbMJJ7Wcz7El58id6jVylMTq+Kkh1G070K1VnPF0tWdpcG80QZ4IbaEKIpytj1Uw+qpHZiV0EiNA+O8MaRj6fAtI4NWcDhbJYH2eMR8QjfllpfWkIPBA3nL2E4fast411bBonSfnf0gsAH96dygP8vFqnEciR7ssLQdC2N30ff2eKDRF8Y0C6z+eQQrB/D/OETgaY6vZlrC+KUy43kBO1pLiv8+8rMatnlOB3jNGjzY7/LYYfcl1jDrs0HVsnMHtHVp23mND2OC9VQjT6jwy1frbv5dBTyrKsBFEcDw+mf8uITVU9cSmvQyDMLXeCc+u5R7x6zNKk1SbjH6AngD+rcb8dfAPG4nE5Mir8ONJ8rZpAwTz87szd+ysGRLWr2i5l1trCMtH0GHNBeEH+nBvGudXs2G4RQhZYdg7ABUt1PgNePFrA4gtb/aXLTP0/PWq/s4J80siAeVCRhZe3Y9VeW91AwMjy0ZQ+9KEirTKuUUZMGvrlvX7o4A2gQkBx4XyDc5kZu6iKvCzIo7/h2g/US7QxaPeptdYZ6Q3kdbe/pjJrDZDfwuwQ7SfK1PSfbOrFSNljZTsnZidOaZdaSpL6mVIDhGX64/RwP81kCmSM8EnXMQZim6Iru1px5Dr3LiqlHgXp3TYAkHWEW5CdE7myTAYa5nm2AsgAYz9EUE6MxNz5dm+I20YHJpd83+7Qwn7i2rJylkmxgCKZY37/0Ytasu0mhEOfCMNeIgzzQyIancGgVFcn9UuctCRcHO87KBnlZUHM2bDMTR8JIZGJRdmD47Idmpnav5F7V5clIS+TXIKLKQx42iSAY1iSFuN/jS+pfz40ublmPVo2UNm2mTALEy/Jr2AEMiTlm8pD7zvMbyF6EJK7SDJkW2WjQMVPfjI3yBNaMVBJzoYZ4io3U5dIq4yhk7EAOHVvkj6ETKcR7KVSZWNiFP39d3LEmDdVhlma1R+zjkXsvYrQSKVoRe0Xss0SUcgo0N/FZdFBoIowqtlOCeErI7KbLXv8sXVqUY3PHldbuCF/8Po+Vkc+mAfuLvwzauPifzQ51Iawak7mbrKUMIv596Qh6VgWv6lsZwD5ryniAO1xg9BC38d/FDVnDTpdYOX7zgbTa8SH79ut4L5l2717Hwm2qPt4bEyg5Q5QOW82dQbOiCdoIM3tJjwasmLIXiyZ3I=:call_2506914",
+                  "type": "function",
+                  "function": {
+                    "name": "release_history",
+                    "arguments": "{\"service\":\"checkout\"}"
+                  }
+                }
+              ]
+            },
+            "finish_reason": "tool_calls"
+          }
+        ]
+      }
+    },
+    {
+      "type": "tool",
+      "name": "release_history",
+      "args": {
+        "service": "checkout"
+      },
+      "rows": [
+        {
+          "release_id": "release:checkout:060413b8c3d569ba",
+          "service": "checkout",
+          "version": "3.2.0",
+          "depth": 0,
+          "built_at": "2026-10-13T09:00:00Z",
+          "bundle_id": "otel-demo-3.2.0",
+          "declared_flags": [
+            {
+              "default": true,
+              "name": "localCurrencyCheckout"
+            }
+          ],
+          "previous_release_id": "release:checkout:058d748d9c193f09",
+          "excerpts": [
+            {
+              "excerpt_id": "excerpt:060413b8c3d569ba:CHANGELOG.md:5-5",
+              "kind": "changelog",
+              "path": "CHANGELOG.md",
+              "span": "5-5",
+              "text": "- Local-currency checkout: orders are now charged in the shopper's selected currency (EUR, GBP, CAD, JPY or USD) and written to `orders` with those amounts; behind flag localCurrencyCheckout (default on).",
+              "content_hash": "sha256:822f80c44ed5b0d0d6956fa7da0015156acd3266ab82e33abeff9fc7df3bb2fc"
+            },
+            {
+              "excerpt_id": "excerpt:060413b8c3d569ba:CHANGELOG.md:6-6",
+              "kind": "changelog",
+              "path": "CHANGELOG.md",
+              "span": "6-6",
+              "text": "- Turning localCurrencyCheckout off prices new orders in USD again, exactly as 3.1.0 did. Orders already written in other currencies stay in the topic.",
+              "content_hash": "sha256:d1d50333fe2f5233fa474f4574832c491f4fb05d71cf94d79c1d48f916ed44ab"
+            },
+            {
+              "excerpt_id": "excerpt:060413b8c3d569ba:CHANGELOG.md:7-7",
+              "kind": "changelog",
+              "path": "CHANGELOG.md",
+              "span": "7-7",
+              "text": "- Consumers must be on 3.2.0 or later to handle non-USD orders.",
+              "content_hash": "sha256:c8c83834e8cf314e2937d6acc5c99da80006027ba81ad178d2209cda2f7b9203"
+            },
+            {
+              "excerpt_id": "excerpt:060413b8c3d569ba:CHANGELOG.md:8-8",
+              "kind": "changelog",
+              "path": "CHANGELOG.md",
+              "span": "8-8",
+              "text": "- Shipped in release train otel-demo-3.2.0 together with accounting 3.2.0, fraud-detection 3.2.0 and recommendation 3.2.0; the other services were rebuilt without functional change.",
+              "content_hash": "sha256:9413c32e7b869956c065100fe70d13ba827b21b5f039368b28da1b3e31502435"
+            },
+            {
+              "excerpt_id": "excerpt:060413b8c3d569ba:codec.py:62-65",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "62-65",
+              "text": "def convert(money: dict, currency: str) -> dict:\n    \"\"\"Price a USD amount in the shopper's currency (upstream currency service Convert).\"\"\"\n    nanos = (money[\"units\"] * 1_000_000_000 + money[\"nanos\"]) * RATES_PER_USD[currency] // 100\n    return {\"currency_code\": currency, \"units\": nanos // 1_000_000_000, \"nanos\": nanos % 1_000_000_000}",
+              "content_hash": "sha256:367f0660778b94a46ce44d26038fa45be75ef73f98687538643552c9779736f8"
+            },
+            {
+              "excerpt_id": "excerpt:060413b8c3d569ba:codec.py:68-73",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "68-73",
+              "text": "def write_order(order: dict, flags: dict) -> bytes:\n    \"\"\"Produce to `orders`: priced in the shopper's currency if localCurrencyCheckout, else in USD as 3.1.0 did.\"\"\"\n    currency = order.get(\"user_currency\", \"USD\") if flags.get(\"localCurrencyCheckout\", True) else \"USD\"\n    priced = dict(order, shipping_cost=convert(order[\"shipping_cost\"], currency),\n                  items=[dict(item, cost=convert(item[\"cost\"], currency)) for item in order[\"items\"]])\n    return _Encode.order_result(priced)",
+              "content_hash": "sha256:8b45de51d861533832828f73f26a644480b447bdd3e555596776dae058ff8997"
+            },
+            {
+              "excerpt_id": "excerpt:060413b8c3d569ba:codec.py:76-77",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "76-77",
+              "text": "def health(data: bytes = b\"\") -> dict:  # startup check; reads no retained state\n    return {\"status\": \"ok\", \"service\": \"checkout\", \"version\": \"3.2.0\"}",
+              "content_hash": "sha256:4f7279986504a0fcbdb867460f9d70d7211647df2512601eca97979708c56a15"
+            }
+          ]
+        },
+        {
+          "release_id": "release:checkout:058d748d9c193f09",
+          "service": "checkout",
+          "version": "3.1.0",
+          "depth": 1,
+          "built_at": "2026-09-18T18:03:28Z",
+          "bundle_id": "otel-demo-3.1.0",
+          "declared_flags": [],
+          "previous_release_id": null,
+          "excerpts": [
+            {
+              "excerpt_id": "excerpt:058d748d9c193f09:CHANGELOG.md:5-5",
+              "kind": "changelog",
+              "path": "CHANGELOG.md",
+              "span": "5-5",
+              "text": "- Publishes every placed order to Kafka topic `orders` as protobuf `OrderResult` bytes from `proto.Marshal(result)` (upstream `sendToPostProcessor`).",
+              "content_hash": "sha256:6632b9e6e72bbab916b00de6ea2a218966792f6b1b3f2082373834f86ef6b4b9"
+            },
+            {
+              "excerpt_id": "excerpt:058d748d9c193f09:CHANGELOG.md:6-6",
+              "kind": "changelog",
+              "path": "CHANGELOG.md",
+              "span": "6-6",
+              "text": "- Every price and shipping cost in the order is in USD.",
+              "content_hash": "sha256:a4c72cdd11fed0a77c818b6c3cae7bbcb831a113be9a4047227a7c14774fbf06"
+            },
+            {
+              "excerpt_id": "excerpt:058d748d9c193f09:CHANGELOG.md:7-7",
+              "kind": "changelog",
+              "path": "CHANGELOG.md",
+              "span": "7-7",
+              "text": "- accounting and fraud-detection consume `orders`.",
+              "content_hash": "sha256:1e8e2e5f3a3d98d71a14d14e1aa2372ff8e90f7693e5ad587a4eeb3632156add"
+            },
+            {
+              "excerpt_id": "excerpt:058d748d9c193f09:codec.py:59-61",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "59-61",
+              "text": "def write_order(order: dict, flags: dict) -> bytes:\n    \"\"\"Produce to `orders`: the proto.Marshal(result) bytes, every amount in USD.\"\"\"\n    return _Encode.order_result(order)",
+              "content_hash": "sha256:acc9b2707411d79287f2179b3cb35a9a80234bfb8d5740194e9536c8ec07e99f"
+            },
+            {
+              "excerpt_id": "excerpt:058d748d9c193f09:codec.py:64-65",
+              "kind": "code",
+              "path": "codec.py",
+              "span": "64-65",
+              "text": "def health(data: bytes = b\"\") -> dict:  # startup check; reads no retained state\n    return {\"status\": \"ok\", \"service\": \"checkout\", \"version\": \"3.1.0\"}",
+              "content_hash": "sha256:c4a48db0ee3418da8d9194fa442d07abd404b5b05db4dd010011a4c0c7259f82"
+            }
+          ]
+        }
+      ],
+      "log": {
+        "name": "release_history",
+        "params": {
+          "snapshot_id": "snapshot:snap-001",
+          "service": "checkout",
+          "max_depth": 5,
+          "limit": 201
+        },
+        "rows": 2,
+        "truncated": false
+      }
+    },
+    {
+      "type": "model",
+      "turn": 2,
+      "response": {
+        "id": "chatcmpl-gni9rm",
+        "object": "chat.completion",
+        "created": 1792366912,
+        "model": "gemini-3-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": "Wait, let's re-read the operator's response:\n\"Operator answered: Yes, turn off localCurrencyCheckout on checkout and keep everything else on 3.2.0.\"\nWait! \"keep everything else on 3.2.0\" means:\n- checkout: version 3.2.0, with `localCurrencyCheckout: false` (i.e. turned off).\n- accounting: keep on 3.2.0 (`release:accounting:0a4f9646b4310512`).\n- fraud-detection: keep on 3.2.0 (`release:fraud-detection:a5541cd9cddf284f`).\n- all other services: keep on their current 3.2.0 releases.\nWait, let's verify if checkout needs any flags changed:\n`release:checkout:060413b8c3d569ba` with flag `localCurrencyCheckout: false`.\nLet's check if the release history of checkout supports turning off `localCurrencyCheckout`:\nExcerpt: `excerpt:060413b8c3d569ba:CHANGELOG.md:6-6`: `- Turning localCurrencyCheckout off prices new orders in USD again, exactly as 3.1.0 did. Orders already written in other currencies stay in the topic.`\nLet's check if accounting and fraud-detection are kept on 3.2.0. Since they are already on 3.2.0 in the current fleet, and the operator said \"keep everything else on 3.2.0\", we don't need to change accounting and fraud-detection at all! Only checkout's flag `localCurrencyCheckout` needs to be set to `False`.\nWait, let's double check if we need to propose changes for checkout.\nCurrent fleet for checkout:\n`release_id: release:checkout:060413b8c3d569ba`, flags: `{localCurrencyCheckout: true}`.\nWe propose:\nService: `checkout`, release_id: `release:checkout:060413b8c3d569ba`, flags: `[{name: \"localCurrencyCheckout\", enabled: false}]`.\nAre there any other services to change? No, everything else is already on 3.2.0 in the current fleet.\nLet's check `propose_fleet` parameters:\n- `changes`: list of objects with `service`, `release_id`, and optional `flags` (array of `{name, enabled}`).\n- `citations`: list of objects with `excerpt_id` and `quote`.\n- `rationale`: string.\n\nLet's check the exact quote for checkout's flag:\n`excerpt_id`: `excerpt:060413b8c3d569ba:CHANGELOG.md:6-6`\n`quote`: `- Turning localCurrencyCheckout off prices new orders in USD again, exactly as 3.1.0 did. Orders already written in other currencies stay in the topic.`\n\nLet's do a quick check on whether any other service needs to be listed in `changes`. The prompt says: \"Only list services in `changes` that you propose to change from the current fleet.\"\nSo only `checkout` changes its flag from `True` to `False`.\n\nLet's call `propose_fleet`.",
+              "tool_calls": [
+                {
+                  "index": 0,
+                  "id": "sig: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:call_4248251",
+                  "type": "function",
+                  "function": {
+                    "name": "propose_fleet",
+                    "arguments": "{\"rationale\":\"As requested by the operator, we keep accounting, fraud-detection, and all other services on 3.2.0, and turn off localCurrencyCheckout on checkout so that new orders are priced in USD while preserving compatibility with 3.2.0 readers.\",\"citations\":[{\"excerpt_id\":\"excerpt:060413b8c3d569ba:CHANGELOG.md:6-6\",\"quote\":\"- Turning localCurrencyCheckout off prices new orders in USD again, exactly as 3.1.0 did. Orders already written in other currencies stay in the topic.\"}],\"changes\":[{\"release_id\":\"release:checkout:060413b8c3d569ba\",\"flags\":[{\"name\":\"localCurrencyCheckout\",\"enabled\":false}],\"service\":\"checkout\"}]}"
+                  }
+                }
+              ]
+            },
+            "finish_reason": "tool_calls"
+          }
+        ]
+      }
+    },
+    {
+      "type": "terminal",
+      "name": "propose_fleet",
+      "args": {
+        "rationale": "As requested by the operator, we keep accounting, fraud-detection, and all other services on 3.2.0, and turn off localCurrencyCheckout on checkout so that new orders are priced in USD while preserving compatibility with 3.2.0 readers.",
+        "citations": [
+          {
+            "excerpt_id": "excerpt:060413b8c3d569ba:CHANGELOG.md:6-6",
+            "quote": "- Turning localCurrencyCheckout off prices new orders in USD again, exactly as 3.1.0 did. Orders already written in other currencies stay in the topic."
+          }
+        ],
+        "changes": [
+          {
+            "release_id": "release:checkout:060413b8c3d569ba",
+            "flags": [
+              {
+                "name": "localCurrencyCheckout",
+                "enabled": false
+              }
+            ],
+            "service": "checkout"
+          }
+        ]
+      }
+    }
+  ],
+  "transport_settings": {
+    "max_completion_tokens": 2048
+  },
+  "transport_trace": [
+    {
+      "status": 200,
+      "rate_limits": {},
+      "usage": {}
+    },
+    {
+      "status": 200,
+      "rate_limits": {},
+      "usage": {}
+    },
+    {
+      "status": 200,
+      "rate_limits": {},
+      "usage": {}
+    }
+  ],
+  "result": {
+    "request_text": "Japanese shoppers are seeing wrong totals since 3.2.0. Roll back accounting and fraud-detection to 3.1.0, their currency conversion is the suspect. Leave checkout alone.\n\nAgent asked: Rolling back accounting and fraud-detection to 3.1.0 while leaving checkout alone (at 3.2.0 with localCurrencyCheckout enabled) causes accounting and fraud-detection 3.1.0 to fail with UnsupportedCurrencyError on non-USD orders written to store:orders by checkout 3.2.0. To succeed, checkout must also be changed (rolled back to 3.1.0 or localCurrencyCheckout disabled), but you requested to leave checkout alone. Should we change checkout (e.g. disable localCurrencyCheckout or roll back checkout to 3.1.0), or is there another approach?\nOperator answered: Yes, turn off localCurrencyCheckout on checkout and keep everything else on 3.2.0.",
+    "result": {
+      "kind": "PROPOSAL",
+      "changes": [
+        {
+          "service": "checkout",
+          "release_id": "release:checkout:060413b8c3d569ba",
+          "flags": {
+            "localCurrencyCheckout": false
+          },
+          "changed": false
+        }
+      ],
+      "citations": [
+        {
+          "excerpt_id": "excerpt:060413b8c3d569ba:CHANGELOG.md:6-6",
+          "content_hash": "sha256:d1d50333fe2f5233fa474f4574832c491f4fb05d71cf94d79c1d48f916ed44ab",
+          "quote": "- Turning localCurrencyCheckout off prices new orders in USD again, exactly as 3.1.0 did. Orders already written in other currencies stay in the topic."
+        }
+      ],
+      "rationale": "As requested by the operator, we keep accounting, fraud-detection, and all other services on 3.2.0, and turn off localCurrencyCheckout on checkout so that new orders are priced in USD while preserving compatibility with 3.2.0 readers."
+    },
+    "model": "groq:gemini-3-flash",
+    "live": true,
+    "tool_calls": [
+      {
+        "name": "current_fleet",
+        "args": {
+          "_placeholder": true
+        },
+        "rows": 12
+      },
+      {
+        "name": "release_history",
+        "args": {
+          "service": "checkout"
+        },
+        "rows": 2
+      }
+    ],
+    "validation_errors": []
+  },
+  "saved_at": "20261018T234152647427Z"
+}

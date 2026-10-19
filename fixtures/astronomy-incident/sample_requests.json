@@ -1,0 +1,14 @@
+[
+  {
+    "label": "Incident: roll back the consumers (blocked)",
+    "request": "Japanese shoppers are seeing wrong totals since 3.2.0. Roll back accounting and fraud-detection to 3.1.0, their currency conversion is the suspect. Leave checkout alone."
+  },
+  {
+    "label": "Turn off local-currency checkout (passes)",
+    "request": "Turn off local-currency checkout and keep every service on its current release."
+  },
+  {
+    "label": "Roll the whole order pipeline back (blocked)",
+    "request": "Put checkout, accounting and fraud-detection back on 3.1.0."
+  }
+]

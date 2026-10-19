@@ -16,81 +16,88 @@
 <p align="center">
   <a href="#quickstart">Quickstart</a> &nbsp;·&nbsp;
   <a href="#how-it-works">How it works</a> &nbsp;·&nbsp;
-  <a href="#demo-and-results-18-oct-2026">Demo and results</a> &nbsp;·&nbsp;
+  <a href="#demo">Demo</a> &nbsp;·&nbsp;
+  <a href="#results">Results</a> &nbsp;·&nbsp;
   <a href="docs/STATUS.md">Current status</a> &nbsp;·&nbsp;
   <a href="docs/MCP.md">MCP tools</a>
 </p>
 
 ---
 
-An on-call engineer asks for a behavioral rollback — *"Undo the basket rollout, but keep the receipt correction."* RollbackWitness turns that into an exact fleet of existing release artifacts (or asks a precise clarification), uses FalkorDB to find every reader that fleet will run and every retained record those readers can meet, runs the real readers on the real stored bytes, and returns one of:
+When a release goes wrong, the usual fix is to roll back to an older version. The code goes back; the records the newer version already saved stay. If the older readers cannot parse those records, the rollback fails after it has been deployed, even though every service starts and every health check is green.
 
-- **BLOCKED** — a concrete failure witness: this reader cannot read this saved record, with the receipt and the graph path that explains why.
-- **NEEDS_EVIDENCE** — no failure found, but something required is missing (coverage, writer, format, route, receipt…), listed exactly.
-- **BOUNDED_PASS** — every modeled reader × record obligation has a current passing receipt. This covers **byte/shape readability of the modeled records only**, not production safety.
+RollbackWitness checks this before anything changes. An on-call engineer describes the rollback in plain language. An agent turns it into an exact set of existing builds (or asks a clarifying question), FalkorDB works out which readers that fleet will run and which saved records they will meet, and a checker runs those readers on the stored bytes. The result is one of three verdicts:
 
-Only a `BOUNDED_PASS` can be approved for an idempotent **local simulation**. Nothing is ever deployed. The grounding agent and the MCP tools cannot approve; the local HTTP API is unauthenticated and trusts whoever can reach it, so the approver label is a local operator name, not a verified identity.
+- **BLOCKED**: at least one reader cannot read a saved record. The verdict includes the failing record, the reader's error and the graph path that connects them.
+- **NEEDS_EVIDENCE**: no failure was found, but something required to decide is missing (store coverage, a record's writer or format, a reader route, a receipt). Missing evidence is listed and is never treated as a pass.
+- **BOUNDED_PASS**: every reader × record check derived for the plan has a passing receipt. This covers byte/shape readability of the modeled records, not production safety.
 
-> The rollback workflow runs on **synthetic fixtures**: `fixtures/astronomy-shop` (the demo: four services modeled on the OpenTelemetry Astronomy Shop, Kafka `orders` topic) and `fixtures/shop` (the default for tests, the oracle and the controls: cart and checkout, two releases each, one cache, saved carts). The separate repository-evidence demo uses real pinned ItsDangerous source and an explicitly synthetic Git-revert example. Replayed runs are labeled as replays.
+A person confirms the scope before checks run, and only a `BOUNDED_PASS` can be approved, for a local simulation. Nothing is deployed. The agent and the MCP tools cannot approve.
 
 <p align="center">
-  <img src="docs/images/rollback-workspace.png" width="1200" alt="RollbackWitness console on the synthetic Astronomy Shop fixture">
+  <img src="docs/images/rollback-incident.png" width="1200" alt="RollbackWitness investigation workspace on the synthetic Astronomy Incident fixture">
   <br>
-  <sub>Rollback console · synthetic Astronomy Shop fixture</sub>
+  <sub>Investigation workspace · synthetic Astronomy Incident fixture</sub>
 </p>
 
-<details>
-<summary><strong>Project guide and implementation history</strong></summary>
-
-New to the codebase? Read the [project guide with examples and Mermaid diagrams](docs/PROJECT_GUIDE.md), then [docs/STATUS.md](docs/STATUS.md) for what currently works and what is open.
-
-The separate repository-evidence demo runs on port 8127. Its setup and graph
-model are documented below, with implementation details in the
-[query and algorithm reference](docs/GRAPH_QUERIES.md).
-
-</details>
+<p align="center">
+  <a href="docs/demo/DEMO_SCRIPT.md">Demo walkthrough</a> &nbsp;·&nbsp;
+  <a href="docs/PROJECT_GUIDE.md">Project guide</a> &nbsp;·&nbsp;
+  <a href="docs/GRAPH_QUERIES.md">Graph queries</a>
+</p>
 
 ## The thirty-second story
 
-1. The agent grounds the request in release notes and code, cites exact quotes, and asks when the fix to keep and the change to undo live in the same artifact.
-2. Proposed fleet: cart → 1.4, keep checkout 2.1. **cart 1.4 starts GREEN** — but its reader **FAILS** on `saved-cart-2002`, which cart 1.5 already wrote as `cart/v2`.
-3. FalkorDB shows the evidence path: `Plan → Deployment → cart 1.4 → load_saved_cart → cart-cache ← saved-cart-2002 (cart/v2) → written by cart 1.5`. Disposition: **BLOCKED**.
-4. Given that evidence, the agent proposes an existing alternative: keep cart 1.5 with `basket_v2` off. Rechecked from scratch → **BOUNDED_PASS**.
-5. A human approves the local simulation; applying it twice changes nothing the second time.
+The demo fixture is a synthetic twelve-service shop modeled on the OpenTelemetry Astronomy Shop. Since 3.2.0, checkout saves orders in local currencies, and accounting books them as `ledger/v2` rows.
+
+1. The engineer asks: *"Japanese shoppers are seeing wrong totals since 3.2.0. Roll back accounting and fraud-detection to 3.1.0. Leave checkout alone."* The agent proposes exactly that and cites the release notes it used.
+2. Every proposed build starts **GREEN**. The checker derives 137 reader × record checks from the graph and runs them: 48 **FAIL**. The 3.1.0 readers cannot read the non-USD orders or the `ledger/v2` rows. Disposition: **BLOCKED**.
+3. FalkorDB shows why: the 16 failing ledger rows were derived from orders written by checkout 3.2.0, the service the engineer asked to leave alone.
+4. Asked for an alternative, the agent asks before touching checkout. With permission, it keeps every service on 3.2.0 and turns off checkout's `localCurrencyCheckout` flag. Rechecked from scratch: **BOUNDED_PASS**, 137/137.
+5. A person approves the local simulation. Applying the same approval twice changes nothing the second time.
 
 ## How it works
 
 | Part | Role |
 |---|---|
-| Grounding agent (`src/rw/grounding.py`) | One bounded tool loop (≤ 8 turns) over fixed read-only graph tools; proposes an existing-artifact fleet or a clarification. Default model chain: Groq `openai/gpt-oss-120b`, then `qwen/qwen3.8-27b`; Gemini optional. The model never sees graph names, Cypher, probes or approval. |
-| FalkorDB (`src/rw/graph.py`) | FalkorDB 6.0.2. Releases, routes, stores, retained records, snapshots, plans and receipts; fixed parameterized queries with row caps. The multi-hop obligation query decides what gets checked and supplies the witness path. |
-| Trusted checker (`src/rw/verification.py`) | Cross-checks graph results against independently parsed release files and snapshot manifests, so a missing edge, conflicting record or truncated query becomes a gap instead of disappearing. Computes the disposition (FAIL dominates; any gap → NEEDS_EVIDENCE). |
-| Probes (`src/rw/probes.py`, `fixtures/shop/harness/`) | Runs allowlisted fixture readers on retained bytes in a bounded subprocess; receipts are bound to the exact obligation tuple (plan, snapshot, release, codec, route, record, payload, probe spec, environment). |
-| Approval & simulation (`src/rw/simulation.py`, `src/rw/api.py`) | Human approval only for BOUNDED_PASS; evidence bytes are re-verified before approval and before simulation; SQLite ledger applies each approval once. |
-| UI (`src/rw/static/`) | Minimal investigation workspace: snapshot context, cited fleet proposal, scope confirmation, startup-vs-reader verdict, connected evidence and receipt inspector, candidate comparison, and eligible human-approved simulation. Separate browser modules and CSS; no frontend build step. See [docs/UI.md](docs/UI.md). |
+| Grounding agent (`src/rw/grounding.py`) | A bounded tool loop (at most 8 model turns) over fixed, read-only graph tools. It proposes a fleet of existing release artifacts or asks a clarifying question, and must quote the release notes or code it relies on. The model is configurable (Groq, Gemini or any OpenAI-compatible endpoint; see [provider setup](docs/QUICKSTART.md#6-live-grounding-optional)). It never sees Cypher, probe internals or approval. |
+| FalkorDB (`src/rw/graph.py`) | Holds releases, reader routes, stores, retained records and their lineage, snapshots, plans and receipts. All queries are fixed and parameterized with row caps. The multi-hop obligation query decides what gets checked and supplies the evidence path. |
+| Trusted checker (`src/rw/verification.py`) | Cross-checks graph results against independently parsed release files and snapshot manifests, so a missing edge, conflicting record or truncated result becomes a named gap instead of disappearing. Computes the disposition: any failure blocks; any gap means `NEEDS_EVIDENCE`. |
+| Probes (`src/rw/probes.py`) | Runs each release's allowlisted fixture reader on retained bytes in a bounded subprocess. Each receipt is bound to the exact obligation: plan, snapshot, release, codec, route, record, payload, probe spec and environment. |
+| Approval & simulation (`src/rw/simulation.py`, `src/rw/api.py`) | Human approval only for `BOUNDED_PASS`. Evidence is re-verified before approval and before simulation, and a SQLite ledger applies each approval once. |
+| UI (`src/rw/static/`) | Investigation workspace: cited proposal, scope confirmation, startup vs saved-data verdict, interactive evidence graph, receipt inspector, candidate comparison and human approval. Plain browser modules, no build step. See [docs/UI.md](docs/UI.md). |
+| MCP server (`src/rw/mcp_server.py`) | Lets Claude Code or another MCP host start and follow investigations. See [Local MCP tools](#local-mcp-tools). |
 
-## Demo and results (18 Oct 2026)
+## Demo
 
-**Demo scenario:** `fixtures/astronomy-shop`, a synthetic model of the OpenTelemetry Astronomy Shop. checkout 3.2.0 writes non-USD orders to the Kafka `orders` topic; accounting and fraud-detection 3.1.0 only read USD. Rolling all three back to 3.1.0 is **unsafe** (every build starts GREEN, but 32 of 80 reader checks fail on orders already in the topic). Rolling back only checkout is **safe** (80/80 pass). The agent is also usable from Claude Code through the MCP server (`scripts/serve_mcp.py`, see [docs/MCP.md](docs/MCP.md)).
+**Incident demo** (`fixtures/astronomy-incident`): twelve services and 97 retained records across three stores (40 orders, 37 ledger rows, 20 saved carts). Rolling accounting and fraud-detection back to 3.1.0 starts **GREEN** but is **BLOCKED**: 48 of 137 reader checks fail. Sixteen incompatible ledger rows trace back to orders written by checkout 3.2.0. Keeping the current readers and turning off checkout's local-currency flag gives **BOUNDED_PASS**, 137/137. That stops new local-currency writes; it does not repair stored data or prove the totals correct.
 
-Run it: `$env:RW_FIXTURE="astronomy-shop"; .venv\Scripts\python.exe scripts\serve.py`, then open http://127.0.0.1:8000.
+```powershell
+.venv/Scripts/python.exe scripts/serve_demo.py      # sh: .venv/bin/python scripts/serve_demo.py
+```
 
-Live results, same model (`gemini-3-flash`) on both sides, small samples on synthetic data. These are indications, not statistically meaningful benchmarks (details and raw files: [docs/results/RESULTS.md](docs/results/RESULTS.md)):
+Open `http://127.0.0.1:8000`. The demo runs without a model key: open **Demo setup**, choose **Saved replay** and pick the saved conversations in `artifacts/demo/replays/` (initial proposal, clarification, answered proposal). Replays reuse a recorded agent conversation; the graph queries and reader checks run fresh, and the workspace stays labeled **Replay · not live**. With a configured model key, the same request runs live. The [demo walkthrough](docs/demo/DEMO_SCRIPT.md) has the narration and the exact inputs.
 
-| Comparison | RollbackWitness (graph + checker) | Control without the graph |
+**Astronomy Shop comparison** (`fixtures/astronomy-shop`): the original four-service version of the same idea, used for the published comparisons. checkout 3.2.0 writes non-USD orders that accounting and fraud-detection 3.1.0 cannot read. Rolling all three back to 3.1.0 is **BLOCKED** (32 of 80 checks fail); rolling back only checkout gives **BOUNDED_PASS** (80/80). Commands are in the [Quickstart](#quickstart).
+
+## Results
+
+Small samples on synthetic fixtures; the same model was used on both sides of every model comparison. Treat these as indications, not benchmarks. Method, configuration and raw files: [docs/results/RESULTS.md](docs/results/RESULTS.md).
+
+| Comparison | RollbackWitness (graph + checker) | Control |
 |---|---|---|
-| Remove the graph's relationships, keep every record (Astronomy Shop, no model) | full graph: unsafe, 32 failing reads found, 80 evidence paths | without reader/store/record links: 0 checks derived, the failures are never found; the verdict falls back to "can't confirm", never to "safe" |
-| Shop rollback, equal-information LLM control with the same probe tool | 13/14 investigations correct and evidence-backed; 0 unsupported "safe" claims | 9/13 correct; 3 "safe" claims without probing a required reader; 1 wrong "safe" |
-| Astronomy Shop, LLM given every file as plain text (6 cases × 3 runs) | 6/6 cases correct | 15/18; on an incomplete order inventory it said "safe" 2/3 times |
-| Request grounding (5 cases × 3 runs) | 13/15 matched the expected proposal/clarification | n/a |
-| SQL joins over the same raw facts (8 hand-derived cases) | 8/8 | 8/8 (a tie: the graph is not exclusive; it drives the agent and supplies the visible evidence path) |
+| Remove the graph's relationships, keep every record (incident fixture, no model) | Full graph: **BLOCKED**, 137 checks derived, 48 failures found | Without reader, store and record links: 0 checks derived, the failures are never found, and the verdict is `NEEDS_EVIDENCE`, never a pass |
+| Same model with and without the graph, same probe tool (shop fixture) | 13/14 investigations correct and evidence-backed; 0 unsupported "safe" claims | Plain-text control: 9/13 correct; 3 "safe" claims without probing a required reader; 1 wrong "safe" |
+| One model call with every fixture file as text (Astronomy Shop, 6 cases × 3 runs) | 6/6 cases correct | 15/18; on an incomplete order inventory it answered "safe" 2 of 3 times |
+| Request grounding (5 cases × 3 runs) | 13/15 matched the expected proposal or clarification | — |
+| SQL joins over the same raw facts (8 hand-derived cases) | 8/8 | 8/8. A tie: the graph is not the only way to compute obligations; it drives what the agent checks and supplies the evidence path |
 
 <details>
 <summary><strong>Graph data model and Cypher reference</strong></summary>
 
 ## Graph data model
 
-FalkorDB 6.0.2, one graph per fixture (`rw_fixture_shop` for `fixtures/shop`). Everything is imported from the fixture files by `graph.reset_and_import`; plans and probe receipts are written back during an investigation.
+FalkorDB 6.0.2, one graph per fixture. Everything is imported from the fixture files by `graph.reset_and_import`; plans and probe receipts are written back during an investigation.
 
 ```mermaid
 graph LR
@@ -106,31 +113,34 @@ graph LR
   StateStore -- HAS_COVERAGE --> Coverage
   Batch -- IN_STORE --> StateStore
   Batch -- WRITTEN_BY --> Release
+  Batch -- DERIVED_FROM --> Batch
   ProbeRun -- TESTS_READER --> Release
   ProbeRun -- TESTS_BATCH --> Batch
 ```
 
 | Node | What it is | Key properties |
 |---|---|---|
-| `Service` | A service in the fleet (cart, checkout) | `id`, `name` |
+| `Service` | A service in the fleet | `id`, `name` |
 | `Release` | One existing build artifact | `id` (artifact hash), `service`, `version`, `built_at`, `codec_hash`, `codec_path`, `bundle_id`, declared flags |
 | `SourceExcerpt` | A changelog bullet or a top-level code `def` of a release | `kind`, `path`, `line_start`/`line_end`, `text`, `content_hash` |
 | `Snapshot` | The captured state of an environment (what runs, what is stored) | `id`, manifest hash |
-| `Deployment` | "service X runs release Y with flags F" — in a snapshot or in a candidate plan | `service`, `version`, `flags_json` |
-| `Plan` | A candidate rollback fleet proposed by the agent (or an operator) | `id`, plan hash, request, origin |
+| `Deployment` | "Service X runs release Y with flags F", in a snapshot or a candidate plan | `service`, `version`, `flags_json` |
+| `Plan` | A candidate rollback fleet proposed by the agent or an operator | `id`, plan hash, request, origin |
 | `ReaderRoute` | A code path in a release that reads retained state | `name`, `entry`, `read_domain`, `route_contract_hash` |
-| `StateStore` | A store holding data that survives a rollback (e.g. `cart-cache`) | `id`, `kind` |
-| `Coverage` | Whether the snapshot inventory of a store is complete | `status` (`COMPLETE` / partial), `inventory_id_hash` |
+| `StateStore` | A store holding data that survives a rollback (for example `orders`) | `id`, `kind` |
+| `Coverage` | Whether the snapshot's inventory of a store is complete | `status` (`COMPLETE` / partial), `inventory_id_hash` |
 | `Batch` | A retained record in a store, with its bytes | `record_id`, `format_id`, `payload_hash`, `payload_path`, `snapshot_id` |
-| `ProbeRun` | A receipt from running a reader on a record's real bytes | `result` (PASS/FAIL/…), `obligation_hash`, `plan_hash`, `receipt_json` |
+| `ProbeRun` | A receipt from running a reader on a record's stored bytes | `result` (PASS/FAIL/…), `obligation_hash`, `plan_hash`, `receipt_json` |
 
-The question the graph answers: **for this candidate plan, which reader will execute, which retained records can it meet, and who wrote them?** That is the path `Plan → Deployment → Release → ReaderRoute → StateStore ← Batch → writer Release`.
+`DERIVED_FROM` records lineage between retained records (for example, a ledger row booked from an order). It explains where incompatible data came from; compatibility itself is decided only by probe receipts.
+
+The question the graph answers: **for this candidate plan, which readers will execute, which retained records can they meet, and who wrote those records?** That is the path `Plan → Deployment → Release → ReaderRoute → StateStore ← Batch → writer Release`.
 
 ## Cypher the product depends on
 
-All queries are fixed and parameterized (`src/rw/graph.py`); the model never writes Cypher. Each read is capped at 200 rows (`LIMIT $limit` fetches cap+1), and a capped result is reported as truncated, never as complete.
+All queries are fixed and parameterized in `src/rw/graph.py`; the model never writes Cypher. Each read is capped at 200 rows (`LIMIT $limit` fetches one extra row), and a capped result is reported as truncated, never as complete.
 
-**1. Obligations — what must be checked for this plan** (`obligation_paths`, `src/rw/graph.py:915`). Every row is one reader × retained-record obligation; the probe runner executes exactly these, and the row is the witness path shown for a BLOCKED verdict.
+**1. Obligations: what must be checked for this plan** (`obligation_paths`). Each row is one reader × retained-record obligation. The probe runner executes exactly these rows, and a failing row is the evidence path shown for a BLOCKED verdict.
 
 ```cypher
 MATCH (p:Plan {id: $plan_id})-[:HAS_DEPLOYMENT]->(d:Deployment)-[:RUNS]->(r:Release)
@@ -145,7 +155,7 @@ ORDER BY d.id, b.record_id
 LIMIT $limit
 ```
 
-**2. Reader routes of a plan** (`plan_reader_routes`, `:820`). `OPTIONAL MATCH` keeps a deployment with a missing release, route or store visible, so the checker reports a gap (`NEEDS_EVIDENCE`) instead of silently checking fewer things.
+**2. Reader routes of a plan** (`plan_reader_routes`). `OPTIONAL MATCH` keeps a deployment with a missing release, route or store visible, so the checker reports a gap (`NEEDS_EVIDENCE`) instead of silently checking less.
 
 ```cypher
 MATCH (p:Plan {id: $plan_id})-[:HAS_DEPLOYMENT]->(d:Deployment)
@@ -158,7 +168,7 @@ ORDER BY d.service, rt.name
 LIMIT $limit
 ```
 
-**3. Release history with source — the agent's grounding tool** (`release_history`, `:698`). Walks the `PREVIOUS` chain from the running build and returns each release's changelog and code excerpts, which the agent must quote verbatim to justify a proposal.
+**3. Release history with source: the agent's grounding tool** (`release_history`). Walks the `PREVIOUS` chain from the running build and returns each release's changelog and code excerpts, which the agent must quote verbatim to justify a proposal.
 
 ```cypher
 MATCH (s:Snapshot {id: $snapshot_id})-[:HAS_DEPLOYMENT]->(d:Deployment {service: $service})-[:RUNS]->(r:Release)
@@ -172,7 +182,7 @@ ORDER BY depth
 LIMIT $limit
 ```
 
-**4. Who reads a store** (`store_readers`, `:798`) — another agent tool, used to find every release that would be affected by data in a store.
+**4. Who reads a store** (`store_readers`): another agent tool, used to find every release affected by data in a store.
 
 ```cypher
 MATCH (st:StateStore {id: $store_id})<-[:READS_FROM]-(rt:ReaderRoute)<-[:EXECUTES_ROUTE]-(r:Release)
@@ -184,160 +194,73 @@ ORDER BY r.id, rt.id
 LIMIT $limit
 ```
 
-Store inventory (`store_inventory`, `:857`) and receipt read-back (`receipts_by_id`, `:1066`) complete the loop. Probe receipts are written with `MERGE (pr:ProbeRun …)-[:TESTS_READER]->(release)` / `-[:TESTS_BATCH]->(batch)` (`write_receipt`, `:1009`). Queries 3–4 are shown slightly abbreviated in their `RETURN` lists; the source has the full column set.
+Store inventory (`store_inventory`), record origins (`record_origins`, which follows `DERIVED_FROM`) and receipt read-back (`receipts_by_id`) complete the loop. Probe receipts are written with `MERGE (pr:ProbeRun …)-[:TESTS_READER]->(release)` and `-[:TESTS_BATCH]->(batch)`. Queries 3–4 are shown with abbreviated `RETURN` lists; the source has the full column set.
 
-**Full query and algorithm reference** (both workflows):
-
-Read [the query and algorithm reference](docs/GRAPH_QUERIES.md) for the actual
-queries the product depends on. It includes:
-
-- Rollback obligations: `Plan → Deployment → Release → ReaderRoute → StateStore
-  ← Batch → writer Release`, with snapshot filtering and optional writer evidence.
-- Version-linked source retrieval through a bounded `PREVIOUS` release chain.
-- Published repository revision lookup and provenance-bearing symbol relationships.
-- Bounded Python dependency/dependent traversal, Git ancestry and content-based
-  fix-presence checking, plus completeness and receipt validation.
-- A runnable read-only example against the initialized demo graphs.
-
-These are implemented operations, not proposed schema or generated Cypher.
-The model does not supply arbitrary queries. A truncated result or absent
-relationship is not sufficient evidence of completeness or safety.
+The [query and algorithm reference](docs/GRAPH_QUERIES.md) documents every query for both workflows, including the repository-evidence queries, completeness and receipt validation, and a runnable read-only example.
 
 </details>
 
 ## Quickstart
 
-Prerequisites: Git, Docker with Compose v2 and a running Docker daemon, and
-[`uv`](https://docs.astral.sh/uv/). The setup script creates `.venv`, selects
-Python 3.12 and installs pinned dependencies. Run commands from the repository
-root. No frontend build is required.
+Prerequisites: Git, Docker with Compose v2, and [`uv`](https://docs.astral.sh/uv/). The setup script creates `.venv` with Python 3.12 and pinned dependencies. Run every command from the repository root; no frontend build is needed.
 
 ```sh
 git clone https://github.com/Ep1cGaimer/FalkorDB_agent.git rollbackwitness
 cd rollbackwitness
+docker compose up -d --wait            # FalkorDB 6.0.2 on 127.0.0.1:6379
+sh scripts/setup.sh                    # Windows: powershell -ExecutionPolicy Bypass -File scripts\setup.ps1
+.venv/bin/python scripts/smoke.py      # end-to-end check with real graph queries and reader probes; no model key
+.venv/bin/python scripts/serve_demo.py # incident demo on http://127.0.0.1:8000
 ```
 
-Choose the workflow you want to run:
+On Windows, use `.venv\Scripts\python.exe` in place of `.venv/bin/python`. Stop the server with Ctrl+C and the database with `docker compose stop`.
 
-| Workflow | Open | Model key needed? | Data |
-| --- | --- | --- | --- |
-| Repository evidence demo | `http://127.0.0.1:8127` | No | Real pinned Python source plus synthetic Git history |
-| Rollback console | `http://127.0.0.1:8000` | Yes for live grounding; no for operator-specified fleet or deterministic smoke | Synthetic shop releases and retained records |
-
-### Rollback workflow — Linux / WSL
+**Without a model key**, everything except live grounding works: the smoke test, saved replays, and checks of an operator-specified fleet:
 
 ```sh
-sh scripts/setup.sh
-docker compose up -d --wait
-.venv/bin/python scripts/smoke.py
-# Deterministic operator-specified fleet; no model call:
-.venv/bin/python scripts/investigate.py --fleet cart=1.4 --confirm-as you
-# Console; live grounding requires the optional key configuration below:
-.venv/bin/python scripts/serve.py
+# The incident rollback as requested, no agent involved: BLOCKED, with the evidence path
+RW_FIXTURE=astronomy-incident .venv/bin/python scripts/investigate.py --fleet accounting=3.1.0 --fleet fraud-detection=3.1.0 --confirm-as you
+
+# Astronomy Shop: all three back to 3.1.0 (BLOCKED), then only checkout (BOUNDED_PASS)
+RW_FIXTURE=astronomy-shop .venv/bin/python scripts/investigate.py --fleet checkout=3.1.0 --fleet accounting=3.1.0 --fleet fraud-detection=3.1.0 --confirm-as you
+RW_FIXTURE=astronomy-shop .venv/bin/python scripts/investigate.py --fleet checkout=3.1.0 --confirm-as you
 ```
 
-The fleet example is expected to be `BLOCKED`: cart 1.4 cannot decode a retained
-`cart/v2` record. The smoke script exercises real graph queries and fixture-reader
-probes with fixed grounding; it does not call a model. The console listens at
-`http://127.0.0.1:8000`. Stop it with Ctrl+C; `docker compose stop` stops the fixture
-database. Do not stop another workflow's database during a recording.
+In PowerShell, set the fixture first with `$env:RW_FIXTURE = "astronomy-incident"`.
 
-For optional live grounding, copy `.env.example` to the ignored `.env` and set
-`GROQ_API_KEY` locally. Do not commit that file. See
-[provider configuration](docs/QUICKSTART.md#6-live-grounding-optional) for model
-selection and provider limits. Keep the local UI bound to loopback.
+**Live grounding** needs a model provider. Copy `.env.example` to `.env` (git-ignored), add your key, and choose the model chain as described in [provider setup](docs/QUICKSTART.md#6-live-grounding-optional). Then ask in plain language, in the UI or from the CLI:
 
-### Windows and further checks
-
-Full instructions: [docs/QUICKSTART.md](docs/QUICKSTART.md). Short version (Windows shown; `sh scripts/setup.sh` on Linux/macOS/Git Bash):
-
-```powershell
-docker compose up -d --wait                                       # FalkorDB 6.0.2 on 127.0.0.1:6379, waits until healthy
-powershell -ExecutionPolicy Bypass -File scripts\setup.ps1         # .venv with Python 3.12 via uv
-.venv\Scripts\python.exe -m pytest -q -m "not live"               # offline test suite
-.venv\Scripts\python.exe scripts\smoke.py                          # end-to-end check, no model key needed
+```sh
+.venv/bin/python scripts/investigate.py "Undo the basket rollout, but keep the receipt correction." --confirm-as you
 ```
 
-Try it:
-
-```powershell
-# Operator-specified fleet, no agent involved (shows BLOCKED with the witness):
-.venv\Scripts\python.exe scripts\investigate.py --fleet cart=1.4 --confirm-as you
-
-# Live agent (needs GROQ_API_KEY in .env):
-.venv\Scripts\python.exe scripts\investigate.py "Undo the basket rollout, but keep the receipt correction." --confirm-as you
-
-# Web UI on http://127.0.0.1:8000 (live or replay of saved runs; snapshot selector for NEEDS_EVIDENCE cases):
-.venv\Scripts\python.exe scripts\serve.py
-```
-
-### Astronomy Shop demo
-
-```powershell
-$env:RW_FIXTURE = "astronomy-shop"                                # sh: export RW_FIXTURE=astronomy-shop
-.venv\Scripts\python.exe scripts\serve.py                          # http://127.0.0.1:8000
-```
-
-Try the sample request **"Put checkout, accounting and fraud-detection back on 3.1.0."**: every build
-starts, but 32 of 80 reader checks fail on non-USD orders already in the `orders` topic, so it is
-unsafe. Ask for an alternative and the agent proposes rolling back only checkout (or asks which
-services to keep), which passes 80/80. Live grounding needs a model key (below). Without one, run the
-same two checks with operator-specified fleets; no model is called:
-
-```powershell
-$env:RW_FIXTURE = "astronomy-shop"
-.venv\Scripts\python.exe scripts\investigate.py --fleet checkout=3.1.0 --fleet accounting=3.1.0 --fleet fraud-detection=3.1.0 --confirm-as you   # BLOCKED, with the graph path
-.venv\Scripts\python.exe scripts\investigate.py --fleet checkout=3.1.0 --confirm-as you                                                    # BOUNDED_PASS
-```
-
-The same flow is available to Claude Code through MCP (see [Local MCP tools](#local-mcp-tools)).
-To see the relationship-removal experiment: `.venv\Scripts\python.exe evals\ablation_relationships.py`.
+**Tests:** `.venv/bin/python -m pytest -q -m "not live"` runs the offline suite against the local FalkorDB; `node --test tests/js/` runs the UI unit tests. `scripts/prepare_demo.py` re-validates the saved demo replays with fresh graph and reader checks. Full instructions: [docs/QUICKSTART.md](docs/QUICKSTART.md).
 
 <details>
-<summary><strong>Second workflow: repository evidence demo — Linux / WSL</strong></summary>
+<summary><strong>Second workflow: repository evidence demo</strong></summary>
 
-### Second workflow: repository evidence demo — Linux / WSL
+### Second workflow: repository evidence demo
 
-Use a dedicated database on local port 55688, separate from the fixture database
-on 6379. The container creation command below is for a **first launch**; if that
-container already exists, use `docker start rw-hackathon-demo-20261018` and check
-its port mapping instead. Choose another fixed port if 55688 is occupied and
-update every `RW_FALKORDB_PORT` value accordingly.
+A separate, deterministic workflow that indexes real Git history into FalkorDB and answers dependency and fix-presence questions with verifiable source citations. No model is involved. It uses its own database on port 55688, separate from the fixture database on 6379. If that container already exists, start it with `docker start rw-hackathon-demo-20261018` instead of creating it.
 
 ```sh
 sh scripts/setup.sh
 mkdir -p artifacts/repos
-# Skip this clone if the bare repository already exists:
 git clone --bare https://github.com/pallets/itsdangerous.git artifacts/repos/itsdangerous
 docker run -d --name rw-hackathon-demo-20261018 --memory=2g \
   -p 127.0.0.1:55688:6379 \
   falkordb/falkordb:6.0.2@sha256:107455e862a824e45e8e9f5a7fbfdf5e00a08b14e13eae2577c72fd9e3f59ba6
-# Wait for PONG before continuing:
-docker exec rw-hackathon-demo-20261018 redis-cli ping
+docker exec rw-hackathon-demo-20261018 redis-cli ping   # wait for PONG
 RW_FALKORDB_PORT=55688 .venv/bin/python scripts/hackathon_demo.py setup
 RW_FALKORDB_PORT=55688 .venv/bin/python scripts/hackathon_demo.py smoke
 RW_FALKORDB_PORT=55688 .venv/bin/python scripts/hackathon_demo.py serve --port 8127
 ```
 
-Open `http://127.0.0.1:8127` and ask **What does TimedSerializer depend on?**
-Then try **Explore a real dependency chain**, open a source citation, and compare
-**Inspect the fix** with **Catch the reverted fix**. The smoke command should
-report `PASS` and prepares an explicitly labeled recorded backup. This is live
-**deterministic retrieval**, not an LLM-generated conversation. The real source is
-pinned to ItsDangerous commit `096c8d42545d3b68ea21a4f890fb2b2d8979c0bd`.
-
-Setup generates local indexes and artifacts; they are not included in a fresh
-clone. Keep the bare clone for source verification. Stop the server with Ctrl+C;
-stop this dedicated database with `docker stop rw-hackathon-demo-20261018`.
-For the underlying queries, a read-only example and evidence boundaries, see the
-[query and algorithm reference](docs/GRAPH_QUERIES.md).
+Open `http://127.0.0.1:8127` and ask **What does TimedSerializer depend on?** Then try **Explore a real dependency chain**, open a source citation, and compare **Inspect the fix** with **Catch the reverted fix**. The source is ItsDangerous pinned to commit `096c8d42545d3b68ea21a4f890fb2b2d8979c0bd`; the reverted-fix example uses explicitly synthetic Git history. Setup generates local indexes that are not part of the repository. Stop the database with `docker stop rw-hackathon-demo-20261018`.
 
 ## Second workflow: repository evidence graph
 
-Implemented by [`src/rw/repo/index.py`](src/rw/repo/index.py) and
-[`src/rw/repo/query.py`](src/rw/repo/query.py). The dedicated demo uses graphs
-`rw_hackathon_demo_real` and `rw_hackathon_demo_trap`. Generic repository imports
-default to `rw_repo_<config.name>` unless explicitly overridden.
+Implemented by [`src/rw/repo/index.py`](src/rw/repo/index.py) and [`src/rw/repo/query.py`](src/rw/repo/query.py). The demo uses the graphs `rw_hackathon_demo_real` and `rw_hackathon_demo_trap`; other repository imports default to `rw_repo_<config.name>`.
 
 ```mermaid
 flowchart LR
@@ -353,50 +276,49 @@ flowchart LR
 | Node | Important properties / purpose |
 | --- | --- |
 | `Repository` | Name, local Git path, status, generation and published import ID; metadata governs which import is usable |
-| `ImportRun` | ID, repository, status, timestamps and metrics; only the current complete publication is queried |
+| `ImportRun` | ID, repository, status, timestamps and metrics; only the current complete import is queried |
 | `Commit` | Full SHA, repository and commit metadata; `PARENT` points to earlier commits |
-| `Tag` | Name and message; alias pointing to a commit, not immutable identity |
-| `Blob` | SHA-256 content hash, Git blob identity and extraction metadata; `HAS_FILE.path` supplies the revision-specific path |
-| `Symbol` | ID, qualified name, kind and source span for definitions; unresolved external targets can lack a local definition |
+| `Tag` | Name and message; an alias pointing to a commit, not an immutable identity |
+| `Blob` | SHA-256 content hash, Git blob identity and extraction metadata; `HAS_FILE.path` gives the revision-specific path |
+| `Symbol` | ID, qualified name, kind and source span for definitions; unresolved external targets may have no local definition |
 | `ReleaseNote` | ID, path and content hash for configured release-note files |
 
-`IMPORTS`, `CALLS` and `INHERITS` edges record provenance and extractor identity.
-Parsed and statically inferred relationships are labeled separately. A citation
-contains repository, commit, path, line range and content hash; opening it verifies
-the Git bytes. Example: follow `URLSafeTimedSerializer → TimedSerializer →
-Serializer` at the pinned ItsDangerous revision. Python performs the bounded
-relationship walk over facts retrieved from FalkorDB; this is not a claim about
-runtime dispatch or behavioral compatibility.
+`IMPORTS`, `CALLS` and `INHERITS` edges record provenance and extractor identity, and parsed relationships are labeled separately from statically inferred ones. A citation contains repository, commit, path, line range and content hash, and opening it verifies the Git bytes. Example: follow `URLSafeTimedSerializer → TimedSerializer → Serializer` at the pinned revision. The relationship walk is static; it makes no claim about runtime dispatch or behavioral compatibility.
 
 </details>
 
 ## Local MCP tools
 
-Install the optional bridge with `sh scripts/setup.sh --mcp` (PowerShell: `scripts\setup.ps1 -Mcp`).
-Start the existing HTTP API with `scripts/serve.py`; a stdio host then launches `scripts/serve_mcp.py`
-using absolute interpreter/script paths. Seven tools start, list and read investigations/transcripts, read a short verdict,
-answer a clarification and request an alternative. Human scope confirmation, approval and local
-simulation remain in the console through the returned review URL. See [docs/MCP.md](docs/MCP.md)
-for host configuration, strict inputs, size/time limits and restart/retry behavior.
+Install the optional MCP bridge with `sh scripts/setup.sh --mcp` (PowerShell: `scripts\setup.ps1 -Mcp`). Start the HTTP API (`scripts/serve_demo.py` or `scripts/serve.py`), then register `scripts/serve_mcp.py` with your MCP host using absolute interpreter and script paths. The server exposes eight tools: start, list and read investigations, list saved replays, answer a clarification, request an alternative, read a short verdict, and query the repository-evidence graph. Scope confirmation, approval and local simulation stay with a person in the console, through the review link each tool returns. See [docs/MCP.md](docs/MCP.md) for host configuration, input limits and retry behavior.
 
-## Evidence and honest limits
+## Evidence and limits
 
-- **Independent oracle:** 8 hand-derived cases (`evals/expected/`) — the real pipeline on real FalkorDB matches all 8 (disposition, exact obligations, probe results, gaps).
-- **Relational control:** SQL joins over the same raw facts reproduce the same obligation sets in 8/8 cases — a **tie**. The graph's contribution here is the connected query that drives what the agent checks and the inspectable evidence path, not exclusivity.
-- **Live comparisons (18–19 Oct):** same-model product vs control, plain-text LLM vs graph checker, request grounding and the relationship-removal experiment are in [docs/results/RESULTS.md](docs/results/RESULTS.md) with raw files. Vague time references are still sometimes guessed instead of clarified (issue #17).
-- **Scope:** synthetic fixture; BOUNDED_PASS is byte/shape readability of modeled records only; readers are trusted, reviewed fixture code (the probe harness is failure containment, not a sandbox); local simulation only.
+- **Independent oracle:** 8 hand-derived cases in `evals/expected/`; the full pipeline on a real FalkorDB matches all 8 (disposition, exact obligations, probe results and gaps).
+- **Synthetic data:** all rollback fixtures are synthetic. The Astronomy fixtures are modeled on OpenTelemetry Demo 3.1.0 (Apache-2.0); their 3.2.0 releases were written for this project.
+- **What a pass means:** `BOUNDED_PASS` covers byte/shape readability of the modeled records only. Readers are reviewed fixture models of each release's decode step, not upstream binaries, and the probe harness contains failures rather than sandboxing untrusted code.
+- **Local only:** approval runs a local simulation; nothing is deployed. The HTTP API is unauthenticated and meant for loopback, so the approver name is a local label, not a verified identity.
+- **Known gap:** vague time references (for example "from last week") are sometimes guessed instead of clarified. Open questions are tracked in [GitHub Issues](https://github.com/Ep1cGaimer/FalkorDB_agent/issues) and [docs/STATUS.md](docs/STATUS.md).
 
 ## Repository layout
 
 ```text
-src/rw/            product: contracts, graph, verification, probes, grounding, pipeline, api, simulation, static UI
-tests/             unit, integration (live FalkorDB) and acceptance tests
-src/rw/repo/       secondary workflow: repository/Git-history indexing and deterministic evidence queries
-fixtures/shop/     synthetic releases (code + changelogs), snapshots, retained payloads, probe harness
-fixtures/astronomy-shop/  the demo fixture (design: fixtures/astronomy-shop/DESIGN.md)
-evals/             independent expected outcomes, SQL and LLM controls, ablation, grounding eval runner
-scripts/           setup, smoke, investigate (CLI), serve (UI), MCP bridge, fixture builders, repo demo
-docs/              STATUS, QUICKSTART, PROJECT_GUIDE, ARCHITECTURE, CONTRACTS, GRAPH_QUERIES, UI, MCP, results/, repo/
+src/rw/                      product: contracts, graph, verification, probes, grounding, pipeline, API, simulation, MCP server, static UI
+src/rw/repo/                 second workflow: Git-history indexing and deterministic evidence queries
+fixtures/astronomy-incident/ incident demo fixture: twelve services, three stores, order-to-ledger lineage
+fixtures/astronomy-shop/     four-service Astronomy Shop fixture used for the published comparisons
+fixtures/shop/               default fixture for tests and controls: cart and checkout, saved carts, probe harness
+artifacts/demo/replays/      saved agent conversations for the incident demo
+evals/                       hand-derived expected outcomes, SQL and LLM controls, relationship-removal experiment, grounding evals
+scripts/                     setup, smoke test, CLI, demo and console servers, MCP bridge, fixture and brand builders
+tests/                       unit, integration (real FalkorDB), UI and acceptance tests
+docs/                        quickstart, status, project guide, architecture, contracts, graph queries, UI, MCP, results, demo
 ```
 
-Design questions and known gaps are tracked as repository issues (see GitHub Issues). HiveMind is a separate project; this repository does not build it.
+<details>
+<summary><strong>Visual identity and assets</strong></summary>
+
+![RollbackWitness — Code goes back. Data stays.](src/rw/static/brand/cover.png)
+
+[SVG and PNG assets](src/rw/static/brand/) · [Usage guide](src/rw/static/brand/README.md) · [Download the kit](src/rw/static/brand/rollbackwitness-brand-kit.zip)
+
+</details>

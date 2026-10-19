@@ -25,6 +25,12 @@ def test_workspace_assets_are_served_with_browser_content_types(path, content_ty
         response = client.get(path)
         assert response.status_code == 200
         assert content_type in response.headers["content-type"]
+        assert response.headers["cache-control"] == "no-cache"
+
+
+def test_workspace_html_is_revalidated_after_ui_updates():
+    with TestClient(create_app()) as client:
+        assert client.get("/").headers["cache-control"] == "no-cache"
 
 
 def test_workspace_overrides_windows_plain_text_module_association(monkeypatch):

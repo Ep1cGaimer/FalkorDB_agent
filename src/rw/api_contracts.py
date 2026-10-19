@@ -35,6 +35,7 @@ class QueryAudit(View):
     params: dict[str, JsonValue]
     rows: int = Field(ge=0)
     truncated: bool
+    cypher: str | None = None  # the fixed query text, for the human UI only
 
 
 class CitationView(Citation):
@@ -127,6 +128,7 @@ class VerificationView(VerificationResult):
 
 class ReportView(View):
     startup_checks: dict[str, StartupResult]
+    no_state_read_services: list[str] = Field(default_factory=list)
     plan: ReportPlanView
     plan_id: Annotated[str, Field(pattern=r"^plan:[0-9a-f]{16}$")]
     plan_hash: HashString

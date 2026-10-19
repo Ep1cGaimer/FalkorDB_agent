@@ -1,0 +1,22 @@
+{
+  "fixture": "astronomy-incident",
+  "request": "Japanese shoppers are seeing wrong totals since 3.2.0. Roll back accounting and fraud-detection to 3.1.0, their currency conversion is the suspect. Leave checkout alone.",
+  "answer": "Yes, turn off localCurrencyCheckout on checkout and keep everything else on 3.2.0.",
+  "transcripts": [
+    "historical-2-1-23b109e3a51cfad7.json",
+    "historical-2-2-ad259a93752646c2.json",
+    "historical-2-3-ce676f9d5a6ea77a.json"
+  ],
+  "outcomes": [
+    "BLOCKED",
+    "CLARIFICATION",
+    "BOUNDED_PASS"
+  ],
+  "source_report": "artifacts\\reports\\c56ff4e0e3ccbad3.json",
+  "transcript_replay_validated": true,
+  "fresh_graph_verification": "passed:20261019T002207Z",
+  "expected_plan_hashes": [
+    "sha256:56c951804ba23fb0887c3830149f58b8684bf269cf0a7b3d45b008628fd811c3",
+    "sha256:532983b349d2d5c5d0152be75342bc221938be3b37ffa7eac400a83858cbfc1e"
+  ]
+}

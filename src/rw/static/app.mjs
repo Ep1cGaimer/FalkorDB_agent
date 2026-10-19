@@ -11,6 +11,8 @@ const state = {
   inv: null, attemptIndex: 0, busy: null, error: null,
   selected: null, focusRecord: null, overlay: null, returnFocus: null, contexts: [], contextError: null,
   transcripts: [], samples: [], history: [], liveRequest: "", retainedExpanded: false,
+  // Graph view state, keyed by `${investigation}|${plan_hash}`; null entries mean "not available".
+  cluster: null, drawerOpen: false, cutShown: null, origins: {}, baseline: {}, ablation: {},
   form: { request: "", snapshot: "", mode: "live", replay: "", answerReplay: "", altReplay: "", answer: "" },
 };
 
@@ -101,7 +103,20 @@ async function restoreNavigation(target) {
   rememberView();
 }
 
+// Lineage is fetched once per plan after its report exists; absence (404) just hides the origin column.
+function ensureOrigins() {
+  const attempt = currentAttempt(state);
+  if (!state.inv || !attempt?.report || !attempt.plan_hash) return;
+  const key = `${state.inv.id}|${attempt.plan_hash}`;
+  if (state.origins[key] !== undefined) return;
+  state.origins[key] = "loading";
+  api("GET", `/api/investigations/${state.inv.id}/plans/${attempt.plan_hash}/origins`)
+    .then(data => { state.origins[key] = data; }, () => { state.origins[key] = { error: "unavailable", origins: [] }; })
+    .finally(() => { if (currentAttempt(state)?.plan_hash === attempt.plan_hash) render(); });
+}
+
 function render() {
+  ensureOrigins();
   document.title = workspaceTitle(contextFor(state), currentAttempt(state));
   const active = document.activeElement;
   const focusedId = active?.id;
@@ -236,7 +251,7 @@ const actions = {
   },
   openInvestigation(id) {
     execute("Loading investigation…", async () => {
-      state.overlay = null; state.focusRecord = null;
+      state.overlay = null; state.focusRecord = null; state.cluster = null; state.cutShown = null;
       selectLatest(await loadInvestigation(id));
       document.getElementById("sidebar").classList.remove("open");
     });
@@ -247,7 +262,7 @@ const actions = {
   newInvestigation() {
     if (state.busy) return;
     navigate(() => {
-      state.inv = null; state.attemptIndex = 0; state.selected = null; state.focusRecord = null; state.error = null; state.overlay = null;
+      state.inv = null; state.attemptIndex = 0; state.selected = null; state.focusRecord = null; state.cluster = null; state.cutShown = null; state.error = null; state.overlay = null;
       state.form.answer = ""; state.form.answerReplay = ""; state.form.altReplay = "";
       if (state.form.mode === "live") state.form.request = state.liveRequest;
     });
@@ -261,7 +276,31 @@ const actions = {
     else if (state.inv) actions.newInvestigation();
   },
   selectAttempt(index) {
-    if (!state.busy && index !== state.attemptIndex) navigate(() => { state.attemptIndex = index; state.selected = null; });
+    if (!state.busy && index !== state.attemptIndex) navigate(() => { state.attemptIndex = index; state.selected = null; state.cluster = null; state.cutShown = null; });
+  },
+  selectCluster(id, target) {
+    state.cluster = state.cluster === id ? null : id;
+    if (state.cluster && target) state.selected = target;
+    render();
+  },
+  setDrawerOpen(open) { if (open !== state.drawerOpen) state.drawerOpen = open; },
+  showCut(kind) { state.cutShown = kind; render(); },
+  async askBaseline(planHash) {
+    const key = `${state.inv.id}|${planHash}`;
+    if (state.baseline[key] === "loading") return;
+    state.baseline[key] = "loading"; render();
+    try { state.baseline[key] = await api("POST", `/api/investigations/${state.inv.id}/plans/${planHash}/baseline`); }
+    catch (error) { state.baseline[key] = { error: error.message || "The plain-agent run failed." }; }
+    render();
+  },
+  async ablate(planHash, kind) {
+    const key = `${state.inv.id}|${planHash}`, remove = kind === "DERIVED_FROM" ? ["DERIVED_FROM"] : ["EXECUTES_ROUTE", "READS_FROM", "IN_STORE"];
+    state.ablation[key] = { ...(state.ablation[key] || {}), [kind]: "loading" }; render();
+    try {
+      const result = await api("POST", `/api/investigations/${state.inv.id}/plans/${planHash}/ablation`, { remove });
+      state.ablation[key] = { ...state.ablation[key], [kind]: result }; state.cutShown = kind;
+    } catch (error) { state.ablation[key] = { ...state.ablation[key], [kind]: { error: error.message || "Ablation failed." } }; }
+    render();
   },
   inspect(selected) { state.selected = selected; actions.openOverlay("receipt"); },
   openOverlay(kind, service) {
@@ -282,7 +321,9 @@ const actions = {
     if (mode === "live") state.form.request = state.liveRequest;
     else {
       const first = state.transcripts.filter(t => !t.request_text.includes("\n\nAgent asked:"));
-      const t = first.find(t => t.replay_path === state.form.replay) || first[0];
+      const t = first.find(t => t.replay_path === state.form.replay)
+        || first.find(t => t.request_text === state.form.request && t.outcome === "proposal")
+        || first.find(t => t.outcome === "proposal") || first[0];
       if (t) { state.form.replay = t.replay_path; state.form.request = t.request_text; }
     }
     state.error = null; render();

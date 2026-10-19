@@ -20,11 +20,18 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
-FIXTURE = ROOT / "fixtures" / "astronomy-shop"
 OUT = ROOT / "artifacts" / "ablation"
-FLEET = [("checkout", "3.1.0"), ("accounting", "3.1.0"), ("fraud-detection", "3.1.0")]
 EDGES = ["EXECUTES_ROUTE", "READS_FROM", "IN_STORE", "WRITTEN_BY"]
-CONDITIONS = [("full graph", [])] + [(f"no {e}", [e]) for e in EDGES] + [("no relationships (all four)", EDGES)]
+# fixture -> (fleet, extra edge types it carries). astronomy-shop is the recorded default.
+SETUPS = {
+    "astronomy-shop": ([("checkout", "3.1.0"), ("accounting", "3.1.0"), ("fraud-detection", "3.1.0")], []),
+    "astronomy-incident": ([("accounting", "3.1.0"), ("fraud-detection", "3.1.0")], ["DERIVED_FROM"]),
+}
+NAME = sys.argv[1] if len(sys.argv) > 1 else "astronomy-shop"
+FIXTURE = ROOT / "fixtures" / NAME
+FLEET, EXTRA = SETUPS[NAME]
+CONDITIONS = ([("full graph", [])] + [(f"no {e}", [e]) for e in EDGES + EXTRA]
+              + [("no relationships (all four)", EDGES)])
 
 
 def run(removed: list[str]) -> dict:
@@ -47,14 +54,17 @@ def run(removed: list[str]) -> dict:
             changes.append(FleetEntry(service=service, release_id=release["release_id"], flags={}))
         plan, errors = session.plan_from_proposal(
             GroundingProposal(changes=changes, citations=[], rationale="ablation"),
-            "Put checkout, accounting and fraud-detection back on 3.1.0.", origin="fixture")
+            "Put " + ", ".join(s for s, _ in FLEET) + " back on 3.1.0.", origin="fixture")
         assert plan is not None and not errors, errors
         confirmation = ScopeConfirmation(plan_hash=plan.plan_hash(), confirmed_by="eval",
                                          confirmed_at=datetime.now(timezone.utc).isoformat(timespec="seconds"))
         report = session.verify(plan, confirmation)
         v = report["verification"]
         witnesses = sum(1 for ob in v["obligations"] if ob.get("witness_path"))
-        return {"edges_deleted": deleted, "nodes": nodes_after, "disposition": v["disposition"],
+        failing = sorted({r["tuple"]["record_id"] for r in v["receipts"] if r["result"] == "FAIL"})
+        origins, log = G.record_origins(session.g, session.snapshot_id, failing) if failing else ([], {"complete": True})
+        return {"origins_traced": len({o["batch_id"] for o in origins if o["hops"] and o["lineage_complete"]}),
+                "lineage_complete": log["complete"], "edges_deleted": deleted, "nodes": nodes_after, "disposition": v["disposition"],
                 "obligations": len(v["obligations"]), "probes_run": len(v["receipts"]),
                 "failures_found": sum(r["result"] == "FAIL" for r in v["receipts"]),
                 "witness_paths": witnesses, "gap_kinds": sorted({g["kind"] for g in v["gaps"]}),
@@ -67,13 +77,13 @@ def main() -> int:
     rows = [{"condition": name, "removed": removed, **run(removed)} for name, removed in CONDITIONS]
     OUT.mkdir(parents=True, exist_ok=True)
     path = OUT / f"{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}.json"
-    path.write_text(json.dumps({"fixture": "astronomy-shop", "snapshot": "snap-001", "fleet": FLEET,
+    path.write_text(json.dumps({"fixture": NAME, "snapshot": "snap-001", "fleet": FLEET,
                                 "rows": rows}, indent=2), encoding="utf-8")
-    print("| condition | edges deleted | nodes | disposition | checks derived | probes run | failures found | witness paths | gaps |")
-    print("|---|---|---|---|---|---|---|---|---|")
+    print("| condition | edges deleted | nodes | disposition | checks derived | probes run | failures found | witness paths | lineage traced | gaps |")
+    print("|---|---|---|---|---|---|---|---|---|---|")
     for r in rows:
         print(f"| {r['condition']} | {r['edges_deleted']} | {r['nodes']} | {r['disposition']} | {r['obligations']} | "
-              f"{r['probes_run']} | {r['failures_found']} | {r['witness_paths']} | {r['gaps']} ({', '.join(r['gap_kinds']) or '-'}) |")
+              f"{r['probes_run']} | {r['failures_found']} | {r['witness_paths']} | {r['origins_traced']} | {r['gaps']} ({', '.join(r['gap_kinds']) or '-'}) |")
     print(f"\nsaved {path}")
     return 0
 

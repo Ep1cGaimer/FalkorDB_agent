@@ -30,11 +30,24 @@ const paths = {
   file: ["M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Z", "M14 2v6h6M8 13h8m-8 4h5"],
   play: ["m8 5 11 7-11 7V5Z"], search: ["m16 16 5 5"], menu: ["M4 6h16M4 12h16M4 18h16"],
 };
+const brandIcons = new Map([
+  ["layers", "release"], ["release", "release"], ["code", "reader"], ["reader", "reader"],
+  ["file", "record"], ["record", "record"], ["database", "store"], ["store", "store"],
+  ["graph", "evidence-path"], ["evidence-path", "evidence-path"], ["review", "receipt"],
+  ["receipt", "receipt"], ["probe", "probe"], ["snapshot", "snapshot"],
+  ["shield", "approval"], ["approval", "approval"], ["rollback", "rollback"],
+]);
 export function icon(name, className = "") {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   Object.entries({ viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "1.65",
     "stroke-linecap": "round", "stroke-linejoin": "round", class: `icon ${className}`, "aria-hidden": "true" })
     .forEach(([key, value]) => svg.setAttribute(key, value));
+  if (brandIcons.has(name)) {
+    const use = document.createElementNS(svg.namespaceURI, "use");
+    use.setAttribute("href", `/static/brand/icons.svg#${brandIcons.get(name)}`);
+    svg.append(use);
+    return svg;
+  }
   for (const d of paths[name] || paths.file) {
     const path = document.createElementNS(svg.namespaceURI, "path"); path.setAttribute("d", d); svg.append(path);
   }
@@ -69,9 +82,18 @@ export function hash(value) {
   return node;
 }
 export function panel(title, subtitle, content, action = null, className = "") {
+  const symbol = panelSymbols.get(title);
   return el("section", { class: `panel ${className}` }, el("div", { class: "panel-heading" },
-    el("div", {}, el("h2", {}, title), subtitle ? el("p", {}, subtitle) : null), action), content);
+    el("div", {}, el("h2", { class: "panel-title" }, symbol ? icon(symbol) : null, title), subtitle ? el("p", {}, subtitle) : null), action), content);
 }
+const panelSymbols = new Map([
+  ["Running services", "release"], ["What should the rollback do?", "rollback"],
+  ["Proposed changes", "release"], ["Saved-data compatibility", "reader"],
+  ["Evidence still needed", "evidence-path"], ["Why this is blocked — FalkorDB path", "evidence-path"],
+  ["Verified reads — FalkorDB path", "evidence-path"], ["Incomplete evidence — FalkorDB path", "evidence-path"],
+  ["Local simulation", "approval"], ["Ready to simulate", "approval"], ["Simulation complete", "receipt"],
+  ["Next step", "rollback"], ["Compare candidates", "release"],
+]);
 export function details(title, ...content) {
   return el("details", { class: "disclosure" }, el("summary", {}, title, icon("down")), ...content);
 }

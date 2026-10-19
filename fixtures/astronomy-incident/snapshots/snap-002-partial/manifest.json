@@ -1,0 +1,1173 @@
+{
+  "captured_at": "2026-10-16T21:40:00Z",
+  "deployments": [
+    {
+      "flags": {},
+      "service": "accounting",
+      "version": "3.2.0"
+    },
+    {
+      "flags": {},
+      "service": "ad",
+      "version": "3.2.0"
+    },
+    {
+      "flags": {},
+      "service": "cart",
+      "version": "3.2.0"
+    },
+    {
+      "flags": {
+        "localCurrencyCheckout": true
+      },
+      "service": "checkout",
+      "version": "3.2.0"
+    },
+    {
+      "flags": {},
+      "service": "currency",
+      "version": "3.2.0"
+    },
+    {
+      "flags": {},
+      "service": "email",
+      "version": "3.2.0"
+    },
+    {
+      "flags": {},
+      "service": "fraud-detection",
+      "version": "3.2.0"
+    },
+    {
+      "flags": {},
+      "service": "frontend",
+      "version": "3.2.0"
+    },
+    {
+      "flags": {},
+      "service": "payment",
+      "version": "3.2.0"
+    },
+    {
+      "flags": {},
+      "service": "quote",
+      "version": "3.2.0"
+    },
+    {
+      "flags": {},
+      "service": "recommendation",
+      "version": "3.2.0"
+    },
+    {
+      "flags": {},
+      "service": "shipping",
+      "version": "3.2.0"
+    }
+  ],
+  "environment": "fixture-local",
+  "snapshot": "snap-002-partial",
+  "stores": [
+    {
+      "coverage": "COMPLETE",
+      "kind": "kv-cache",
+      "name": "cart-cache",
+      "records": [
+        {
+          "format": "Cart/v1",
+          "payload": "payloads/cart-14d57954.bin",
+          "payload_hash": "sha256:b4fa090aa081f62935a41d32bce0cd5b324d2cbc029b726c574194dca0721bdf",
+          "record_id": "cart-14d57954",
+          "writer": {
+            "service": "cart",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "Cart/v1",
+          "payload": "payloads/cart-41e8d4ba.bin",
+          "payload_hash": "sha256:81750de0685ee52da43794784fb558b45aa7638eb05c9c65fa108520d3cd67f1",
+          "record_id": "cart-41e8d4ba",
+          "writer": {
+            "service": "cart",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "Cart/v1",
+          "payload": "payloads/cart-f91b0d1c.bin",
+          "payload_hash": "sha256:308e54a112ce6387c3f714c21fb941d0bd53e3e840390b7e1e075c5374375dbe",
+          "record_id": "cart-f91b0d1c",
+          "writer": {
+            "service": "cart",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "Cart/v1",
+          "payload": "payloads/cart-c63d7034.bin",
+          "payload_hash": "sha256:55cf898dab6d241dcf8cc4e71881b115b77761d985ec81e16a3e3bb6c7475b42",
+          "record_id": "cart-c63d7034",
+          "writer": {
+            "service": "cart",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "Cart/v1",
+          "payload": "payloads/cart-9c6bbfd2.bin",
+          "payload_hash": "sha256:04cabc44a592b32ee70e50c470b3a0f190f274dfacd7eceafec4548c526dae17",
+          "record_id": "cart-9c6bbfd2",
+          "writer": {
+            "service": "cart",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "Cart/v1",
+          "payload": "payloads/cart-c98cc515.bin",
+          "payload_hash": "sha256:cd414fed59c8bbd3f6d2c7b28b041a9bf2838ae39e48c74f939fcfa9112f489b",
+          "record_id": "cart-c98cc515",
+          "writer": {
+            "service": "cart",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "Cart/v1",
+          "payload": "payloads/cart-04a2a7b7.bin",
+          "payload_hash": "sha256:473c65991097be8cad9927412dd33db675b311eeb2230f91f7e9b8239066cd2b",
+          "record_id": "cart-04a2a7b7",
+          "writer": {
+            "service": "cart",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "Cart/v1",
+          "payload": "payloads/cart-4325914b.bin",
+          "payload_hash": "sha256:a0fc8e09929fd8dbf0330eb400c5b54ee3774d15c6c024d46d4c800ae315680e",
+          "record_id": "cart-4325914b",
+          "writer": {
+            "service": "cart",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "Cart/v1",
+          "payload": "payloads/cart-7481f4d5.bin",
+          "payload_hash": "sha256:edef1012d0c72d085b9dfd9c373f054eb50e1e4c9ee1ac523271e433a72cdc6d",
+          "record_id": "cart-7481f4d5",
+          "writer": {
+            "service": "cart",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "Cart/v1",
+          "payload": "payloads/cart-469324cf.bin",
+          "payload_hash": "sha256:f8cc92ffee09716673dcc9125a7cd7ecba292aec13e46cb1e7a737e2aa8d695a",
+          "record_id": "cart-469324cf",
+          "writer": {
+            "service": "cart",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "Cart/v1",
+          "payload": "payloads/cart-a0150261.bin",
+          "payload_hash": "sha256:9e084f9723a787ab7422a94bbb0b4f2f73e7d46033806b1c8c033999e472648b",
+          "record_id": "cart-a0150261",
+          "writer": {
+            "service": "cart",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "Cart/v1",
+          "payload": "payloads/cart-42e54f88.bin",
+          "payload_hash": "sha256:404c9e106a667d6c3fd4e674e21974acf5f214841c576462f3559c321836aa0e",
+          "record_id": "cart-42e54f88",
+          "writer": {
+            "service": "cart",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "Cart/v1",
+          "payload": "payloads/cart-96a8adf1.bin",
+          "payload_hash": "sha256:a65876645a43a3a4154dee51b0ea2943d1352d75d275ef29648f5f2860434dbd",
+          "record_id": "cart-96a8adf1",
+          "writer": {
+            "service": "cart",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "format": "Cart/v1",
+          "payload": "payloads/cart-99c74a81.bin",
+          "payload_hash": "sha256:646aa21c194de2ed7fc2e4bc7d7775823f9fce8bd405513f7a25165675e7d752",
+          "record_id": "cart-99c74a81",
+          "writer": {
+            "service": "cart",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "format": "Cart/v1",
+          "payload": "payloads/cart-1d671e49.bin",
+          "payload_hash": "sha256:69d4a581e76f37512cb52aa990abf5bc3b3a46346f7582e852dad11215fa41e6",
+          "record_id": "cart-1d671e49",
+          "writer": {
+            "service": "cart",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "format": "Cart/v1",
+          "payload": "payloads/cart-e53ed37a.bin",
+          "payload_hash": "sha256:426c3d45cc88c7ed1fb04bcbfdd15c219e57d313e7738c32dfa25a7ed7f9728f",
+          "record_id": "cart-e53ed37a",
+          "writer": {
+            "service": "cart",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "format": "Cart/v1",
+          "payload": "payloads/cart-608e6058.bin",
+          "payload_hash": "sha256:92c0cde9fd7659cf0c39901ab1bdb6ca50029d252eadd2a0b9a0725bf5b2490f",
+          "record_id": "cart-608e6058",
+          "writer": {
+            "service": "cart",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "format": "Cart/v1",
+          "payload": "payloads/cart-0c5504b4.bin",
+          "payload_hash": "sha256:c8f61cb5f6b8b291a7c602cc352f6e8195ad399440f3fead124d87ef766b9642",
+          "record_id": "cart-0c5504b4",
+          "writer": {
+            "service": "cart",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "format": "Cart/v1",
+          "payload": "payloads/cart-9745e13f.bin",
+          "payload_hash": "sha256:59d6bd7dce4bbe7986f1105300b38d35e03145d385cdb04c3baf0e2c3e186e3f",
+          "record_id": "cart-9745e13f",
+          "writer": {
+            "service": "cart",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "format": "Cart/v1",
+          "payload": "payloads/cart-daa7b6a5.bin",
+          "payload_hash": "sha256:45bb7a06d23393d1da7ca1104a9bfc69bf2f5c68fdd4e403ee5ee44d93517f65",
+          "record_id": "cart-daa7b6a5",
+          "writer": {
+            "service": "cart",
+            "version": "3.2.0"
+          }
+        }
+      ]
+    },
+    {
+      "coverage": "PARTIAL",
+      "kind": "postgres-table",
+      "name": "ledger",
+      "records": [
+        {
+          "derived_from": [
+            "orders-0@1040"
+          ],
+          "format": "ledger/v1",
+          "payload": "payloads/ledger-1001.bin",
+          "payload_hash": "sha256:2e36b0073423f803b5aabd825c73c5aabde9e589c1ebe5b713fb150935966e92",
+          "record_id": "ledger-1001",
+          "writer": {
+            "service": "accounting",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-1@1057"
+          ],
+          "format": "ledger/v1",
+          "payload": "payloads/ledger-1002.bin",
+          "payload_hash": "sha256:3ef2598fb627e2ff30caa33bf6d75837a5308e9948159d3095470785efd458b8",
+          "record_id": "ledger-1002",
+          "writer": {
+            "service": "accounting",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-2@1074"
+          ],
+          "format": "ledger/v1",
+          "payload": "payloads/ledger-1003.bin",
+          "payload_hash": "sha256:29cca0e2d4710f89ba6895da4b5d2fffff5f200927f979b90f1abf3e3dab98a5",
+          "record_id": "ledger-1003",
+          "writer": {
+            "service": "accounting",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-1@1058"
+          ],
+          "format": "ledger/v1",
+          "payload": "payloads/ledger-1004.bin",
+          "payload_hash": "sha256:1c0ac83afdcb6ccc5d53d6b588f21f408a34970094312b8841de70723f2847de",
+          "record_id": "ledger-1004",
+          "writer": {
+            "service": "accounting",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-2@1075"
+          ],
+          "format": "ledger/v1",
+          "payload": "payloads/ledger-1005.bin",
+          "payload_hash": "sha256:b59b7b9f718cd0fa31fae6e4785c2c363ac744a3310dde19cd1405626a57ad4d",
+          "record_id": "ledger-1005",
+          "writer": {
+            "service": "accounting",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-0@1042"
+          ],
+          "format": "ledger/v1",
+          "payload": "payloads/ledger-1006.bin",
+          "payload_hash": "sha256:eaaa117ea5f7cffb0c88941682c41f9730c4945a36fed5621b168457d4868ba2",
+          "record_id": "ledger-1006",
+          "writer": {
+            "service": "accounting",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-1@1059"
+          ],
+          "format": "ledger/v1",
+          "payload": "payloads/ledger-1007.bin",
+          "payload_hash": "sha256:dbf0983712a66fdbedc145774f1f752dbeadbaccb1dd90396519ed836a96a4dd",
+          "record_id": "ledger-1007",
+          "writer": {
+            "service": "accounting",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-2@1076"
+          ],
+          "format": "ledger/v1",
+          "payload": "payloads/ledger-1008.bin",
+          "payload_hash": "sha256:fb6cf9de8667188b5d84273eb0564ed34601bfd17de0ed20b1ab97a20f86fe59",
+          "record_id": "ledger-1008",
+          "writer": {
+            "service": "accounting",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-0@1043"
+          ],
+          "format": "ledger/v1",
+          "payload": "payloads/ledger-1009.bin",
+          "payload_hash": "sha256:76572d8780dd4d2b8e2e4f51bdc0921c161b79e71438ed91cbfecd6b92361307",
+          "record_id": "ledger-1009",
+          "writer": {
+            "service": "accounting",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-2@1077"
+          ],
+          "format": "ledger/v1",
+          "payload": "payloads/ledger-1010.bin",
+          "payload_hash": "sha256:5fe6de941c8c9e66f7fdee08c51fc4f45f8a137d5d3016f8914c476902ddd3d4",
+          "record_id": "ledger-1010",
+          "writer": {
+            "service": "accounting",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-0@1044"
+          ],
+          "format": "ledger/v1",
+          "payload": "payloads/ledger-1011.bin",
+          "payload_hash": "sha256:0209b18474d3d4e8e7b17d9fbb15f5b9e8553b6c5431aef2faffa73a6a96e1ca",
+          "record_id": "ledger-1011",
+          "writer": {
+            "service": "accounting",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-1@1061"
+          ],
+          "format": "ledger/v1",
+          "payload": "payloads/ledger-1012.bin",
+          "payload_hash": "sha256:6579f4118cd185981a2d9a885cb15f2b7512c5cc81afac962496a8bca36e5167",
+          "record_id": "ledger-1012",
+          "writer": {
+            "service": "accounting",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-2@1078"
+          ],
+          "format": "ledger/v1",
+          "payload": "payloads/ledger-1013.bin",
+          "payload_hash": "sha256:9e158a3edc5b062a55bc442b3561d62e88fda6f77b1b0a918d737d1d1fcae19b",
+          "record_id": "ledger-1013",
+          "writer": {
+            "service": "accounting",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-0@1045"
+          ],
+          "format": "ledger/v1",
+          "payload": "payloads/ledger-1014.bin",
+          "payload_hash": "sha256:54e79e4ef2ab4ac2c63093295eba5e8ec16a395ad4b5be9cb6cec11552b985d1",
+          "record_id": "ledger-1014",
+          "writer": {
+            "service": "accounting",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-1@1062"
+          ],
+          "format": "ledger/v1",
+          "payload": "payloads/ledger-1015.bin",
+          "payload_hash": "sha256:8a2fe567cb6718e81aca2f67b268dfcd45ea325e6183d8ddb30e0ed5df57c347",
+          "record_id": "ledger-1015",
+          "writer": {
+            "service": "accounting",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-0@1046"
+          ],
+          "format": "ledger/v1",
+          "payload": "payloads/ledger-1016.bin",
+          "payload_hash": "sha256:735707dde82030162ee5a695e4e4d5115f174a30a45c8bc4cb6ba03d7c6c6c80",
+          "record_id": "ledger-1016",
+          "writer": {
+            "service": "accounting",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-1@1063"
+          ],
+          "format": "ledger/v1",
+          "payload": "payloads/ledger-1017.bin",
+          "payload_hash": "sha256:f51bcedecc497e56d794749a218fc964aed2c68c406d39dd27c11f65d0063c1f",
+          "record_id": "ledger-1017",
+          "writer": {
+            "service": "accounting",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-2@1080"
+          ],
+          "format": "ledger/v1",
+          "payload": "payloads/ledger-1018.bin",
+          "payload_hash": "sha256:155587164c1dc5effab8d389d33fdb273eb20291a97f2e6cfcc6b6900712dc1f",
+          "record_id": "ledger-1018",
+          "writer": {
+            "service": "accounting",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-0@1047"
+          ],
+          "format": "ledger/v1",
+          "payload": "payloads/ledger-1019.bin",
+          "payload_hash": "sha256:c32e5e0680af5786d1c246086c0d1472b0e0358a25dc838e47da3ae6d3076c03",
+          "record_id": "ledger-1019",
+          "writer": {
+            "service": "accounting",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-1@1064"
+          ],
+          "format": "ledger/v1",
+          "payload": "payloads/ledger-1020.bin",
+          "payload_hash": "sha256:d7a24b8f075c98db2bdd0611cf660fc6f3ead29ac352d6b94dbb16ce2a8c8c8e",
+          "record_id": "ledger-1020",
+          "writer": {
+            "service": "accounting",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-2@1081"
+          ],
+          "format": "ledger/v1",
+          "payload": "payloads/ledger-1021.bin",
+          "payload_hash": "sha256:69b88d7c0616ed0e7240817251fe3fe430526b632c775004a24182187cad6122",
+          "record_id": "ledger-1021",
+          "writer": {
+            "service": "accounting",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-0@1048"
+          ],
+          "format": "ledger/v2",
+          "payload": "payloads/ledger-1022.bin",
+          "payload_hash": "sha256:a8308219b42ca9285f59520f989a45214c392b01909ebcb70749c366e0910ba2",
+          "record_id": "ledger-1022",
+          "writer": {
+            "service": "accounting",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-1@1065"
+          ],
+          "format": "ledger/v2",
+          "payload": "payloads/ledger-1023.bin",
+          "payload_hash": "sha256:bf9835fb1fdc358945e7aafa511dc615e3f806826f9ac51aed94b0b16e1d06fd",
+          "record_id": "ledger-1023",
+          "writer": {
+            "service": "accounting",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-2@1082"
+          ],
+          "format": "ledger/v2",
+          "payload": "payloads/ledger-1024.bin",
+          "payload_hash": "sha256:5d07ce9700c6326cf48de6d1267f5ca2a5412ea0e8a8e4e4e9b0a08ea701c449",
+          "record_id": "ledger-1024",
+          "writer": {
+            "service": "accounting",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-0@1049"
+          ],
+          "format": "ledger/v2",
+          "payload": "payloads/ledger-1025.bin",
+          "payload_hash": "sha256:2421bcce3d467abb3aa7122ec59554cffb8153e84aa4da72094d21e2bf20bd8f",
+          "record_id": "ledger-1025",
+          "writer": {
+            "service": "accounting",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-1@1066"
+          ],
+          "format": "ledger/v2",
+          "payload": "payloads/ledger-1026.bin",
+          "payload_hash": "sha256:97087a5dd02da5451132daed7d2ce7aac75356eef6e7de8829372e5bc230cc00",
+          "record_id": "ledger-1026",
+          "writer": {
+            "service": "accounting",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-2@1083"
+          ],
+          "format": "ledger/v2",
+          "payload": "payloads/ledger-1027.bin",
+          "payload_hash": "sha256:35479b24b8334a753ae95f9fe04b09f46678ed9566b2116a08d6ff1bd0b00d45",
+          "record_id": "ledger-1027",
+          "writer": {
+            "service": "accounting",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-0@1050"
+          ],
+          "format": "ledger/v2",
+          "payload": "payloads/ledger-1028.bin",
+          "payload_hash": "sha256:2bcec3e443d92f9da7d9c711838733e247e8a21a29e2b4961b9412ad69c63b15",
+          "record_id": "ledger-1028",
+          "writer": {
+            "service": "accounting",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-1@1067"
+          ],
+          "format": "ledger/v2",
+          "payload": "payloads/ledger-1029.bin",
+          "payload_hash": "sha256:27fdae037d1c50651233b2cfe3be7a8a4bb27929902a2d644eacdd09c8b65fec",
+          "record_id": "ledger-1029",
+          "writer": {
+            "service": "accounting",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-2@1084"
+          ],
+          "format": "ledger/v2",
+          "payload": "payloads/ledger-1030.bin",
+          "payload_hash": "sha256:5703ce04c1a05a31c98ddcab4167c998711859e74cebdad5ac7c7fa19a155b2e",
+          "record_id": "ledger-1030",
+          "writer": {
+            "service": "accounting",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-0@1051"
+          ],
+          "format": "ledger/v2",
+          "payload": "payloads/ledger-1031.bin",
+          "payload_hash": "sha256:376d14931497e5d78244482b9bb757d2b1d1dbc0264df492274f36e7c5c0e9ef",
+          "record_id": "ledger-1031",
+          "writer": {
+            "service": "accounting",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-1@1068"
+          ],
+          "format": "ledger/v2",
+          "payload": "payloads/ledger-1032.bin",
+          "payload_hash": "sha256:b3a4432771998939906855b1363e564aa16b92adfaeeedf5448059e8f6139058",
+          "record_id": "ledger-1032",
+          "writer": {
+            "service": "accounting",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-2@1085"
+          ],
+          "format": "ledger/v2",
+          "payload": "payloads/ledger-1033.bin",
+          "payload_hash": "sha256:4c1d7a1445e7dd0f5a407467a4ade9ceb6ef21fe8feba26232f3a2239b1ff89e",
+          "record_id": "ledger-1033",
+          "writer": {
+            "service": "accounting",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-0@1052"
+          ],
+          "format": "ledger/v2",
+          "payload": "payloads/ledger-1034.bin",
+          "payload_hash": "sha256:6d03af6998a4d06f3dffffdeba108c093f3e1a01d261bca0ef9bfdb8814b147a",
+          "record_id": "ledger-1034",
+          "writer": {
+            "service": "accounting",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-1@1069"
+          ],
+          "format": "ledger/v2",
+          "payload": "payloads/ledger-1035.bin",
+          "payload_hash": "sha256:5de2ac78830e3e18f765490919f12ae11127add191b55fd0ec34990c1299d273",
+          "record_id": "ledger-1035",
+          "writer": {
+            "service": "accounting",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-2@1086"
+          ],
+          "format": "ledger/v2",
+          "payload": "payloads/ledger-1036.bin",
+          "payload_hash": "sha256:dc6e9132ae9c5631f498f2786b243c15f268fb2c8a6840c4fb2b6f0b9b05cb15",
+          "record_id": "ledger-1036",
+          "writer": {
+            "service": "accounting",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "derived_from": [
+            "orders-0@1053"
+          ],
+          "format": "ledger/v2",
+          "payload": "payloads/ledger-1037.bin",
+          "payload_hash": "sha256:57468d6a94458d4a47cd1bb994a7de6b6aa603939b2fe968abd5c524d9534b29",
+          "record_id": "ledger-1037",
+          "writer": {
+            "service": "accounting",
+            "version": "3.2.0"
+          }
+        }
+      ]
+    },
+    {
+      "coverage": "COMPLETE",
+      "kind": "kafka-topic",
+      "name": "orders",
+      "records": [
+        {
+          "format": "OrderResult/USD",
+          "payload": "payloads/orders-0@1040.bin",
+          "payload_hash": "sha256:515dfbc1242478a36f1d03baf63b577d6b747fad80d538e2aaaed27ab14aca56",
+          "record_id": "orders-0@1040",
+          "writer": {
+            "service": "checkout",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "OrderResult/USD",
+          "payload": "payloads/orders-1@1057.bin",
+          "payload_hash": "sha256:7958042a8d51025a3991c03d6d3527decc8ba919f438eb953e766695a822cedc",
+          "record_id": "orders-1@1057",
+          "writer": {
+            "service": "checkout",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "OrderResult/USD",
+          "payload": "payloads/orders-2@1074.bin",
+          "payload_hash": "sha256:72a8e8393a3160d91a2313e1908e0a2114f83dd00b0c6feb9cfa1e2e8eaa036b",
+          "record_id": "orders-2@1074",
+          "writer": {
+            "service": "checkout",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "OrderResult/USD",
+          "payload": "payloads/orders-0@1041.bin",
+          "payload_hash": "sha256:17931df5b3c1b98bcdd35ea5da896a0fc399cc8d9e0075189889910d3c2c5faf",
+          "record_id": "orders-0@1041",
+          "writer": {
+            "service": "checkout",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "OrderResult/USD",
+          "payload": "payloads/orders-1@1058.bin",
+          "payload_hash": "sha256:5624f9d05b81ed71eae71a7673075f369647eb8a45065f4f823c48e25a7f190e",
+          "record_id": "orders-1@1058",
+          "writer": {
+            "service": "checkout",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "OrderResult/USD",
+          "payload": "payloads/orders-2@1075.bin",
+          "payload_hash": "sha256:ac0494961d6a3fd426d3bbfd1002520e5102322b083c2b2327712b376889d596",
+          "record_id": "orders-2@1075",
+          "writer": {
+            "service": "checkout",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "OrderResult/USD",
+          "payload": "payloads/orders-0@1042.bin",
+          "payload_hash": "sha256:8fcb904003fc53f34d01bdc70ea32b82ab7484cbfa6afef60a77280711c465b3",
+          "record_id": "orders-0@1042",
+          "writer": {
+            "service": "checkout",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "OrderResult/USD",
+          "payload": "payloads/orders-1@1059.bin",
+          "payload_hash": "sha256:ebe4c4cfe2fe9323cbe979d20fce4e84149de7a283570fc363eee4f87d474272",
+          "record_id": "orders-1@1059",
+          "writer": {
+            "service": "checkout",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "OrderResult/USD",
+          "payload": "payloads/orders-2@1076.bin",
+          "payload_hash": "sha256:a579a8174a8bd0421d643c71b061c5af0818b09a3b017aef09cc716705df7ea5",
+          "record_id": "orders-2@1076",
+          "writer": {
+            "service": "checkout",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "OrderResult/USD",
+          "payload": "payloads/orders-0@1043.bin",
+          "payload_hash": "sha256:6865fbcb4cd855bf8bdec37340d35ff4a2910a0417699042e53c74740eb17792",
+          "record_id": "orders-0@1043",
+          "writer": {
+            "service": "checkout",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "OrderResult/USD",
+          "payload": "payloads/orders-1@1060.bin",
+          "payload_hash": "sha256:2baaf6a3c69fd8490c3ad2703b9592fc18a9b29d0b6e777dc81a9e39e51480ef",
+          "record_id": "orders-1@1060",
+          "writer": {
+            "service": "checkout",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "OrderResult/USD",
+          "payload": "payloads/orders-2@1077.bin",
+          "payload_hash": "sha256:b9858ec93510c83bade3fbd5525327d5521dce3ba62817a584a0706deba7c489",
+          "record_id": "orders-2@1077",
+          "writer": {
+            "service": "checkout",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "OrderResult/USD",
+          "payload": "payloads/orders-0@1044.bin",
+          "payload_hash": "sha256:407b9601ffda80487cf38a3d06550accd15ef3ef7bdf7a8d309113e065fdf747",
+          "record_id": "orders-0@1044",
+          "writer": {
+            "service": "checkout",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "OrderResult/USD",
+          "payload": "payloads/orders-1@1061.bin",
+          "payload_hash": "sha256:e13bbf91382ea74f6063ce15086ad01e58466ebe3bdfc1ada5332f10d048c675",
+          "record_id": "orders-1@1061",
+          "writer": {
+            "service": "checkout",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "OrderResult/USD",
+          "payload": "payloads/orders-2@1078.bin",
+          "payload_hash": "sha256:ffc8ac90001623173dd1eb280b545cc5710edf63dfc70b57f0df449c8ffea3b7",
+          "record_id": "orders-2@1078",
+          "writer": {
+            "service": "checkout",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "OrderResult/USD",
+          "payload": "payloads/orders-0@1045.bin",
+          "payload_hash": "sha256:b03bd8261a9d55b6a2eb9cba1b10c6395196dfcbc5fd01ccf00b7d07e21612cf",
+          "record_id": "orders-0@1045",
+          "writer": {
+            "service": "checkout",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "OrderResult/USD",
+          "payload": "payloads/orders-1@1062.bin",
+          "payload_hash": "sha256:5a71f513848fd7de4163028843a7cac4f8ac575cb9c5534a2168080044e4870c",
+          "record_id": "orders-1@1062",
+          "writer": {
+            "service": "checkout",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "OrderResult/USD",
+          "payload": "payloads/orders-2@1079.bin",
+          "payload_hash": "sha256:88af88037bc37f022d859dee580b93ba2b3aafb20604140f4d9e5c098bce1977",
+          "record_id": "orders-2@1079",
+          "writer": {
+            "service": "checkout",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "OrderResult/USD",
+          "payload": "payloads/orders-0@1046.bin",
+          "payload_hash": "sha256:973a026a1f1c06ac8bcf4c545e53f86328494f02c0707b1054d8271f5e94e340",
+          "record_id": "orders-0@1046",
+          "writer": {
+            "service": "checkout",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "OrderResult/USD",
+          "payload": "payloads/orders-1@1063.bin",
+          "payload_hash": "sha256:018a8ed0fa82f5c97f6cf01cd7af48475cb228608fe79d80b720124d196df974",
+          "record_id": "orders-1@1063",
+          "writer": {
+            "service": "checkout",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "OrderResult/USD",
+          "payload": "payloads/orders-2@1080.bin",
+          "payload_hash": "sha256:e69404d8f9076e614dc6c22857aee043b072017ead18e379bd3b9bb798e374c9",
+          "record_id": "orders-2@1080",
+          "writer": {
+            "service": "checkout",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "OrderResult/USD",
+          "payload": "payloads/orders-0@1047.bin",
+          "payload_hash": "sha256:02e97d26233110c64cae79c085c58ab771a68e7842c811662e6425d88c7116a5",
+          "record_id": "orders-0@1047",
+          "writer": {
+            "service": "checkout",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "OrderResult/USD",
+          "payload": "payloads/orders-1@1064.bin",
+          "payload_hash": "sha256:ac741695ae66fa0ec08a394ef6e2a5231f8ac157d2f91ac81c7ec89b1095ecdd",
+          "record_id": "orders-1@1064",
+          "writer": {
+            "service": "checkout",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "OrderResult/USD",
+          "payload": "payloads/orders-2@1081.bin",
+          "payload_hash": "sha256:e6207c0a58ce4686c075fad32f4546c677f5ac8636b134abb4c4b0fe733d304d",
+          "record_id": "orders-2@1081",
+          "writer": {
+            "service": "checkout",
+            "version": "3.1.0"
+          }
+        },
+        {
+          "format": "OrderResult/local-currency",
+          "payload": "payloads/orders-0@1048.bin",
+          "payload_hash": "sha256:8c79b5172222be9eabde0804ef51177b7f57e2b8ea489fb9339211056879aa4c",
+          "record_id": "orders-0@1048",
+          "writer": {
+            "service": "checkout",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "format": "OrderResult/local-currency",
+          "payload": "payloads/orders-1@1065.bin",
+          "payload_hash": "sha256:c17fef58ef583647de55b48873a6ff47acdc2913b87d57cd4d15ae7e6657e0a6",
+          "record_id": "orders-1@1065",
+          "writer": {
+            "service": "checkout",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "format": "OrderResult/local-currency",
+          "payload": "payloads/orders-2@1082.bin",
+          "payload_hash": "sha256:78d0795841115f74c2e38557998722f3402471c503eabdbff82e9bb1664cc8f1",
+          "record_id": "orders-2@1082",
+          "writer": {
+            "service": "checkout",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "format": "OrderResult/local-currency",
+          "payload": "payloads/orders-0@1049.bin",
+          "payload_hash": "sha256:59111e96283b4bc4a10ca1aeb087e8bc7cd17b654c4f11c48b6350a047d4bd9c",
+          "record_id": "orders-0@1049",
+          "writer": {
+            "service": "checkout",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "format": "OrderResult/local-currency",
+          "payload": "payloads/orders-1@1066.bin",
+          "payload_hash": "sha256:5581d5c8a31d48196626e2398c7d376db7e44206453b9621dc9c0ec7a0476900",
+          "record_id": "orders-1@1066",
+          "writer": {
+            "service": "checkout",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "format": "OrderResult/local-currency",
+          "payload": "payloads/orders-2@1083.bin",
+          "payload_hash": "sha256:3cd983e410a59490d4b15aa1a8502b00c4084da7e907efbdf7247c834162581c",
+          "record_id": "orders-2@1083",
+          "writer": {
+            "service": "checkout",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "format": "OrderResult/local-currency",
+          "payload": "payloads/orders-0@1050.bin",
+          "payload_hash": "sha256:4750e57299797436503a03599458feedb1718cf4eb4d26780d970e3ce573f5dc",
+          "record_id": "orders-0@1050",
+          "writer": {
+            "service": "checkout",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "format": "OrderResult/local-currency",
+          "payload": "payloads/orders-1@1067.bin",
+          "payload_hash": "sha256:e3e90daac1121c4e851418428c680c651b04363457193dbbad2797af75da95ef",
+          "record_id": "orders-1@1067",
+          "writer": {
+            "service": "checkout",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "format": "OrderResult/local-currency",
+          "payload": "payloads/orders-2@1084.bin",
+          "payload_hash": "sha256:743de0c0c3f4df8047283d48a45a8610f35f4ed41c7d589ae7815d815e014569",
+          "record_id": "orders-2@1084",
+          "writer": {
+            "service": "checkout",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "format": "OrderResult/local-currency",
+          "payload": "payloads/orders-0@1051.bin",
+          "payload_hash": "sha256:b9ed29783be4601143e186fc0320cd17747e86528310456de19fa696f841b925",
+          "record_id": "orders-0@1051",
+          "writer": {
+            "service": "checkout",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "format": "OrderResult/local-currency",
+          "payload": "payloads/orders-1@1068.bin",
+          "payload_hash": "sha256:0ca2d0c9a3c650e14502b16ed5379d6f84ce82f273ee6782262d03b2d1a4b355",
+          "record_id": "orders-1@1068",
+          "writer": {
+            "service": "checkout",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "format": "OrderResult/local-currency",
+          "payload": "payloads/orders-2@1085.bin",
+          "payload_hash": "sha256:34b1ef936b572c6fc2b53d1156cfc6757ac03eb1d9fd02e7af4ec9e7a77cd5f1",
+          "record_id": "orders-2@1085",
+          "writer": {
+            "service": "checkout",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "format": "OrderResult/local-currency",
+          "payload": "payloads/orders-0@1052.bin",
+          "payload_hash": "sha256:c8b5e92555f3c7c0e246d8a80e4dcaef30bce174321164c52bc7cefa3d1afd92",
+          "record_id": "orders-0@1052",
+          "writer": {
+            "service": "checkout",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "format": "OrderResult/local-currency",
+          "payload": "payloads/orders-1@1069.bin",
+          "payload_hash": "sha256:80643fa6c34377dd4870407dea48976600627d4a9e6757b1896097a2efb729d6",
+          "record_id": "orders-1@1069",
+          "writer": {
+            "service": "checkout",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "format": "OrderResult/local-currency",
+          "payload": "payloads/orders-2@1086.bin",
+          "payload_hash": "sha256:12d2cdb6cb12d60898a0da81a24a990ed730cbb7bd1dba2fd6acee474b7a291f",
+          "record_id": "orders-2@1086",
+          "writer": {
+            "service": "checkout",
+            "version": "3.2.0"
+          }
+        },
+        {
+          "format": "OrderResult/local-currency",
+          "payload": "payloads/orders-0@1053.bin",
+          "payload_hash": "sha256:9beac60700cd291121486dc547da78d2325f608edb2e9e9e8f05b90abd68a32a",
+          "record_id": "orders-0@1053",
+          "writer": {
+            "service": "checkout",
+            "version": "3.2.0"
+          }
+        }
+      ]
+    }
+  ]
+}

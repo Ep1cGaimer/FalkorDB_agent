@@ -41,6 +41,15 @@ from .contracts import (
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
+def applicable_receipts(verification: dict) -> list[dict]:
+    """Only exact, hash-checked obligation tuples may supply evidence to a derived view."""
+    obligations = {o["obligation_hash"]: o["tuple"] for o in verification.get("obligations", [])
+                   if h(o["tuple"]) == o["obligation_hash"]}
+    return [r for r in verification.get("receipts", [])
+            if r.get("obligation_hash") in obligations
+            and r.get("tuple") == obligations[r["obligation_hash"]]]
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 

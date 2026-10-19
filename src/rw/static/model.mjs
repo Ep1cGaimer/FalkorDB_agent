@@ -86,7 +86,8 @@ export function preferredCheck(verification, selected) {
     || rows.find(r => r.result !== "PASS") || rows[0] || null;
 }
 export function replayCandidates(transcripts, request, used = []) {
-  return transcripts.filter(t => t.request_text === request && t.outcome === "proposal" && !used.includes(t.replay_path));
+  return transcripts.filter(t => t.request_text === request && ["proposal", "question"].includes(t.outcome)
+    && !used.includes(t.replay_path));
 }
 export function usedReplays(inv) {
   return (inv?.attempts || []).map(a => {

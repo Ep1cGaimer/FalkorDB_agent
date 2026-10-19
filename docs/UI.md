@@ -37,8 +37,29 @@ forced into a predetermined result.
 Confirm the proposed scope to run graph queries and real reader probes. The review then leads
 with the trusted disposition and contrasts startup with retained-state reads. The connected
 evidence diagram shows the actual read error immediately; the diagram and matrix open the exact
-probe receipt. Source citations and raw probe evidence remain inspectable. Raw query and model
-tool-call logs stay in the API evidence, rather than appearing as product UI.
+probe receipt. Source citations and raw probe evidence remain inspectable. The raw graph queries
+the agent and checker issued are available in a collapsed "What FalkorDB was asked" drawer under the graph.
+
+### Traversal graph, query drawer and controls
+
+`graph.mjs` replaces the old four-box diagram with a data-driven SVG of the plan's evidence subgraph
+(Plan, Deployments, reader Releases, ReaderRoutes, StateStores, record clusters, writer Releases and,
+when lineage exists, origin writers). Positions are computed in JS; `buildGraph`/`layoutGraph` are pure and
+covered by `tests/js/graph.test.mjs`. Services with no retained-state reads collapse into one grey node.
+Records cluster by store, format, writer and outcome; selecting a cluster lists its records (bounded) and
+filters the compatibility matrix. Edge colour comes from receipts (red = a reader failed, green = all
+passed, grey = unresolved); dashed purple edges are DERIVED_FROM lineage from
+`GET .../plans/{hash}/origins`. If failing rows converge on one unchanged origin writer, a callout states
+it, with wording derived from the data. Columns reveal in sequence (disabled under reduced motion) and
+each header shows its real node count. If the origins endpoint is unavailable the origin column is omitted.
+
+The drawer lists the agent's graph lookups (`grounding.tool_calls`), the checker queries
+(`report.queries`, with `cypher` when present) and the origins query. It also holds two ablation buttons
+("Cut DERIVED_FROM", "Cut reader/store/record links") that call `POST .../ablation` on a disposable graph
+copy, show the returned counts and fade the corresponding edge types until restored.
+
+The verdict panel has "Ask a plain agent (no graph)", which calls `POST .../baseline` and shows a
+side-by-side card of the numbers as returned (no editorial copy); the model's raw text is collapsible.
 
 An alternative receives its own scope confirmation and verification. The previously selected
 record stays in focus across the comparison, making it clear whether the same retained data
