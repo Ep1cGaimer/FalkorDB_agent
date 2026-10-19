@@ -14,12 +14,13 @@
 </p>
 
 <p align="center">
+  <a href="#falkordb-in-action">FalkorDB in action</a> &nbsp;·&nbsp;
   <a href="#quickstart">Quickstart</a> &nbsp;·&nbsp;
   <a href="#how-it-works">How it works</a> &nbsp;·&nbsp;
-  <a href="#demo">Demo</a> &nbsp;·&nbsp;
   <a href="#results">Results</a> &nbsp;·&nbsp;
-  <a href="docs/STATUS.md">Current status</a> &nbsp;·&nbsp;
-  <a href="docs/MCP.md">MCP tools</a>
+  <a href="docs/demo/DEMO_SCRIPT.md">Demo walkthrough</a> &nbsp;·&nbsp;
+  <a href="docs/GRAPH_QUERIES.md">Graph queries</a> &nbsp;·&nbsp;
+  <a href="docs/STATUS.md">Current status</a>
 </p>
 
 ---
@@ -40,21 +41,47 @@ A person confirms the scope before checks run, and only a `BOUNDED_PASS` can be 
   <sub>Investigation workspace · synthetic Astronomy Incident fixture</sub>
 </p>
 
-<p align="center">
-  <a href="docs/demo/DEMO_SCRIPT.md">Demo walkthrough</a> &nbsp;·&nbsp;
-  <a href="docs/PROJECT_GUIDE.md">Project guide</a> &nbsp;·&nbsp;
-  <a href="docs/GRAPH_QUERIES.md">Graph queries</a>
-</p>
-
 ## The thirty-second story
 
 The demo fixture is a synthetic twelve-service shop modeled on the OpenTelemetry Astronomy Shop. Since 3.2.0, checkout saves orders in local currencies, and accounting books them as `ledger/v2` rows.
 
 1. The engineer asks: *"Japanese shoppers are seeing wrong totals since 3.2.0. Roll back accounting and fraud-detection to 3.1.0. Leave checkout alone."* The agent proposes exactly that and cites the release notes it used.
 2. Every proposed build starts **GREEN**. The checker derives 137 reader × record checks from the graph and runs them: 48 **FAIL**. The 3.1.0 readers cannot read the non-USD orders or the `ledger/v2` rows. Disposition: **BLOCKED**.
-3. FalkorDB shows why: the 16 failing ledger rows were derived from orders written by checkout 3.2.0, the service the engineer asked to leave alone.
+3. **FalkorDB shows why:** the 16 failing ledger rows were derived from orders written by checkout 3.2.0, the service the engineer asked to leave alone: `ledger/v2 row -DERIVED_FROM-> order -WRITTEN_BY-> checkout 3.2.0`.
 4. Asked for an alternative, the agent asks before touching checkout. With permission, it keeps every service on 3.2.0 and turns off checkout's `localCurrencyCheckout` flag. Rechecked from scratch: **BOUNDED_PASS**, 137/137.
 5. A person approves the local simulation. Applying the same approval twice changes nothing the second time.
+
+## FalkorDB in action
+
+FalkorDB is not just where the data sits. It decides what gets checked, and the agent works through it:
+
+- **The agent's tools are graph queries.** The agent sees the fleet, release history, who reads each store and record lineage only through fixed, parameterized Cypher queries. It never writes Cypher itself.
+- **One multi-hop query decides the checks.** `Plan → Deployment → Release → ReaderRoute → StateStore ← Batch → writer Release` returns every reader × record pair the plan will meet: 137 for the incident plan. A check means running one release's real decode function on one saved record's bytes.
+- **A lineage traversal finds the hidden connection.** A variable-length `DERIVED_FROM*` walk traces the failing ledger rows to orders written by checkout 3.2.0. That fact goes to the agent, which then proposes turning off checkout's flag instead of rolling back the readers.
+- **Every verdict has a graph path.** A BLOCKED result shows the exact path from the plan to the failing record and its writer, and the console shows the Cypher that ran.
+- **Removing relationships removes the capability.** Delete the reader, store and record links while keeping every record, and no checks can be derived, so the verdict is `NEEDS_EVIDENCE`, never a pass. Delete only `DERIVED_FROM`, and the 48 failures are still found but none of them can be traced to an origin ([results](docs/results/RESULTS.md)).
+
+The same graph in FalkorDB Browser, queried directly. This multi-hop query runs from the old accounting reader to the ledger rows it cannot read, then along `DERIVED_FROM` to the orders, and on to the checkout release that wrote them:
+
+```cypher
+MATCH p = (old:Release {service:'accounting', version:'3.1.0'})-[:EXECUTES_ROUTE]->(:ReaderRoute)
+          -[:READS_FROM]->(:StateStore {id:'store:ledger'})
+          <-[:IN_STORE]-(row:Batch {snapshot_id:'snapshot:snap-001', format_id:'ledger/v2'})
+          -[:DERIVED_FROM]->(:Batch)-[:WRITTEN_BY]->(:Release {service:'checkout', version:'3.2.0'})
+RETURN p LIMIT 6
+```
+
+<p align="center">
+  <img src="docs/images/falkordb-browser-lineage.png" width="1100" alt="FalkorDB Browser running the lineage query: accounting 3.1.0 reader route, ledger store, ledger/v2 rows, DERIVED_FROM orders, WRITTEN_BY checkout 3.2.0">
+  <br>
+  <sub>FalkorDB 6.0.2 Browser · graph <code>rw_fixture_astronomy-incident</code> · lineage query result (16 nodes, 20 edges)</sub>
+</p>
+
+<p align="center">
+  <img src="docs/images/falkordb-browser-overview.png" width="1100" alt="FalkorDB Browser overview of the incident graph with node and relationship types">
+  <br>
+  <sub>The whole incident graph: 635 nodes and 1,248 edges (releases, routes, stores, retained records, plans and probe receipts)</sub>
+</p>
 
 ## How it works
 
@@ -70,25 +97,25 @@ The demo fixture is a synthetic twelve-service shop modeled on the OpenTelemetry
 
 ## Demo
 
-**Incident demo** (`fixtures/astronomy-incident`): twelve services and 97 retained records across three stores (40 orders, 37 ledger rows, 20 saved carts). Rolling accounting and fraud-detection back to 3.1.0 starts **GREEN** but is **BLOCKED**: 48 of 137 reader checks fail. Sixteen incompatible ledger rows trace back to orders written by checkout 3.2.0. Keeping the current readers and turning off checkout's local-currency flag gives **BOUNDED_PASS**, 137/137. That stops new local-currency writes; it does not repair stored data or prove the totals correct.
+**Incident demo** (`fixtures/astronomy-incident`): twelve services and 97 retained records across three stores (40 orders, 37 ledger rows, 20 saved carts); the story above. Turning off checkout's local-currency flag stops new local-currency writes; it does not repair stored data or prove the totals correct.
 
-```powershell
-.venv/Scripts/python.exe scripts/serve_demo.py      # sh: .venv/bin/python scripts/serve_demo.py
+```sh
+.venv/bin/python scripts/serve_demo.py     # Windows: .venv\Scripts\python.exe scripts\serve_demo.py
 ```
 
-Open `http://127.0.0.1:8000`. The demo runs without a model key: open **Demo setup**, choose **Saved replay** and pick the saved conversations in `artifacts/demo/replays/` (initial proposal, clarification, answered proposal). Replays reuse a recorded agent conversation; the graph queries and reader checks run fresh, and the workspace stays labeled **Replay · not live**. With a configured model key, the same request runs live. The [demo walkthrough](docs/demo/DEMO_SCRIPT.md) has the narration and the exact inputs.
+Open `http://127.0.0.1:8000`. **No model key is needed for the demo**: open **Demo setup**, choose **Saved replay** and pick the saved conversations in `artifacts/demo/replays/` (initial proposal, clarification, answered proposal). Replays reuse a recorded agent conversation; the graph queries and reader checks run fresh, and the workspace stays labeled **Replay · not live**. With a configured model key, the same request runs live. The [demo walkthrough](docs/demo/DEMO_SCRIPT.md) has the narration and the exact inputs.
 
 **Astronomy Shop comparison** (`fixtures/astronomy-shop`): the original four-service version of the same idea, used for the published comparisons. checkout 3.2.0 writes non-USD orders that accounting and fraud-detection 3.1.0 cannot read. Rolling all three back to 3.1.0 is **BLOCKED** (32 of 80 checks fail); rolling back only checkout gives **BOUNDED_PASS** (80/80). Commands are in the [Quickstart](#quickstart).
 
 ## Results
 
-Small samples on synthetic fixtures; the same model was used on both sides of every model comparison. Treat these as indications, not benchmarks. Method, configuration and raw files: [docs/results/RESULTS.md](docs/results/RESULTS.md).
+Small samples on synthetic fixtures. Where a model is compared, both sides use the same model; the checker, relationship-removal and SQL rows have no model on the graph side. Treat these as indications, not benchmarks. Method, configuration and raw files: [docs/results/RESULTS.md](docs/results/RESULTS.md).
 
 | Comparison | RollbackWitness (graph + checker) | Control |
 |---|---|---|
-| Remove the graph's relationships, keep every record (incident fixture, no model) | Full graph: **BLOCKED**, 137 checks derived, 48 failures found | Without reader, store and record links: 0 checks derived, the failures are never found, and the verdict is `NEEDS_EVIDENCE`, never a pass |
-| Same model with and without the graph, same probe tool (shop fixture) | 13/14 investigations correct and evidence-backed; 0 unsupported "safe" claims | Plain-text control: 9/13 correct; 3 "safe" claims without probing a required reader; 1 wrong "safe" |
-| One model call with every fixture file as text (Astronomy Shop, 6 cases × 3 runs) | 6/6 cases correct | 15/18; on an incomplete order inventory it answered "safe" 2 of 3 times |
+| **Remove the graph's relationships, keep every record** (incident fixture, no model) | Full graph: **BLOCKED**, 137 checks derived, 48 failures found, 16 failures traced to their origin | Without reader, store and record links: 0 checks derived, failures never found, verdict `NEEDS_EVIDENCE`, never a pass. Without `DERIVED_FROM`: the 48 failures are still found, but none can be traced to an origin |
+| Same model with and without the graph, same probe tool (shop fixture) | 13 correct and evidence-backed + 1 clarifying question (14 runs); 0 unsupported "safe" claims | Plain-text control: 9/13 correct; 3 "safe" claims without probing a required reader; 1 wrong "safe" |
+| Deterministic checker vs one model call with every fixture file as text (Astronomy Shop, 6 designed cases; model 3 runs each) | Checker: 6/6 designed cases | Model: 15/18; on an incomplete order inventory it answered "safe" 2 of 3 times |
 | Request grounding (5 cases × 3 runs) | 13/15 matched the expected proposal or clarification | — |
 | SQL joins over the same raw facts (8 hand-derived cases) | 8/8 | 8/8. A tie: the graph is not the only way to compute obligations; it drives what the agent checks and supplies the evidence path |
 
@@ -236,56 +263,7 @@ In PowerShell, set the fixture first with `$env:RW_FIXTURE = "astronomy-incident
 
 **Tests:** `.venv/bin/python -m pytest -q -m "not live"` runs the offline suite against the local FalkorDB; `node --test tests/js/` runs the UI unit tests. `scripts/prepare_demo.py` re-validates the saved demo replays with fresh graph and reader checks. Full instructions: [docs/QUICKSTART.md](docs/QUICKSTART.md).
 
-<details>
-<summary><strong>Second workflow: repository evidence demo</strong></summary>
-
-### Second workflow: repository evidence demo
-
-A separate, deterministic workflow that indexes real Git history into FalkorDB and answers dependency and fix-presence questions with verifiable source citations. No model is involved. It uses its own database on port 55688, separate from the fixture database on 6379. If that container already exists, start it with `docker start rw-hackathon-demo-20261018` instead of creating it.
-
-```sh
-sh scripts/setup.sh
-mkdir -p artifacts/repos
-git clone --bare https://github.com/pallets/itsdangerous.git artifacts/repos/itsdangerous
-docker run -d --name rw-hackathon-demo-20261018 --memory=2g \
-  -p 127.0.0.1:55688:6379 \
-  falkordb/falkordb:6.0.2@sha256:107455e862a824e45e8e9f5a7fbfdf5e00a08b14e13eae2577c72fd9e3f59ba6
-docker exec rw-hackathon-demo-20261018 redis-cli ping   # wait for PONG
-RW_FALKORDB_PORT=55688 .venv/bin/python scripts/hackathon_demo.py setup
-RW_FALKORDB_PORT=55688 .venv/bin/python scripts/hackathon_demo.py smoke
-RW_FALKORDB_PORT=55688 .venv/bin/python scripts/hackathon_demo.py serve --port 8127
-```
-
-Open `http://127.0.0.1:8127` and ask **What does TimedSerializer depend on?** Then try **Explore a real dependency chain**, open a source citation, and compare **Inspect the fix** with **Catch the reverted fix**. The source is ItsDangerous pinned to commit `096c8d42545d3b68ea21a4f890fb2b2d8979c0bd`; the reverted-fix example uses explicitly synthetic Git history. Setup generates local indexes that are not part of the repository. Stop the database with `docker stop rw-hackathon-demo-20261018`.
-
-## Second workflow: repository evidence graph
-
-Implemented by [`src/rw/repo/index.py`](src/rw/repo/index.py) and [`src/rw/repo/query.py`](src/rw/repo/query.py). The demo uses the graphs `rw_hackathon_demo_real` and `rw_hackathon_demo_trap`; other repository imports default to `rw_repo_<config.name>`.
-
-```mermaid
-flowchart LR
-    T[Tag] -->|POINTS_TO| C[Commit]
-    C -->|PARENT| P[Parent commit]
-    C -->|HAS_FILE: path| B[Blob]
-    B -->|DEFINES| S[Symbol]
-    S -->|IMPORTS / CALLS / INHERITS| D[Target symbol]
-    C -->|HAS_NOTE| N[ReleaseNote]
-    I[ImportRun] -->|INDEXED| C
-```
-
-| Node | Important properties / purpose |
-| --- | --- |
-| `Repository` | Name, local Git path, status, generation and published import ID; metadata governs which import is usable |
-| `ImportRun` | ID, repository, status, timestamps and metrics; only the current complete import is queried |
-| `Commit` | Full SHA, repository and commit metadata; `PARENT` points to earlier commits |
-| `Tag` | Name and message; an alias pointing to a commit, not an immutable identity |
-| `Blob` | SHA-256 content hash, Git blob identity and extraction metadata; `HAS_FILE.path` gives the revision-specific path |
-| `Symbol` | ID, qualified name, kind and source span for definitions; unresolved external targets may have no local definition |
-| `ReleaseNote` | ID, path and content hash for configured release-note files |
-
-`IMPORTS`, `CALLS` and `INHERITS` edges record provenance and extractor identity, and parsed relationships are labeled separately from statically inferred ones. A citation contains repository, commit, path, line range and content hash, and opening it verifies the Git bytes. Example: follow `URLSafeTimedSerializer → TimedSerializer → Serializer` at the pinned revision. The relationship walk is static; it makes no claim about runtime dispatch or behavioral compatibility.
-
-</details>
+**Second workflow.** A separate, deterministic repository-evidence workflow indexes real Git history into FalkorDB and answers dependency and fix-presence questions with verifiable source citations. Setup and graph model: [docs/repo/DEMO.md](docs/repo/DEMO.md).
 
 ## Local MCP tools
 
